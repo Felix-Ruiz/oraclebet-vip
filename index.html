@@ -118,7 +118,7 @@
                 </button>
                 <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/5 px-3 py-2 rounded flex justify-between items-center border border-white/5">
                     <div class="flex items-center gap-2 truncate">
-                        <i class="fas fa-map-marker-alt text-yellow-500"></i> <span id="nombreLigaActiva" class="text-yellow-500 truncate">Fútbol Elite (Top 5)</span>
+                        <i class="fas fa-map-marker-alt text-yellow-500"></i> <span id="nombreLigaActiva" class="text-yellow-500 truncate">Partidos Destacados Hoy</span>
                     </div>
                     <span id="contadorPartidosActivos" class="bg-gray-800 text-gray-300 px-2 py-0.5 rounded text-[9px] whitespace-nowrap">0 Eventos</span>
                 </div>
@@ -356,7 +356,7 @@
         }
 
         // ==========================================
-        // UI & NAVEGACIÓN (MENÚ 3 NIVELES)
+        // UI & NAVEGACIÓN (MENÚ 3 NIVELES CORREGIDO)
         // ==========================================
         window.cambiarVista = function(vista) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('view-active'));
@@ -380,10 +380,16 @@
         window.cerrarModalLogin = function() { document.getElementById('modalLogin').classList.add('hidden'); };
         window.abrirModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.remove('hidden'); };
         window.cerrarModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.add('hidden'); };
+        
+        // ¡REPARACIÓN DE LA "X" EN EL MODO FREE!
+        window.cerrarModal = function() { document.getElementById('modalAnalisis').classList.add('hidden'); };
 
         function extraerPais(titulo) {
-            if (titulo.includes(' - ')) return titulo.split(' - ')[0].trim();
-            return 'Internacional';
+            // La API manda los datos como "La Liga - Spain". Entonces el país está después del guion.
+            if (titulo.includes(' - ')) return titulo.split(' - ')[1].trim();
+            // Si no tiene guion (ej. NBA, NFL), le asignamos USA manualmente, sino Mundial.
+            if (titulo === 'NBA' || titulo === 'NFL' || titulo === 'MLB' || titulo === 'NHL') return 'USA';
+            return 'Mundial';
         }
 
         function construirMenuLateral() {
@@ -392,12 +398,12 @@
             
             competicionesGlobales.forEach(liga => {
                 let deporte = liga.group || 'Otros';
-                // Traducción de deportes
                 const traducciones = { 'Soccer': 'Fútbol', 'Basketball': 'Baloncesto', 'Tennis': 'Tenis', 'Ice Hockey': 'Hockey Hielo', 'American Football': 'Fútbol Americano', 'Baseball': 'Béisbol', 'Mixed Martial Arts': 'Artes Marciales' };
                 deporte = traducciones[deporte] || deporte;
                 
                 let pais = extraerPais(liga.title);
-                let nombreLiga = liga.title.includes(' - ') ? liga.title.split(' - ')[1].trim() : liga.title;
+                // Si la liga tiene guion (ej. "La Liga - Spain"), la liga es la primera parte ("La Liga")
+                let nombreLiga = liga.title.includes(' - ') ? liga.title.split(' - ')[0].trim() : liga.title;
 
                 if(!arbol[deporte]) arbol[deporte] = {};
                 if(!arbol[deporte][pais]) arbol[deporte][pais] = [];
