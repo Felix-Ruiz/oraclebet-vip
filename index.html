@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OracleBet VIP - Alta Probabilidad</title>
+    <title>OracleBet VIP - Broker Global</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -24,11 +24,9 @@
         .checkbox-vip { accent-color: var(--primary-gold); width: 20px; height: 20px; cursor: pointer; }
         .fade-in-right { animation: fadeInRight 0.2s ease-out forwards; }
         @keyframes fadeInRight { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
-        
         input[type="date"] { color-scheme: dark; }
         #contenidoMenuLateral::-webkit-scrollbar { display: none; }
         .neon-premium { box-shadow: 0 0 15px rgba(168, 85, 247, 0.5), inset 0 0 10px rgba(168, 85, 247, 0.3); border: 1px solid #a855f7; }
-        
         .view-section { display: none; }
         .view-active { display: block; animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -40,7 +38,7 @@
     
     <div id="menuLateral" class="fixed inset-y-0 left-0 w-4/5 max-w-sm bg-gray-900 border-r border-yellow-500/50 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
         <div class="p-5 border-b border-gray-800 flex justify-between items-center bg-black/50">
-            <h2 class="text-yellow-500 font-black uppercase tracking-widest text-sm"><i class="fas fa-globe-americas mr-2"></i> Explorador Global</h2>
+            <h2 class="text-yellow-500 font-black uppercase tracking-widest text-sm"><i class="fas fa-globe mr-2"></i> Base Global</h2>
             <button onclick="cerrarMenuLateral()" class="text-gray-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
         </div>
         <div class="p-3 border-b border-gray-800">
@@ -50,7 +48,8 @@
             </button>
         </div>
         <div id="contenidoMenuLateral" class="flex-grow overflow-y-auto p-2 space-y-1 pb-10">
-            </div>
+            <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Sincronizando Servidor...</div>
+        </div>
     </div>
 
     <div class="p-4">
@@ -92,7 +91,7 @@
                 <section class="space-y-4">
                     <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2 flex justify-between items-center">
                         Pronósticos Disponibles
-                        <span class="text-[8px] bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/50 uppercase tracking-widest font-black"><i class="fas fa-cloud"></i> NUBE ACTIVA</span>
+                        <span class="text-[8px] bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/50 uppercase tracking-widest font-black"><i class="fas fa-cloud"></i> NUBE GLOBAL</span>
                     </h2>
                     <div id="containerPartidos" class="space-y-4">
                         <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Consultando a Firebase...</div>
@@ -279,8 +278,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Ya NO HAY API KEYS EN EL FRONT-END. Se acabó el robo de saldo.
-
         function obtenerHuellaDispositivo() {
             let miHuella = localStorage.getItem('oraclebet_huella_secreta');
             if (!miHuella) { miHuella = 'disp_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36); localStorage.setItem('oraclebet_huella_secreta', miHuella); }
@@ -290,50 +287,36 @@
         const MASTER_CODE = "FELIX_ADMIN_777";
         
         let modoVipActivo = false, modoIlimitadoActivo = false, codigoActivoUsuario = '', estadoEscalera = 'none';
-        let partidosGlobales = [], partidosFiltrados = []; 
+        let partidosGlobales = [], partidosFiltrados = [], competicionesGlobales = []; 
         let seleccionesVIPGlobal = [], ticketDinamicoVIP = []; 
         let modoMercadoGlobal = 'mixto'; 
 
-        // EL CATÁLOGO ESTÁTICO DEL BROKER (Misma lista que descarga el Robot)
-        const LIGAS_MENU = [
-            { key: 'soccer_epl', title: 'Premier League', group: 'Europa / Fútbol' },
-            { key: 'soccer_spain_la_liga', title: 'La Liga (España)', group: 'Europa / Fútbol' },
-            { key: 'soccer_italy_serie_a', title: 'Serie A (Italia)', group: 'Europa / Fútbol' },
-            { key: 'soccer_germany_bundesliga', title: 'Bundesliga (Alemania)', group: 'Europa / Fútbol' },
-            { key: 'soccer_france_ligue_one', title: 'Ligue 1 (Francia)', group: 'Europa / Fútbol' },
-            { key: 'soccer_uefa_champs_league', title: 'Champions League', group: 'Internacional / Fútbol' },
-            { key: 'soccer_uefa_europa_league', title: 'Europa League', group: 'Internacional / Fútbol' },
-            { key: 'soccer_conmebol_libertadores', title: 'Copa Libertadores', group: 'América / Fútbol' },
-            { key: 'soccer_colombia_primera_a', title: 'Primera A (Colombia)', group: 'América / Fútbol' },
-            { key: 'soccer_mexico_ligamx', title: 'Liga MX (México)', group: 'América / Fútbol' },
-            { key: 'soccer_argentina_primera_division', title: 'Primera División (Arg)', group: 'América / Fútbol' },
-            { key: 'soccer_usa_mls', title: 'MLS (USA)', group: 'América / Fútbol' },
-            { key: 'basketball_nba', title: 'NBA', group: 'USA / Baloncesto' },
-            { key: 'basketball_euroleague', title: 'Euroleague', group: 'Europa / Baloncesto' },
-            { key: 'tennis_atp', title: 'ATP (Masculino)', group: 'Mundial / Tenis' },
-            { key: 'tennis_wta', title: 'WTA (Femenino)', group: 'Mundial / Tenis' },
-            { key: 'baseball_mlb', title: 'MLB (Béisbol)', group: 'USA / Béisbol' },
-            { key: 'americanfootball_nfl', title: 'NFL', group: 'USA / Fútbol Americano' }
-        ];
-
         // ======================================================================
-        // EL MOTOR DE EXTRACCIÓN (100% FIRESTORE)
+        // EL MOTOR DE EXTRACCIÓN (100% FIRESTORE - CERO APIS EXTERNAS)
         // ======================================================================
         async function obtenerPartidosDesdeNube(ligasArray) {
             if(ligasArray.length === 0) return [];
             let resultados = [];
             try {
-                // Firestore permite consultar de 10 en 10 ligas a la vez. Dividimos si piden muchas.
                 for (let i = 0; i < ligasArray.length; i += 10) {
                     const chunk = ligasArray.slice(i, i + 10);
                     const q = query(collection(db, "eventos_sincronizados"), where("sport_key", "in", chunk));
                     const snap = await getDocs(q);
                     snap.forEach(doc => resultados.push(doc.data()));
                 }
-            } catch(e) {
-                console.error("Error leyendo de Firebase:", e);
-            }
+            } catch(e) { console.error("Error leyendo Firebase:", e); }
             return resultados;
+        }
+
+        window.obtenerLigasDisponibles = async function() {
+            try {
+                // Descarga la lista de ligas que el Robot encontró y guardó en Firebase
+                const snap = await getDoc(doc(db, "global", "menu_ligas"));
+                if(snap.exists()) {
+                    competicionesGlobales = snap.data().ligas || [];
+                    construirMenuLateral();
+                }
+            } catch(e) { console.error("Error cargando menú:", e); }
         }
 
         // ==========================================
@@ -353,7 +336,7 @@
 
         window.iniciarApp = async function() {
             document.getElementById('filtroFecha').value = ""; 
-            construirMenuLateral();
+            await window.obtenerLigasDisponibles();
             window.ejecutarTopFutbol(); 
         };
 
@@ -365,7 +348,7 @@
         function construirMenuLateral() {
             const contenedor = document.getElementById('contenidoMenuLateral'); 
             let agrupado = {};
-            LIGAS_MENU.forEach(l => { if(!agrupado[l.group]) agrupado[l.group] = []; agrupado[l.group].push(l); });
+            competicionesGlobales.forEach(l => { if(!agrupado[l.group]) agrupado[l.group] = []; agrupado[l.group].push(l); });
             let html = '';
             Object.keys(agrupado).sort().forEach(grupo => {
                 const idLimpio = grupo.replace(/[^a-zA-Z0-9]/g, '');
@@ -404,18 +387,16 @@
         };
 
         // ==========================================
-        // EJECUCIÓN CENTRAL DE DATOS
+        // EJECUCIÓN CENTRAL
         // ==========================================
         window.ejecutarTopFutbol = async function() {
             window.cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = 'Fútbol Elite (Top 5 Ligas)';
             const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
-            cFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando desde la Nube...</div>`;
+            cFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando Nube...</div>`;
             if(modoVipActivo) cVip.innerHTML = cFree.innerHTML;
             
             const ligasTop = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_uefa_champs_league', 'soccer_italy_serie_a'];
-            const data = await obtenerPartidosDesdeNube(ligasTop);
-            
-            partidosGlobales = data;
+            partidosGlobales = await obtenerPartidosDesdeNube(ligasTop);
             partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time));
             window.aplicarFiltrosLocales();
         };
@@ -432,17 +413,19 @@
         };
 
         // ==========================================
-        // UI TICKETS & SELECCIONES
+        // UI TICKETS (CON FECHA DE DÍA Y HORA PARA FUTURO)
         // ==========================================
         window.renderizarPartidosFree = function() {
             const container = document.getElementById('containerPartidos'); container.innerHTML = '';
-            if(partidosFiltrados.length === 0) { container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5"><p class="text-gray-400 text-[10px] font-bold uppercase">No hay eventos para la fecha seleccionada.</p></div>`; return; }
+            if(partidosFiltrados.length === 0) { container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5"><p class="text-gray-400 text-[10px] font-bold uppercase">No hay eventos para esta fecha.</p></div>`; return; }
             partidosFiltrados.slice(0, 15).forEach(partido => {
-                const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const d = new Date(partido.commence_time);
+                const fechaTexto = d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short'}) + ' - ' + d.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+                
                 container.innerHTML += `
                     <div class="card-glass p-5 animate-slide-up relative overflow-hidden mb-4 shadow-lg border border-white/5">
                         <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md">OPORTUNIDAD</div>
-                        <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-gray-500 border-b border-white/5 pb-2 mt-2"><span class="uppercase">${partido.sport_title}</span><span class="bg-gray-800 px-2 py-0.5 rounded">${date}</span></div>
+                        <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-gray-500 border-b border-white/5 pb-2 mt-2"><span class="uppercase">${partido.sport_title}</span><span class="bg-gray-800 px-2 py-0.5 rounded">${fechaTexto}</span></div>
                         <div class="flex justify-between items-center mb-5 px-1"><div class="w-2/5 text-center"><p class="font-bold text-xs text-white">${partido.home_team}</p></div><div class="text-yellow-500 font-black italic text-sm">VS</div><div class="w-2/5 text-center"><p class="font-bold text-xs text-white">${partido.away_team}</p></div></div>
                         <button onclick="verProbabilidadFree('${partido.home_team}')" class="w-full py-3 bg-gray-800 rounded-lg text-[10px] font-black text-yellow-500 shadow-lg flex justify-center items-center gap-2 tracking-widest"><i class="fas fa-lock"></i> VER PREDICCIÓN</button>
                     </div>`;
@@ -453,14 +436,16 @@
             const container = document.getElementById('containerPartidosVIP'); container.innerHTML = '';
             if(partidosFiltrados.length === 0) { container.innerHTML = `<p class="text-center opacity-50 text-[10px] uppercase pt-10">Sin resultados</p>`; return; }
             partidosFiltrados.forEach((partido) => {
-                const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const d = new Date(partido.commence_time);
+                const fechaTexto = d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short'}) + ' - ' + d.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+                
                 const estaSeleccionado = seleccionesVIPGlobal.some(s => s.id === partido.id);
                 container.innerHTML += `
                     <div class="bg-black/40 border ${estaSeleccionado ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-white/5'} p-3 rounded-xl flex items-center justify-between mb-2 hover:border-yellow-500/30 transition shadow-sm fade-in-right">
                         <div class="flex items-center gap-3 w-full">
                             <input type="checkbox" id="check_${partido.id}" onchange="toggleSeleccionVIP('${partido.id}')" class="checkbox-vip w-5 h-5 ml-1" ${estaSeleccionado ? 'checked' : ''}>
                             <label for="check_${partido.id}" class="flex flex-col cursor-pointer w-full pl-2">
-                                <div class="flex justify-between items-center mb-1"><span class="text-[8px] text-yellow-500 font-bold uppercase tracking-widest">${partido.sport_title}</span><span class="text-[8px] text-gray-500 font-bold">${date}</span></div>
+                                <div class="flex justify-between items-center mb-1"><span class="text-[8px] text-yellow-500 font-bold uppercase tracking-widest">${partido.sport_title}</span><span class="text-[8px] text-gray-500 font-bold">${fechaTexto}</span></div>
                                 <span class="text-xs font-bold text-white">${partido.home_team} <span class="text-gray-500 font-normal text-[10px] mx-1 italic">vs</span> ${partido.away_team}</span>
                             </label>
                         </div>
@@ -472,7 +457,7 @@
         window.toggleSeleccionVIP = function(id) {
             const cb = document.getElementById('check_' + id);
             if(cb.checked) {
-                if(!modoIlimitadoActivo && seleccionesVIPGlobal.length >= 5) { cb.checked = false; alert("Límite VIP (Máx 5). Usa código PREMIUM para ilimitado."); return; }
+                if(!modoIlimitadoActivo && seleccionesVIPGlobal.length >= 5) { cb.checked = false; alert("Límite VIP (Máx 5). Usa código PREMIUM."); return; }
                 const p = partidosGlobales.find(x => x.id === id); if(p && !seleccionesVIPGlobal.some(s=>s.id===id)) seleccionesVIPGlobal.push(p);
             } else { seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== id); }
             const card = cb.closest('.bg-black\\/40');
@@ -483,16 +468,12 @@
 
         window.actualizarContadorVIP = function() {
             const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion');
-            const cantidad = seleccionesVIPGlobal.length;
-            contador.innerText = `${cantidad} Seleccionados`;
+            const cantidad = seleccionesVIPGlobal.length; contador.innerText = `${cantidad} Seleccionados`;
             if(!modoIlimitadoActivo) document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); });
             if(cantidad >= 2 && (modoIlimitadoActivo || cantidad <= 5)) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); btn.innerHTML = `<span>GENERAR TICKET INTELIGENTE</span>`; } 
             else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.innerHTML = `<span>GENERAR TICKET INTELIGENTE</span>`; }
         };
 
-        // ==========================================
-        // ALGORITMO Y TICKETS CREADOR MANUAL
-        // ==========================================
         function obtenerOpcionesRentables(partido) {
             let opciones = [];
             partido.bookmakers?.forEach(b => b.markets?.forEach(m => m.outcomes?.forEach(o => {
@@ -522,9 +503,7 @@
                 if(modo === 'h2h' || modo === 'totals' || modo === 'spreads') { 
                     const idx = item.opciones.findIndex(o => o.mercadoKey === modo); 
                     if(idx !== -1) item.indexSeleccionado = idx; 
-                } else {
-                    item.indexSeleccionado = 0; // Mixto
-                }
+                } else { item.indexSeleccionado = 0; }
             });
             window.dibujarTicketDinamico(false);
         };
@@ -532,13 +511,8 @@
         window.rotarPickIndividual = function(id) { let i = ticketDinamicoVIP.find(t => t.partido.id === id); if(i) { i.indexSeleccionado = (i.indexSeleccionado + 1) % i.opciones.length; window.dibujarTicketDinamico(false); } };
         window.regenerarTicketCompleto = function() {
             ticketDinamicoVIP.forEach(item => {
-                if(modoMercadoGlobal !== 'mixto') { 
-                    const idx = item.opciones.findIndex(o => o.mercadoKey === modoMercadoGlobal); 
-                    if(idx !== -1) item.indexSeleccionado = idx; 
-                } else { 
-                    let max = item.opciones.length > 6 ? 6 : item.opciones.length; 
-                    item.indexSeleccionado = Math.floor(Math.random() * max); 
-                }
+                if(modoMercadoGlobal !== 'mixto') { const idx = item.opciones.findIndex(o => o.mercadoKey === modoMercadoGlobal); if(idx !== -1) item.indexSeleccionado = idx; } 
+                else { let max = item.opciones.length > 6 ? 6 : item.opciones.length; item.indexSeleccionado = Math.floor(Math.random() * max); }
             });
             window.dibujarTicketDinamico(false);
         };
@@ -551,11 +525,9 @@
             ticketDinamicoVIP.forEach((item, idx) => {
                 const p = item.partido; const o = item.opciones[item.indexSeleccionado];
                 cuotaTotal *= o.cuota; probPromedio += o.probabilidad;
-                
                 let txt = "Ganador", ico = "fa-handshake";
                 if(o.mercadoKey === 'totals') { txt = "Totales"; ico = "fa-futbol"; }
                 if(o.mercadoKey === 'spreads') { txt = "Handicap"; ico = "fa-balance-scale"; }
-                
                 let pickTxt = o.nombre + (o.point ? ` (${o.point>0?'+':''}${o.point})` : '');
                 let bg = idx % 2 === 0 ? 'bg-black/40' : 'bg-gray-900/50';
 
@@ -579,25 +551,11 @@
             let c3 = modoMercadoGlobal === 'totals' ? 'bg-yellow-500 text-black' : 'text-gray-400';
             let c4 = modoMercadoGlobal === 'spreads' ? 'bg-yellow-500 text-black' : 'text-gray-400';
             
-            let ctrls = esRadarAuto ? '' : `
-                <div class="grid grid-cols-4 gap-1 bg-black/60 p-1 rounded-lg mb-4">
-                    <button onclick="cambiarModoMercado('mixto')" class="py-2 text-[8px] font-black uppercase rounded ${c1}">Mixto</button>
-                    <button onclick="cambiarModoMercado('h2h')" class="py-2 text-[8px] font-black uppercase rounded ${c2}">Ganador</button>
-                    <button onclick="cambiarModoMercado('totals')" class="py-2 text-[8px] font-black uppercase rounded ${c3}">Totales</button>
-                    <button onclick="cambiarModoMercado('spreads')" class="py-2 text-[8px] font-black uppercase rounded ${c4}">Handicap</button>
-                </div>`;
-                
+            let ctrls = esRadarAuto ? '' : `<div class="grid grid-cols-4 gap-1 bg-black/60 p-1 rounded-lg mb-4"><button onclick="cambiarModoMercado('mixto')" class="py-2 text-[8px] font-black uppercase rounded ${c1}">Mixto</button><button onclick="cambiarModoMercado('h2h')" class="py-2 text-[8px] font-black uppercase rounded ${c2}">Ganador</button><button onclick="cambiarModoMercado('totals')" class="py-2 text-[8px] font-black uppercase rounded ${c3}">Totales</button><button onclick="cambiarModoMercado('spreads')" class="py-2 text-[8px] font-black uppercase rounded ${c4}">Handicap</button></div>`;
             let btnBar = esRadarAuto ? '' : `<button onclick="regenerarTicketCompleto()" class="w-full mt-4 py-3 border border-yellow-500/30 text-yellow-500 rounded-xl text-[10px] font-black uppercase"><i class="fas fa-random mr-1"></i> Barajar Opciones</button>`;
             let idUnicoBtn = 'btnGuardar_' + Date.now();
 
-            resDiv.innerHTML = `
-                <div class="card-glass p-4 border-t-2 ${esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5'} rounded-xl shadow-2xl mb-10">
-                    <div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${esRadarAuto?'text-purple-500':'text-yellow-500'} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Ticket</span><span class="text-[10px] text-green-400 font-black bg-green-400/10 px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>
-                    ${ctrls} ${htmlPartidos}
-                    <div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final</span></div><span class="text-3xl font-black text-white">${cuotaTotal.toFixed(2)}</span></div>
-                    ${btnBar}
-                    <button id="${idUnicoBtn}" onclick="guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button>
-                </div>`;
+            resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5'} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${esRadarAuto?'text-purple-500':'text-yellow-500'} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Ticket</span><span class="text-[10px] text-green-400 font-black bg-green-400/10 px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final</span></div><span class="text-3xl font-black text-white">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button id="${idUnicoBtn}" onclick="guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
         }
 
         // ==========================================
@@ -611,7 +569,6 @@
             localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist));
             alert("✅ Guardado en Historial."); window.cambiarVista('historial');
         };
-
         window.renderizarHistorial = function() {
             if(!codigoActivoUsuario) return;
             let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || [];
@@ -626,22 +583,12 @@
                     if(t.estado === 'won') { bgStatus = 'bg-green-900/20 border-green-500/50'; txtStatus = '<span class="text-green-400 font-black"><i class="fas fa-check-circle"></i> ACERTADO</span>'; }
                     if(t.estado === 'lost') { bgStatus = 'bg-red-900/20 border-red-500/50'; txtStatus = '<span class="text-red-400 font-black"><i class="fas fa-times-circle"></i> FALLADO</span>'; }
                     let picksHtml = t.picks.map(p => `<li class="text-[9px] text-gray-300 border-b border-white/5 py-1 last:border-0">${p}</li>`).join('');
-
-                    cont.innerHTML += `
-                        <div class="${bgStatus} p-4 rounded-xl border relative shadow-md">
-                            <div class="flex justify-between items-center mb-3 border-b border-white/5 pb-2"><span class="text-[10px] font-bold text-gray-400">${t.fecha} • Cuota: <span class="text-white">${t.cuota}</span></span><div class="text-[10px] uppercase tracking-widest">${txtStatus}</div></div>
-                            <ul class="mb-4 pl-2 border-l-2 border-yellow-500/50">${picksHtml}</ul>
-                            <div class="flex gap-2">
-                                <button onclick="marcarTicket(${t.id}, 'won')" class="flex-1 py-2 bg-green-600/20 text-green-500 text-[9px] font-black rounded border border-green-600/30 uppercase hover:bg-green-600/40">GANADO</button>
-                                <button onclick="marcarTicket(${t.id}, 'lost')" class="flex-1 py-2 bg-red-600/20 text-red-500 text-[9px] font-black rounded border border-red-600/30 uppercase hover:bg-red-600/40">PERDIDO</button>
-                            </div>
-                        </div>`;
+                    cont.innerHTML += `<div class="${bgStatus} p-4 rounded-xl border relative shadow-md"><div class="flex justify-between items-center mb-3 border-b border-white/5 pb-2"><span class="text-[10px] font-bold text-gray-400">${t.fecha} • Cuota: <span class="text-white">${t.cuota}</span></span><div class="text-[10px] uppercase tracking-widest">${txtStatus}</div></div><ul class="mb-4 pl-2 border-l-2 border-yellow-500/50">${picksHtml}</ul><div class="flex gap-2"><button onclick="marcarTicket(${t.id}, 'won')" class="flex-1 py-2 bg-green-600/20 text-green-500 text-[9px] font-black rounded border border-green-600/30 uppercase hover:bg-green-600/40">GANADO</button><button onclick="marcarTicket(${t.id}, 'lost')" class="flex-1 py-2 bg-red-600/20 text-red-500 text-[9px] font-black rounded border border-red-600/30 uppercase hover:bg-red-600/40">PERDIDO</button></div></div>`;
                 });
             }
             document.getElementById('statGenerados').innerText = generados; document.getElementById('statPerdidos').innerText = perdidos;
             document.getElementById('statWinRate').innerText = `${generados > 0 ? Math.floor((ganados / generados) * 100) : 0}%`;
         };
-
         window.marcarTicket = function(id, estado) { let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)); let index = hist.findIndex(t => t.id === id); if(index !== -1) { hist[index].estado = estado; localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist)); window.renderizarHistorial(); } };
         window.limpiarHistorial = function() { if(confirm("¿Seguro?")) { localStorage.removeItem('oracle_historial_' + codigoActivoUsuario); window.renderizarHistorial(); } };
 
@@ -701,7 +648,6 @@
             setTimeout(() => { c.innerHTML = `<button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button><i class="fas fa-lock text-yellow-500 text-5xl mb-4 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"></i><h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Acceso Protegido</h3><div class="bg-black/60 p-6 rounded-xl border border-red-500/40 mb-6 relative overflow-hidden"><div class="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex flex-col items-center justify-center z-10 p-4"><span class="bg-red-600 text-white text-[11px] font-black px-4 py-2 rounded uppercase shadow-lg flex items-center gap-2 mb-3"><i class="fas fa-key"></i> VIP REQUERIDO</span></div><p class="blur-[5px] opacity-50 text-white font-black mb-3">Gana ${eq}</p></div><a href="https://wa.me/573005191112" target="_blank" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-xs uppercase shadow-lg flex justify-center gap-2"><i class="fab fa-whatsapp text-xl"></i> SOLICITAR ACCESO</a>`; }, 1500);
         };
 
-        // ADMIN FIREBASE
         window.crearCodigo = async function(esIl) {
             const nuevo = document.getElementById('newCodeInput').value.toUpperCase().trim(); if(nuevo==="") return;
             const btn = document.getElementById(esIl ? 'btnCrearPrem' : 'btnCrearVip'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
@@ -750,7 +696,7 @@
             window.scrollTo(0, document.body.scrollHeight);
             
             try {
-                let eps = dep==='mixto'? LIGAS_MENU.map(l=>l.key) :
+                let eps = dep==='mixto'? competicionesGlobales.map(l=>l.key) :
                          (dep==='futbol'?['soccer_epl','soccer_spain_la_liga','soccer_italy_serie_a','soccer_germany_bundesliga','soccer_uefa_champs_league'] :
                          (dep==='baloncesto'?['basketball_nba','basketball_euroleague'] :
                          (dep==='tenis'?['tennis_atp','tennis_wta']:[])));

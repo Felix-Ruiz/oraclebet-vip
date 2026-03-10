@@ -6,41 +6,47 @@ const axios = require("axios");
 admin.initializeApp();
 const db = admin.firestore();
 
-// ⚠️ PON TUS 3 LLAVES AQUÍ (El robot las rotará inteligentemente)
+// 🔋 TUS 6 LLAVES NUEVAS (Batería Inagotable)
 const API_KEYS = [
-    'f9f7716fcf820abf2976ba5ca0fcd322', 
-    '6bce6b0eb3202dfd23f1246a67257fd5', 
-    '1428ffa5315c791e176a2c6e5a0ebac4'
+    '1428ffa5315c791e176a2c6e5a0ebac4',
+    '7f88d62ce90724b4c234025630a67d20',
+    '2535be0ca41418f6d64d4f1696bedd8e',
+    '273e5650255281ae3aa3b6fb96c6893b',
+    '4ce60f5a7141356202e8d4d5363a1e2a',
+    '3f42bd75893fdcfc066c0bf75383206d'
 ];
 let indexLlaveActual = 0;
 
-// EL CATÁLOGO GLOBAL DE ORACLEBET (18 Competiciones Elite)
-const LIGAS_GLOBALES = [
-    'soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 
-    'soccer_germany_bundesliga', 'soccer_france_ligue_one', 
-    'soccer_uefa_champs_league', 'soccer_uefa_europa_league',
-    'soccer_conmebol_libertadores', 'soccer_colombia_primera_a', 
-    'soccer_mexico_ligamx', 'soccer_argentina_primera_division', 
-    'soccer_usa_mls',
-    'basketball_nba', 'basketball_euroleague',
-    'tennis_atp', 'tennis_wta',
-    'baseball_mlb', 'americanfootball_nfl'
-];
-
 async function ejecutarEscaneoGlobal() {
-    console.log("🌍 INICIANDO ESCÁNER MUNDIAL ORACLEBET...");
+    console.log("🌍 INICIANDO ESCÁNER MUNDIAL ABSOLUTO...");
     let totalGuardados = 0;
+    let ligasActivasEncontradas = [];
 
-    for (const liga of LIGAS_GLOBALES) {
+    // 1. Descargar el catálogo completo de deportes del planeta
+    let deportes = [];
+    try {
+        const urlDeportes = `https://api.the-odds-api.com/v4/sports/?apiKey=${API_KEYS[indexLlaveActual]}`;
+        const resDeportes = await axios.get(urlDeportes);
+        // Filtramos apuestas a largo plazo (outrights) para quedarnos solo con partidos reales
+        deportes = resDeportes.data.filter(s => s.active && !s.has_outrights);
+    } catch(e) {
+        console.error("Fallo al obtener la lista mundial de deportes.");
+        return { exito: false, error: "Fallo lista inicial" };
+    }
+
+    console.log(`📡 Se encontraron ${deportes.length} competiciones activas.`);
+
+    // 2. Escanear el planeta entero
+    for (const deporte of deportes) {
+        const liga = deporte.key;
         let exitoLiga = false;
         let intentos = 0;
 
         while (!exitoLiga && intentos < API_KEYS.length) {
-            const url = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[indexLlaveActual]}&regions=eu,us&markets=h2h,totals`;
+            const url = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[indexLlaveActual]}&regions=eu,us&markets=h2h,totals,spreads`;
             
             try {
-                // Retraso de 1 segundo por regla anti-spam de la API
-                await new Promise(r => setTimeout(r, 1000)); 
+                await new Promise(r => setTimeout(r, 1000)); // Anti-Spam de 1 segundo
                 
                 const response = await axios.get(url, { headers: { 'Accept-Encoding': 'identity' } });
                 const partidos = response.data;
@@ -50,43 +56,63 @@ async function ejecutarEscaneoGlobal() {
                     partidos.forEach(p => {
                         const docRef = db.collection('eventos_sincronizados').doc(p.id);
                         p.ultima_actualizacion = Date.now();
-                        p.sport_key = liga; // Sello de identidad de la liga
+                        p.sport_key = liga; 
+                        p.sport_title = deporte.title;
+                        p.sport_group = deporte.group;
                         batch.set(docRef, p);
                         totalGuardados++;
                     });
                     await batch.commit();
-                    console.log(`✅ [${liga}] Guardada con éxito.`);
+                    
+                    // Guardamos la liga para inyectarla dinámicamente en tu página web
+                    ligasActivasEncontradas.push({ key: liga, title: deporte.title, group: deporte.group });
+                    console.log(`✅ [${liga}] Guardada: ${partidos.length} eventos.`);
                 }
-                exitoLiga = true; // Salió bien, rompemos el ciclo while y pasamos a la siguiente liga
+                exitoLiga = true;
 
             } catch (error) {
-                // Si el error es 429 (Límite de spam) o 401 (Límite mensual), rotamos la llave
                 if (error.response && (error.response.status === 429 || error.response.status === 401)) {
-                    console.warn(`🔄 Llave ${indexLlaveActual} agotada/bloqueada. Cambiando de llave...`);
                     indexLlaveActual = (indexLlaveActual + 1) % API_KEYS.length;
                     intentos++;
                 } else if (error.response && error.response.status === 422) {
-                    // La liga no soporta estos mercados hoy, la ignoramos silenciosamente
-                    exitoLiga = true; 
+                    // Rescate Cascada: Si la liga no soporta Totales o Handicap, intentamos solo Ganador
+                    try {
+                        await new Promise(r => setTimeout(r, 1000)); 
+                        const urlRescate = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[indexLlaveActual]}&regions=eu&markets=h2h`;
+                        const resRescate = await axios.get(urlRescate, { headers: { 'Accept-Encoding': 'identity' } });
+                        const partidosRescate = resRescate.data;
+                        if (Array.isArray(partidosRescate) && partidosRescate.length > 0) {
+                            const batch = db.batch();
+                            partidosRescate.forEach(p => {
+                                const docRef = db.collection('eventos_sincronizados').doc(p.id);
+                                p.ultima_actualizacion = Date.now();
+                                p.sport_key = liga; 
+                                p.sport_title = deporte.title;
+                                p.sport_group = deporte.group;
+                                batch.set(docRef, p);
+                                totalGuardados++;
+                            });
+                            await batch.commit();
+                            ligasActivasEncontradas.push({ key: liga, title: deporte.title, group: deporte.group });
+                        }
+                        exitoLiga = true;
+                    } catch(e2) { exitoLiga = true; }
                 } else {
-                    console.error(`❌ Error en [${liga}]:`, error.message);
-                    exitoLiga = true; // Para no quedarnos atrapados en un bucle infinito
+                    exitoLiga = true; 
                 }
             }
         }
     }
     
-    console.log(`🏆 CICLO TERMINADO: ${totalGuardados} partidos almacenados en la Nube.`);
-    return { exito: true, cantidad: totalGuardados };
+    // 3. Crear el Menú Dinámico para la página web
+    if(ligasActivasEncontradas.length > 0) {
+        await db.collection('global').doc('menu_ligas').set({ ligas: ligasActivasEncontradas, actualizado: Date.now() });
+    }
+    
+    console.log(`🏆 Terminado: ${totalGuardados} partidos listos.`);
+    return { exito: true, cantidad: totalGuardados, ligas: ligasActivasEncontradas.length };
 }
 
-// EL ROBOT DESPIERTA CADA 3 HORAS (Para ahorrar saldo mensual)
-exports.robotSincronizador = onSchedule("every 3 hours", async (event) => {
-    await ejecutarEscaneoGlobal();
-});
-
-// DISPARADOR MANUAL PARA TUS PRUEBAS
-exports.disparadorManual = onRequest(async (req, res) => {
-    const resultado = await ejecutarEscaneoGlobal();
-    res.json(resultado);
-});
+// Despierta cada 12 horas para no quemar las llaves con todo el mundo
+exports.robotSincronizador = onSchedule("every 12 hours", async (event) => { await ejecutarEscaneoGlobal(); });
+exports.disparadorManual = onRequest(async (req, res) => { const resultado = await ejecutarEscaneoGlobal(); res.json(resultado); });
