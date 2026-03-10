@@ -129,11 +129,11 @@
     </section>
 
     <div id="modalAnalisis" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-6 z-50 backdrop-blur-md">
-        <div class="card-glass p-8 w-full max-w-sm text-center border-yellow-500/30">
-            <i class="fas fa-microchip text-yellow-500 text-3xl mb-4"></i>
-            <h3 class="text-lg font-bold mb-2 uppercase italic">Análisis Básico</h3>
-            <p id="textoAnalisis" class="text-2xl text-white font-black py-6 bg-white/5 rounded-xl mb-6"></p>
-            <button onclick="cerrarModal()" class="w-full py-3 bg-gray-800 rounded-lg font-bold text-sm text-gray-400">Cerrar</button>
+        <div class="card-glass p-8 w-full max-w-sm text-center border-yellow-500/30 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 animate-pulse"></div>
+            
+            <div id="contenidoModalAnalisis">
+                </div>
         </div>
     </div>
 
@@ -175,7 +175,7 @@
         let nivelFiltroActual = 'deportes'; // 'deportes' -> 'paises' -> 'ligas'
         let filtroDeporteSeleccionado = '';
         let filtroPaisSeleccionado = '';
-        let listaActualRenderizada = []; // Para que funcione el buscador interno del modal
+        let listaActualRenderizada = []; 
 
         async function iniciarApp() {
             await obtenerLigasDisponibles();
@@ -183,18 +183,14 @@
         }
 
         // --- SISTEMA PROFESIONAL DE FILTROS JERÁRQUICOS ---
-
         async function obtenerLigasDisponibles() {
             try {
                 const res = await fetch(`https://api.the-odds-api.com/v4/sports/?apiKey=${API_KEY}`);
                 const data = await res.json();
                 competicionesGlobales = data.filter(l => l.active);
-            } catch (error) {
-                console.error("Error cargando ligas", error);
-            }
+            } catch (error) { console.error("Error cargando ligas", error); }
         }
 
-        // Utilidad para extraer un "País/Continente" del nombre de la liga que da la API
         function extraerPaisDeLiga(liga) {
             if (liga.title.includes(' - ')) return liga.title.split(' - ')[1].trim();
             if (liga.group.includes('Basketball') && liga.title.includes('NBA')) return 'USA / Norteamérica';
@@ -204,7 +200,6 @@
             return 'Internacional / Competición Global';
         }
 
-        // Utilidad para traducir grupos
         function traducirDeporte(group) {
             const dic = {
                 'Soccer': 'Fútbol', 'Basketball': 'Baloncesto', 'Tennis': 'Tenis', 
@@ -386,19 +381,21 @@
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const dateDay = new Date(partido.commence_time).toLocaleDateString();
                 const card = document.createElement('div');
-                card.className = 'card-glass p-5 animate-slide-up';
+                card.className = 'card-glass p-5 animate-slide-up relative overflow-hidden';
+                
+                // Pequeño guiño de marketing
                 card.innerHTML = `
-                    <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-gray-500 border-b border-white/5 pb-2">
+                    <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[9px] font-black px-2 py-0.5 rounded-bl-lg">OPORTUNIDAD DETECTADA</div>
+                    <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-gray-500 border-b border-white/5 pb-2 mt-2">
                         <span>${partido.sport_title} • ${dateDay} ${date}</span>
-                        <span class="bg-green-500/10 text-green-500 px-2 py-0.5 rounded"><i class="fas fa-bolt"></i> ACTIVO</span>
                     </div>
                     <div class="flex justify-between items-center mb-5 px-2">
                         <div class="text-center w-2/5"><p class="font-bold text-xs">${partido.home_team}</p></div>
                         <div class="text-yellow-500 font-black italic text-sm bg-black/50 px-3 py-1 rounded-full border border-yellow-500/20">VS</div>
                         <div class="text-center w-2/5"><p class="font-bold text-xs">${partido.away_team}</p></div>
                     </div>
-                    <button onclick="verProbabilidad('${partido.home_team}')" class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-bold text-yellow-500 transition shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
-                        VER PREDICCIÓN BÁSICA
+                    <button onclick="verProbabilidad('${partido.home_team}')" class="w-full py-2.5 bg-gray-800 border border-yellow-500/30 hover:bg-gray-700 rounded-lg text-xs font-bold text-yellow-500 transition shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
+                        <i class="fas fa-lock text-[10px] mr-1"></i> VER PREDICCIÓN ALGORÍTMICA
                     </button>
                 `;
                 container.appendChild(card);
@@ -473,20 +470,17 @@
                 checkboxes.forEach(cb => {
                     const partido = partidosGlobales.find(p => p.id === cb.value);
                     
-                    // 1. Determinar el mercado objetivo basándonos en el primer broker
                     let targetMarketKey = partido.bookmakers[0].markets.some(m => m.key === 'totals') ? 'totals' : 'h2h';
                     let baseMarket = partido.bookmakers[0].markets.find(m => m.key === targetMarketKey);
                     
-                    // 2. Elegir el resultado (outcome) con mejor balance inicial
                     let targetOutcome = baseMarket.outcomes[0];
                     baseMarket.outcomes.forEach(o => {
                         if (o.price >= 1.40 && o.price <= 2.80) targetOutcome = o;
                     });
                     
                     let targetOutcomeName = targetOutcome.name;
-                    let targetOutcomePoint = targetOutcome.point; // Para el caso de Over/Under
+                    let targetOutcomePoint = targetOutcome.point; 
                     
-                    // 3. Escanear TODOS los brokers buscando ese mismo resultado
                     let preciosEncontrados = [];
                     partido.bookmakers.forEach(bookie => {
                         let mkt = bookie.markets.find(m => m.key === targetMarketKey);
@@ -496,14 +490,11 @@
                         }
                     });
 
-                    // Fallback de seguridad
                     if(preciosEncontrados.length === 0) preciosEncontrados.push(targetOutcome.price);
 
-                    // 4. Cálculos Matemáticos Avanzados
                     let cuotaMaximaEncontrada = Math.max(...preciosEncontrados);
                     let cuotaPromedioMercado = preciosEncontrados.reduce((a,b) => a+b, 0) / preciosEncontrados.length;
                     
-                    // Probabilidad Implícita Real + Ligero boost algorítmico VIP
                     let probMatematica = Math.floor((1 / cuotaPromedioMercado) * 100);
                     let probFinalPartido = probMatematica + Math.floor(Math.random() * 8) + 2; 
                     if(probFinalPartido > 96) probFinalPartido = 96;
@@ -511,7 +502,6 @@
                     cuotaTotal *= cuotaMaximaEncontrada;
                     probPromedio += probFinalPartido;
 
-                    // Textos de Interfaz
                     let tipoApuestaTxt = targetMarketKey === 'totals' ? "Línea de Puntos/Goles (Totales)" : "Ganador del Encuentro (Moneyline)";
                     let pickTexto = targetOutcomeName;
                     if(targetMarketKey === 'totals') pickTexto = `${targetOutcomeName} de ${targetOutcomePoint || 2.5}`;
@@ -564,6 +554,53 @@
                 `;
             }, 2500);
         }
+
+        // --- EMBUDO DE VENTAS (MODAL FREE PROTEGIDO) ---
+        function verProbabilidad(equipo) {
+            const modal = document.getElementById('modalAnalisis');
+            const contenido = document.getElementById('contenidoModalAnalisis');
+            
+            // 1. Mostrar estado "Escaneando"
+            contenido.innerHTML = `
+                <i class="fas fa-satellite-dish animate-pulse text-yellow-500 text-3xl mb-4 mt-2"></i>
+                <h3 class="text-lg font-bold mb-2 uppercase italic text-white">Escaneando Mercados...</h3>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-4 mb-2">Calculando rentabilidad para ${equipo}</p>
+            `;
+            modal.classList.remove('hidden');
+
+            // 2. Mostrar estado "Bloqueado VIP" después de 1.5 segundos
+            setTimeout(() => {
+                const probAltaSimulada = Math.floor(Math.random() * (92 - 82 + 1)) + 82; 
+                const cuotaSimulada = (Math.random() * (2.80 - 1.80) + 1.80).toFixed(2);
+                
+                contenido.innerHTML = `
+                    <i class="fas fa-lock text-yellow-500 text-4xl mb-3 drop-shadow-[0_0_10px_rgba(212,175,55,0.5)]"></i>
+                    <h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Pronóstico Protegido</h3>
+                    <p class="text-[10px] text-gray-400 mb-5 uppercase tracking-widest">El algoritmo encontró valor de alta rentabilidad.</p>
+                    
+                    <div class="bg-black/50 p-5 rounded-lg border border-red-500/40 mb-6 relative overflow-hidden shadow-[0_0_20px_rgba(220,38,38,0.15)]">
+                        <div class="absolute inset-0 backdrop-blur-[4px] bg-black/50 flex flex-col items-center justify-center z-10 p-4">
+                            <span class="bg-red-600 text-white text-[10px] font-black px-4 py-1.5 rounded uppercase tracking-widest shadow-lg flex items-center gap-2 mb-2"><i class="fas fa-key"></i> EXCLUSIVO VIP</span>
+                            <span class="text-[9px] text-center text-gray-300 font-bold uppercase">Requiere código de acceso para ver la jugada y cuota exacta.</span>
+                        </div>
+                        
+                        <div class="blur-[4px] opacity-60">
+                            <p class="text-sm text-white font-black uppercase tracking-widest mb-2 border-b border-gray-600 pb-2">Pick: Gana ${equipo}</p>
+                            <div class="flex justify-between">
+                                <span class="text-yellow-500 font-bold">Probabilidad: ${probAltaSimulada}%</span>
+                                <span class="text-green-400 font-black">Cuota: ${cuotaSimulada}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="https://wa.me/573005191112?text=Hola%20Félix,%20vi%20un%20pronóstico%20protegido%20con%20alta%20rentabilidad.%20Quiero%20comprar%20mi%20código%20VIP" target="_blank" class="w-full py-4 bg-green-600 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-lg mb-3 flex items-center justify-center gap-2 hover:bg-green-500 transition scale-100 active:scale-95">
+                        <i class="fab fa-whatsapp text-lg"></i> DESBLOQUEAR CON WHATSAPP
+                    </a>
+                    <button onclick="cerrarModal()" class="w-full py-2 bg-transparent border border-gray-700 rounded-lg font-bold text-[10px] text-gray-400 uppercase tracking-widest hover:text-white transition">Volver a los partidos</button>
+                `;
+            }, 1500);
+        }
+        function cerrarModal() { document.getElementById('modalAnalisis').classList.add('hidden'); }
 
         // LÓGICA DE CÓDIGOS Y ACCESOS
         function validarCodigo() {
@@ -625,14 +662,6 @@
             document.getElementById('freeSection').style.display = 'block';
             document.getElementById('filtrosGlobales').style.display = 'flex';
         }
-
-        // FUNCIONES COMPLEMENTARIAS
-        function verProbabilidad(equipo) {
-            const prob = Math.floor(Math.random() * (85 - 60 + 1)) + 60;
-            document.getElementById('textoAnalisis').innerText = `Gana ${equipo} (${prob}%)`;
-            document.getElementById('modalAnalisis').classList.remove('hidden');
-        }
-        function cerrarModal() { document.getElementById('modalAnalisis').classList.add('hidden'); }
 
         // SERVICE WORKER PWA
         if ('serviceWorker' in navigator) {
