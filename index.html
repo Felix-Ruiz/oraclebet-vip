@@ -18,7 +18,6 @@
         body { background-color: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
         .card-glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; }
         .gold-border { border: 1px solid var(--primary-gold); }
-        .vip-section { display: none; }
         .btn-gold { background: linear-gradient(135deg, #D4AF37 0%, #f1d27b 100%); color: #000; }
         .pulse-green { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } }
@@ -27,163 +26,249 @@
         @keyframes fadeInRight { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
         input[type="date"] { color-scheme: dark; }
         #contenidoMenuLateral::-webkit-scrollbar { display: none; }
+        .neon-premium { box-shadow: 0 0 15px rgba(168, 85, 247, 0.5), inset 0 0 10px rgba(168, 85, 247, 0.3); border: 1px solid #a855f7; }
+        
+        /* Ocultar secciones dinámicamente */
+        .view-section { display: none; }
+        .view-active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
-<body class="p-4 pb-10" onload="iniciarApp()">
+<body class="pb-24" onload="iniciarApp()">
 
-    <div id="overlayMenu" onclick="cerrarMenuLateral()" class="fixed inset-0 bg-black/80 z-40 hidden transition-opacity duration-300 backdrop-blur-sm"></div>
-
-    <div id="menuLateral" class="fixed inset-y-0 left-0 w-4/5 max-w-sm bg-gray-900 border-r border-yellow-500/50 z-50 transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+    <div id="overlayMenu" onclick="cerrarMenuLateral()" class="fixed inset-0 bg-black/80 z-[60] hidden transition-opacity duration-300 backdrop-blur-sm"></div>
+    <div id="menuLateral" class="fixed inset-y-0 left-0 w-4/5 max-w-sm bg-gray-900 border-r border-yellow-500/50 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
         <div class="p-5 border-b border-gray-800 flex justify-between items-center bg-black/50">
             <h2 class="text-yellow-500 font-black uppercase tracking-widest text-sm"><i class="fas fa-globe-americas mr-2"></i> Explorador Global</h2>
             <button onclick="cerrarMenuLateral()" class="text-gray-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
         </div>
-        
         <div class="p-3 border-b border-gray-800">
             <button onclick="ejecutarTopFutbol()" class="w-full text-left bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/30 p-3 rounded-lg text-yellow-500 font-bold text-xs flex justify-between items-center shadow-lg active:scale-95 transition">
                 <span><i class="fas fa-star mr-2"></i> Fútbol Elite (Top 5 Ligas)</span>
                 <i class="fas fa-bolt text-[10px]"></i>
             </button>
         </div>
-
         <div id="contenidoMenuLateral" class="flex-grow overflow-y-auto p-2 space-y-1 pb-10">
             <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando Países...</div>
         </div>
     </div>
 
-    <header class="flex justify-between items-center mb-6 pt-4">
-        <div>
-            <h1 class="text-2xl font-black text-yellow-500 tracking-tighter italic">ORACLE<span class="text-white">BET</span></h1>
-            <p class="text-[10px] text-gray-400 uppercase tracking-widest">Inteligencia Deportiva</p>
-        </div>
-        <button id="btnTopLogin" onclick="abrirModalLogin()" class="bg-gradient-to-r from-red-600 to-red-500 text-white text-[10px] px-4 py-2 rounded-full font-black uppercase tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.4)] flex items-center gap-2 pulse-green border border-red-400/50 transition-all">
-            <i class="fas fa-lock"></i> INGRESAR
-        </button>
-    </header>
-
-    <div id="filtrosGlobales" class="mb-6 flex flex-col gap-3">
-        <div class="flex gap-2 h-10">
-            <div class="relative flex-grow h-full">
-                <i class="fas fa-search absolute left-3 top-3 text-gray-500 text-sm"></i>
-                <input type="text" id="buscadorEquipos" onkeyup="aplicarFiltrosLocales()" placeholder="Buscar equipo..." class="w-full h-full bg-gray-900 border border-gray-700 rounded-lg py-2 pl-10 pr-3 text-white text-xs font-bold outline-none focus:border-yellow-500 transition-colors">
-            </div>
-            <div class="relative w-[130px] h-full">
-                <input type="date" id="filtroFecha" onchange="aplicarFiltrosLocales()" class="w-full h-full bg-gray-900 border border-gray-700 rounded-lg px-2 text-white text-[11px] font-bold outline-none focus:border-yellow-500 cursor-pointer shadow-inner transition-colors">
-            </div>
-        </div>
+    <div class="p-4">
         
-        <button onclick="abrirMenuLateral()" class="w-full bg-gray-800 border border-yellow-500/50 rounded-lg py-3 text-yellow-500 hover:bg-gray-700 transition flex justify-center items-center gap-2 text-xs font-bold shadow-[0_0_15px_rgba(212,175,55,0.15)] active:scale-95">
-            <i class="fas fa-bars"></i> EXPLORAR PAÍSES Y COMPETICIONES
-        </button>
-
-        <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/5 px-3 py-2 rounded flex justify-between items-center border border-white/5">
-            <div class="flex items-center gap-2 truncate">
-                <i class="fas fa-map-marker-alt text-yellow-500"></i> <span id="nombreLigaActiva" class="text-yellow-500 truncate">Cargando Competición...</span>
+        <header class="flex justify-between items-center mb-6 pt-2">
+            <div>
+                <h1 class="text-2xl font-black text-yellow-500 tracking-tighter italic">ORACLE<span class="text-white">BET</span></h1>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest">Inteligencia Deportiva</p>
             </div>
-            <span id="contadorPartidosActivos" class="bg-gray-800 text-gray-300 px-2 py-0.5 rounded text-[9px] whitespace-nowrap">0 Eventos</span>
-        </div>
-    </div>
+            <button id="btnTopLogin" onclick="abrirModalLogin()" class="bg-gradient-to-r from-red-600 to-red-500 text-white text-[10px] px-4 py-2 rounded-full font-black uppercase tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.4)] flex items-center gap-2 pulse-green border border-red-400/50 transition-all">
+                <i class="fas fa-lock"></i> INGRESAR
+            </button>
+        </header>
 
-    <section id="freeSection" class="space-y-4">
-        <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2">Pronósticos Disponibles</h2>
-        <div id="containerPartidos" class="space-y-4">
-            <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Sincronizando brokers...</div>
+        <div id="vista_picks" class="view-section view-active">
+            
+            <div id="wrapperFree">
+                <div id="filtrosGlobales" class="mb-6 flex flex-col gap-3">
+                    <div class="flex gap-2 h-10">
+                        <div class="relative flex-grow h-full">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-500 text-sm"></i>
+                            <input type="text" id="buscadorEquipos" onkeyup="aplicarFiltrosLocales()" placeholder="Buscar equipo..." class="w-full h-full bg-gray-900 border border-gray-700 rounded-lg py-2 pl-10 pr-3 text-white text-xs font-bold outline-none focus:border-yellow-500 transition-colors">
+                        </div>
+                        <div class="relative w-[130px] h-full">
+                            <input type="date" id="filtroFecha" onchange="aplicarFiltrosLocales()" class="w-full h-full bg-gray-900 border border-gray-700 rounded-lg px-2 text-white text-[11px] font-bold outline-none focus:border-yellow-500 cursor-pointer shadow-inner">
+                        </div>
+                    </div>
+                    <button onclick="abrirMenuLateral()" class="w-full bg-gray-800 border border-yellow-500/50 rounded-lg py-3 text-yellow-500 hover:bg-gray-700 transition flex justify-center items-center gap-2 text-xs font-bold shadow-[0_0_15px_rgba(212,175,55,0.15)] active:scale-95">
+                        <i class="fas fa-bars"></i> EXPLORAR PAÍSES Y COMPETICIONES
+                    </button>
+                    <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/5 px-3 py-2 rounded flex justify-between items-center border border-white/5">
+                        <div class="flex items-center gap-2 truncate">
+                            <i class="fas fa-map-marker-alt text-yellow-500"></i> <span id="nombreLigaActiva" class="text-yellow-500 truncate">Cargando Competición...</span>
+                        </div>
+                        <span id="contadorPartidosActivos" class="bg-gray-800 text-gray-300 px-2 py-0.5 rounded text-[9px] whitespace-nowrap">0 Eventos</span>
+                    </div>
+                </div>
+
+                <section class="space-y-4">
+                    <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2">Pronósticos Disponibles</h2>
+                    <div id="containerPartidos" class="space-y-4">
+                        <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Sincronizando brokers...</div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="wrapperVIP" style="display:none;">
+                <button id="btnAutoPremium" onclick="abrirModalRadarPremium()" style="display:none;" class="w-full mb-6 p-4 bg-gradient-to-r from-purple-900 to-purple-700 neon-premium rounded-xl font-black text-white shadow-[0_10px_30px_rgba(168,85,247,0.4)] flex flex-col items-center transition-all active:scale-95 group">
+                    <span class="flex items-center gap-2 text-sm tracking-widest"><i class="fas fa-rocket text-yellow-400 group-hover:animate-bounce"></i> RADAR CUOTA 4.0 SEGURO</span>
+                    <span class="text-[9px] text-purple-300 mt-1 uppercase tracking-widest">Algoritmo 90%+ Probabilidad Verdadera</span>
+                </button>
+
+                <div class="flex items-center justify-between text-yellow-500 mb-4 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20 shadow-inner">
+                    <div class="flex items-center gap-2"><i class="fas fa-hand-pointer text-lg drop-shadow-md"></i><h2 id="txtTituloVip" class="text-sm font-black uppercase tracking-widest">Creador Manual</h2></div>
+                    <span id="contadorSeleccion" class="text-xs font-bold bg-yellow-500 text-black px-2 py-1 rounded shadow-md">0 Seleccionados</span>
+                </div>
+                <p id="txtInstruccionVip" class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center font-bold">Navega por las ligas. Tus selecciones se guardarán.</p>
+                <div id="containerPartidosVIP" class="space-y-3 mb-6 max-h-[50vh] overflow-y-auto pr-1"></div>
+                <button id="btnGenerarTicket" onclick="procesarTicketVIP()" class="w-full p-4 btn-gold rounded-xl font-black shadow-[0_10px_20px_rgba(212,175,55,0.3)] text-sm flex flex-col items-center opacity-50 cursor-not-allowed transition-all" disabled>
+                    <span>GENERAR TICKET INTELIGENTE</span>
+                </button>
+                <div id="resultadoVIP" class="mt-6 space-y-4"></div>
+            </div>
+
         </div>
-    </section>
+
+        <div id="vista_historial" class="view-section">
+            <div class="card-glass p-6 text-center border-t-4 border-yellow-500 mb-6 bg-gradient-to-b from-yellow-500/10 to-transparent">
+                <h2 class="text-lg font-black text-white uppercase tracking-widest mb-1"><i class="fas fa-chart-line text-yellow-500 mr-2"></i> Rendimiento Personal</h2>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-4">Analítica de tus tickets generados</p>
+                
+                <div class="flex justify-around items-center bg-black/50 p-4 rounded-xl border border-white/5 shadow-inner">
+                    <div class="flex flex-col items-center">
+                        <span id="statGenerados" class="text-2xl font-black text-white">0</span>
+                        <span class="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Tickets</span>
+                    </div>
+                    <div class="h-10 w-[1px] bg-gray-700"></div>
+                    <div class="flex flex-col items-center">
+                        <span id="statWinRate" class="text-3xl font-black text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">0%</span>
+                        <span class="text-[8px] text-green-500/80 uppercase font-bold tracking-widest">Acierto Real</span>
+                    </div>
+                    <div class="h-10 w-[1px] bg-gray-700"></div>
+                    <div class="flex flex-col items-center">
+                        <span id="statPerdidos" class="text-xl font-black text-red-400">0</span>
+                        <span class="text-[8px] text-red-500/80 uppercase font-bold tracking-widest">Fallos</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xs font-bold text-gray-300 uppercase tracking-widest border-l-2 border-yellow-500 pl-2">Tus Tickets Guardados</h3>
+                <button onclick="limpiarHistorial()" class="text-[9px] text-red-400 bg-red-400/10 px-2 py-1 rounded hover:bg-red-400/20 transition"><i class="fas fa-trash"></i> Limpiar</button>
+            </div>
+            
+            <div id="contenedorHistorial" class="space-y-4 pb-10">
+                </div>
+        </div>
+
+        <div id="vista_escalera" class="view-section">
+            <div class="card-glass p-6 text-center border-t-4 border-blue-500 mb-6 bg-gradient-to-b from-blue-500/10 to-transparent">
+                <i class="fas fa-users text-4xl text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)] mb-3"></i>
+                <h2 class="text-xl font-black text-white uppercase tracking-widest mb-1">Club Escalera</h2>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest leading-relaxed">Grupo Privado Exclusivo para gestión de banca agresiva (Retos de Cuota 10+).</p>
+            </div>
+
+            <div id="escaleraBloqueada" class="text-center bg-black/60 p-8 rounded-xl border border-white/5 shadow-inner">
+                <i class="fas fa-lock text-gray-600 text-5xl mb-4"></i>
+                <h3 class="text-sm font-bold text-white uppercase tracking-widest mb-2">Acceso Restringido</h3>
+                <p id="msgEscalera" class="text-[10px] text-gray-400 mb-6">Debes ingresar con un código activo y solicitar invitación al Administrador.</p>
+                <button id="btnSolicitarEscalera" onclick="solicitarAccesoEscalera()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition active:scale-95" disabled>
+                    SOLICITAR INVITACIÓN
+                </button>
+            </div>
+
+            <div id="escaleraAprobada" class="hidden">
+                <div class="bg-gradient-to-r from-blue-900/50 to-black border border-blue-500/30 p-4 rounded-xl shadow-lg mb-4">
+                    <div class="flex items-center gap-2 mb-3 border-b border-blue-500/20 pb-2">
+                        <div class="bg-blue-500 text-black w-8 h-8 rounded-full flex items-center justify-center font-black"><i class="fas fa-user-shield"></i></div>
+                        <div class="flex flex-col">
+                            <span class="text-xs font-bold text-blue-400 uppercase">Félix (Admin)</span>
+                            <span class="text-[8px] text-gray-500">Administrador Global</span>
+                        </div>
+                    </div>
+                    <div class="text-sm text-white font-bold whitespace-pre-wrap leading-relaxed" id="textoRetoAdmin">
+                        Cargando reto del día...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section id="adminSection" style="display: none;" class="mt-4 animate-fade-in pb-10">
+            <div class="card-glass p-6 border-2 border-red-500/50 bg-red-500/5 text-center shadow-[0_0_20px_rgba(239,68,68,0.2)] mb-4">
+                <h3 class="text-xl font-black mb-4 text-white"><i class="fas fa-server text-red-500 mr-2"></i> Panel de Códigos</h3>
+                <div class="flex flex-col gap-2 mb-6">
+                    <input type="text" id="newCodeInput" placeholder="NUEVO CÓDIGO" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-center font-bold uppercase outline-none focus:border-red-500">
+                    <div class="flex gap-2">
+                        <button onclick="crearCodigo(false)" id="btnCrearVip" class="flex-grow bg-blue-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase shadow-lg active:scale-95 transition">Crear VIP</button>
+                        <button onclick="crearCodigo(true)" id="btnCrearPrem" class="flex-grow bg-purple-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase shadow-lg active:scale-95 transition">Crear PREMIUM</button>
+                    </div>
+                </div>
+                <div class="text-left mb-2 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 pb-1">Códigos Activos</div>
+                <div id="codesList" class="space-y-2 max-h-40 overflow-y-auto mb-2 pr-1"></div>
+            </div>
+
+            <div class="card-glass p-6 border-2 border-blue-500/50 bg-blue-500/5 text-center shadow-lg">
+                <h3 class="text-lg font-black mb-4 text-blue-400"><i class="fas fa-users-cog mr-2"></i> Gestión Escalera</h3>
+                
+                <textarea id="inputAdminReto" rows="3" placeholder="Escribe el Reto Escalera del Día aquí..." class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-500 mb-2"></textarea>
+                <button onclick="publicarRetoEscalera()" id="btnPublicarReto" class="w-full bg-blue-600 text-white py-2.5 rounded-lg text-[10px] font-black uppercase shadow-lg mb-6 active:scale-95 transition">Actualizar Reto para el Club</button>
+
+                <div class="text-left mb-2 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-700 pb-1">Solicitudes Pendientes</div>
+                <div id="solicitudesList" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+            </div>
+
+            <button onclick="cerrarAdmin()" class="w-full mt-4 py-4 bg-gray-800 rounded-xl font-bold text-sm text-gray-400 hover:text-white transition shadow-lg">Cerrar Panel Master</button>
+        </section>
+
+        <footer id="footerApp" class="mt-8 pt-8 pb-4 border-t border-white/5 text-center px-4">
+            <h1 class="text-lg font-black text-yellow-500 italic opacity-50 mb-2 tracking-tighter">ORACLE<span class="text-white">BET</span></h1>
+            <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-4">&copy; 2026 Todos los derechos reservados.</p>
+            <div class="bg-gray-900/50 rounded-lg p-3 inline-block border border-white/5 shadow-inner">
+                <p class="text-[8px] text-gray-500 uppercase tracking-widest mb-1">Desarrollado y Arquitecturado por</p>
+                <p class="text-xs font-black text-yellow-500">Félix Ruiz Ortega</p>
+            </div>
+        </footer>
+
+    </div> <nav id="bottomNav" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t border-gray-800 flex justify-around items-center pb-safe pt-2 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+        <button onclick="cambiarVista('picks')" id="nav_picks" class="flex flex-col items-center p-2 text-yellow-500 transition-colors w-1/3">
+            <i class="fas fa-crosshairs text-xl mb-1"></i>
+            <span class="text-[9px] font-bold uppercase tracking-widest">Picks</span>
+        </button>
+        <button onclick="cambiarVista('historial')" id="nav_historial" class="flex flex-col items-center p-2 text-gray-500 hover:text-gray-300 transition-colors w-1/3">
+            <i class="fas fa-chart-line text-xl mb-1"></i>
+            <span class="text-[9px] font-bold uppercase tracking-widest">Historial</span>
+        </button>
+        <button onclick="cambiarVista('escalera')" id="nav_escalera" class="flex flex-col items-center p-2 text-gray-500 hover:text-gray-300 transition-colors w-1/3">
+            <i class="fas fa-users text-xl mb-1"></i>
+            <span class="text-[9px] font-bold uppercase tracking-widest">Escalera</span>
+        </button>
+    </nav>
 
     <div id="modalLogin" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-[100] backdrop-blur-md">
         <div class="card-glass p-8 w-full max-w-sm text-center border-yellow-500/30 relative overflow-hidden shadow-[0_0_40px_rgba(212,175,55,0.15)]">
             <button onclick="cerrarModalLogin()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
-            
             <i class="fas fa-crown text-yellow-500 text-5xl mb-3 drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]"></i>
             <h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Acceso <span class="text-yellow-500">Elite</span></h3>
-            <p class="text-[10px] text-gray-400 mb-6 uppercase tracking-widest">Ingresa tu credencial o solicítala.</p>
-            
+            <p class="text-[10px] text-gray-400 mb-6 uppercase tracking-widest">Ingresa tu credencial.</p>
             <div class="flex flex-col gap-4">
                 <input type="text" id="vipCode" placeholder="CÓDIGO DE ACCESO" onkeyup="if(event.key === 'Enter') validarCodigo()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 text-center text-white font-black tracking-widest focus:border-yellow-500 outline-none uppercase transition-colors shadow-inner">
-                
                 <button onclick="validarCodigo()" id="btnValidarCodigo" class="bg-yellow-500 text-black font-black py-4 rounded-lg uppercase text-sm shadow-[0_5px_15px_rgba(212,175,55,0.3)] transition active:scale-95 flex justify-center items-center gap-2">
                     <i class="fas fa-sign-in-alt text-lg"></i> VERIFICAR ACCESO
                 </button>
-                
-                <div class="flex items-center gap-2 my-1">
-                    <div class="h-[1px] bg-gray-800 w-full"></div><span class="text-[9px] text-gray-600 font-bold uppercase tracking-widest">¿No tienes código?</span><div class="h-[1px] bg-gray-800 w-full"></div>
-                </div>
-
-                <a href="https://wa.me/573005191112?text=Hola%20Félix,%20quiero%20adquirir%20mi%20código%20de%20acceso%20para%20OracleBet" target="_blank" class="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white p-3.5 rounded-lg text-[11px] font-black border border-green-500/50 hover:brightness-110 shadow-[0_10px_20px_rgba(34,197,94,0.2)] transition active:scale-95 uppercase tracking-widest">
+                <div class="flex items-center gap-2 my-1"><div class="h-[1px] bg-gray-800 w-full"></div><span class="text-[9px] text-gray-600 font-bold uppercase">¿No tienes código?</span><div class="h-[1px] bg-gray-800 w-full"></div></div>
+                <a href="https://wa.me/573005191112" target="_blank" class="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white p-3.5 rounded-lg text-[11px] font-black hover:brightness-110 shadow-lg transition active:scale-95 uppercase tracking-widest">
                     <i class="fab fa-whatsapp text-xl"></i> ADQUIRIR MEMBRESÍA
                 </a>
             </div>
         </div>
     </div>
 
-    <section id="adminSection" style="display: none;" class="mt-8 animate-fade-in">
-        <div class="card-glass p-6 border-2 border-red-500/50 bg-red-500/5 text-center shadow-[0_0_20px_rgba(239,68,68,0.2)]">
-            <h3 class="text-xl font-black mb-4 text-white"><i class="fas fa-server text-red-500 mr-2"></i> Base de Datos</h3>
-            <p class="text-[10px] text-gray-400 mb-4">Administración en la Nube y Control Anti-Piratería.</p>
-            
-            <div class="flex flex-col gap-2 mb-6">
-                <input type="text" id="newCodeInput" placeholder="NUEVO CÓDIGO" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-center font-bold uppercase outline-none focus:border-red-500">
-                <div class="flex gap-2">
-                    <button onclick="crearCodigo(false)" id="btnCrearVip" class="flex-grow bg-blue-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase shadow-lg active:scale-95 transition">Crear VIP (Máx 5)</button>
-                    <button onclick="crearCodigo(true)" id="btnCrearPrem" class="flex-grow bg-purple-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase shadow-lg active:scale-95 transition">Crear PREMIUM (∞)</button>
-                </div>
-            </div>
-            
-            <div class="text-left mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-700 pb-1 flex justify-between">
-                <span>Códigos Nube</span> <span class="text-green-500"><i class="fas fa-wifi"></i> Online</span>
-            </div>
-            <div id="codesList" class="space-y-2 max-h-48 overflow-y-auto mb-4 pr-1"></div>
-
-            <button onclick="cerrarAdmin()" class="w-full py-3 bg-gray-800 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition active:scale-95">Cerrar Panel</button>
-        </div>
-    </section>
-
-    <section id="vipSection" class="vip-section mt-4 animate-fade-in">
-        <div class="flex items-center justify-between text-yellow-500 mb-4 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20 shadow-inner">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-crown text-lg drop-shadow-md"></i>
-                <h2 id="txtTituloVip" class="text-sm font-black uppercase tracking-widest">Creador VIP</h2>
-            </div>
-            <span id="contadorSeleccion" class="text-xs font-bold bg-yellow-500 text-black px-2 py-1 rounded shadow-md">0 Seleccionados</span>
-        </div>
-        
-        <p id="txtInstruccionVip" class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center font-bold">Navega por las ligas. Tus selecciones se guardarán.</p>
-        
-        <div id="containerPartidosVIP" class="space-y-3 mb-6 max-h-[50vh] overflow-y-auto pr-1"></div>
-        
-        <button id="btnGenerarTicket" onclick="procesarTicketVIP()" class="w-full p-4 btn-gold rounded-xl font-black shadow-[0_10px_20px_rgba(212,175,55,0.3)] text-sm flex flex-col items-center opacity-50 cursor-not-allowed transition-all" disabled>
-            <span>GENERAR TICKET INTELIGENTE</span>
-        </button>
-        
-        <div id="resultadoVIP" class="mt-6 space-y-4"></div>
-    </section>
-
-    <footer class="mt-14 pt-8 pb-4 border-t border-white/5 text-center px-4">
-        <h1 class="text-lg font-black text-yellow-500 italic opacity-50 mb-2 tracking-tighter">ORACLE<span class="text-white">BET</span></h1>
-        <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-4">&copy; 2026 Todos los derechos reservados.</p>
-        
-        <div class="flex justify-center items-center gap-4 mb-6 opacity-40">
-            <div class="flex flex-col items-center">
-                <i class="fas fa-shield-alt text-lg mb-1"></i><span class="text-[7px] uppercase">Seguridad SSL</span>
-            </div>
-            <div class="flex flex-col items-center border-l border-r border-gray-700 px-4">
-                <span class="border-2 border-gray-400 font-black text-[9px] px-1 rounded mb-1">18+</span><span class="text-[7px] uppercase">Responsable</span>
-            </div>
-            <div class="flex flex-col items-center">
-                <i class="fas fa-user-secret text-lg mb-1"></i><span class="text-[7px] uppercase">Privacidad Nube</span>
+    <div id="modalRadarPremium" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-[100] backdrop-blur-md">
+        <div class="bg-gray-900 p-8 w-full max-w-sm text-center border-2 border-purple-500/50 rounded-2xl relative overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.3)]">
+            <button onclick="cerrarModalRadarPremium()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
+            <i class="fas fa-radar animate-spin text-purple-500 text-5xl mb-3"></i>
+            <h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Escáner <span class="text-purple-500">Premium</span></h3>
+            <p class="text-[10px] text-gray-400 mb-6 uppercase tracking-widest">Generará una cuota 4.0 cruzando eventos con >90% de probabilidad verdadera.</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="generarParlaySeguro('futbol')" class="bg-black border border-white/10 hover:border-purple-500 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition flex justify-between items-center px-4"><i class="fas fa-futbol text-gray-500"></i> Solo Fútbol <i class="fas fa-chevron-right text-[10px] text-purple-500"></i></button>
+                <button onclick="generarParlaySeguro('baloncesto')" class="bg-black border border-white/10 hover:border-purple-500 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition flex justify-between items-center px-4"><i class="fas fa-basketball-ball text-gray-500"></i> Solo Baloncesto <i class="fas fa-chevron-right text-[10px] text-purple-500"></i></button>
+                <button onclick="generarParlaySeguro('tenis')" class="bg-black border border-white/10 hover:border-purple-500 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition flex justify-between items-center px-4"><i class="fas fa-table-tennis text-gray-500"></i> Solo Tenis <i class="fas fa-chevron-right text-[10px] text-purple-500"></i></button>
+                <div class="h-[1px] bg-gray-800 w-full my-2"></div>
+                <button onclick="generarParlaySeguro('mixto')" class="bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-lg text-sm uppercase tracking-widest shadow-lg transition active:scale-95 flex justify-center items-center gap-2"><i class="fas fa-bolt text-yellow-400"></i> Inteligencia Mixta Mundial</button>
             </div>
         </div>
-        
-        <div class="bg-gray-900/50 rounded-lg p-3 inline-block border border-white/5 shadow-inner">
-            <p class="text-[8px] text-gray-500 uppercase tracking-widest mb-1">Desarrollado y Arquitecturado por</p>
-            <p class="text-xs font-black text-yellow-500">Félix Ruiz Ortega</p>
-        </div>
-    </footer>
+    </div>
 
-    <div id="modalAnalisis" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-6 z-50 backdrop-blur-md z-[100]">
+    <div id="modalAnalisis" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-6 z-[100] backdrop-blur-md">
         <div class="card-glass p-8 w-full max-w-sm text-center border-yellow-500/30 relative overflow-hidden shadow-[0_0_30px_rgba(212,175,55,0.1)]">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 animate-pulse"></div>
             <div id="contenidoModalAnalisis"></div>
         </div>
     </div>
@@ -192,7 +277,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // TUS CREDENCIALES EXACTAS FIREBASE
+        // CREDENCIALES
         const firebaseConfig = {
             apiKey: "AIzaSyAUB1hC-JSQcrJ68ayl9rEUhP4Qz9xz7Uk",
             authDomain: "oraclebet-db.firebaseapp.com",
@@ -201,32 +286,28 @@
             messagingSenderId: "407519995167",
             appId: "1:407519995167:web:4428c165b527ebb9c6fc2a"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // HUELLA DIGITAL ANTI-PIRATERÍA
+        // ANTI-PIRATERÍA (Device ID)
         function obtenerHuellaDispositivo() {
             let miHuella = localStorage.getItem('oraclebet_huella_secreta');
-            if (!miHuella) {
-                miHuella = 'disp_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-                localStorage.setItem('oraclebet_huella_secreta', miHuella);
-            }
+            if (!miHuella) { miHuella = 'disp_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36); localStorage.setItem('oraclebet_huella_secreta', miHuella); }
             return miHuella;
         }
         const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo();
 
-        // SISTEMA ROTATIVO DE API KEYS
-        const API_KEYS = [
-            'f9f7716fcf820abf2976ba5ca0fcd322', 
-            '6bce6b0eb3202dfd23f1246a67257fd5', 
-            '3de65f75eaa239d32fab9092aa0a0d17'
-        ];
+        // APIS ROTATIVAS
+        const API_KEYS = ['f9f7716fcf820abf2976ba5ca0fcd322', '6bce6b0eb3202dfd23f1246a67257fd5', '3de65f75eaa239d32fab9092aa0a0d17'];
         let currentApiIndex = 0;
         
+        // ESTADOS GLOBALES
         const MASTER_CODE = "FELIX_ADMIN_777";
         let modoVipActivo = false;
         let modoIlimitadoActivo = false;
+        let codigoActivoUsuario = ''; // Guardamos el código usado para el historial personal
+        let estadoEscalera = 'none'; // 'none', 'pending', 'approved'
+
         let partidosGlobales = [], partidosFiltrados = [], competicionesGlobales = []; 
         let seleccionesVIPGlobal = [], ticketDinamicoVIP = []; 
         let modoMercadoGlobal = 'mixto'; 
@@ -236,18 +317,36 @@
             while(intentos < API_KEYS.length) {
                 const url = endpointTemplate.replace('API_KEY_PLACEHOLDER', API_KEYS[currentApiIndex]);
                 const res = await fetch(url);
-                if(res.status === 429 || res.status === 401) {
-                    console.warn(`Límite en llave ${currentApiIndex + 1}. Rotando...`);
-                    currentApiIndex = (currentApiIndex + 1) % API_KEYS.length;
-                    intentos++;
-                } else if (!res.ok) throw new Error("Error API");
-                else return await res.json();
+                if(res.status === 429 || res.status === 401) { currentApiIndex = (currentApiIndex + 1) % API_KEYS.length; intentos++; } 
+                else if (!res.ok) throw new Error("Error API"); else return await res.json();
             }
-            throw new Error("Límites de todas las APIs agotados.");
+            throw new Error("Límites agotados.");
         }
 
         // ==========================================
-        // FUNCIONES GLOBALES (Expuestas al HTML)
+        // NAVEGACIÓN BOTTOM NAV
+        // ==========================================
+        window.cambiarVista = function(vista) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('view-active'));
+            document.getElementById('vista_' + vista).classList.add('view-active');
+            
+            // Estilos de botones
+            const botones = ['picks', 'historial', 'escalera'];
+            botones.forEach(b => {
+                const btn = document.getElementById('nav_' + b);
+                if(b === vista) {
+                    btn.classList.remove('text-gray-500'); btn.classList.add('text-yellow-500');
+                } else {
+                    btn.classList.add('text-gray-500'); btn.classList.remove('text-yellow-500');
+                }
+            });
+
+            if(vista === 'historial') renderizarHistorial();
+            if(vista === 'escalera') chequearEstadoEscaleraUI();
+        };
+
+        // ==========================================
+        // INICIALIZACIÓN Y FILTROS
         // ==========================================
         window.iniciarApp = async function() {
             document.getElementById('filtroFecha').value = ""; 
@@ -255,55 +354,40 @@
             ejecutarTopFutbol(); 
         };
 
-        window.abrirModalLogin = function() {
-            document.getElementById('modalLogin').classList.remove('hidden');
-        };
-        
-        window.cerrarModalLogin = function() {
-            document.getElementById('modalLogin').classList.add('hidden');
-        };
+        window.abrirModalLogin = function() { document.getElementById('modalLogin').classList.remove('hidden'); };
+        window.cerrarModalLogin = function() { document.getElementById('modalLogin').classList.add('hidden'); };
+        window.abrirModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.remove('hidden'); };
+        window.cerrarModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.add('hidden'); };
 
         async function obtenerLigasDisponibles() {
             try {
                 const data = await fetchConRotacion(`https://api.the-odds-api.com/v4/sports/?apiKey=API_KEY_PLACEHOLDER`);
                 competicionesGlobales = data.filter(l => l.active);
                 construirMenuLateral();
-            } catch (error) { console.error("Error ligas", error); }
+            } catch (e) { console.error(e); }
         }
 
         function extraerPais(liga) {
             if (liga.title.includes(' - ')) return liga.title.split(' - ')[1].trim();
             if (liga.group.includes('Basketball') && liga.title.includes('NBA')) return 'USA / NBA';
             if (liga.group.includes('Baseball') && liga.title.includes('MLB')) return 'USA / MLB';
-            if (liga.group.includes('American Football')) return 'USA / NFL';
             return 'Internacional';
         }
 
         function construirMenuLateral() {
             const contenedor = document.getElementById('contenidoMenuLateral');
             let agrupado = {};
-            competicionesGlobales.forEach(l => {
-                let p = extraerPais(l);
-                if(!agrupado[p]) agrupado[p] = [];
-                agrupado[p].push(l);
-            });
-
+            competicionesGlobales.forEach(l => { let p = extraerPais(l); if(!agrupado[p]) agrupado[p] = []; agrupado[p].push(l); });
             let html = '';
             Object.keys(agrupado).sort().forEach(pais => {
                 const idLimpio = pais.replace(/[^a-zA-Z0-9]/g, '');
-                html += `
-                <div class="border border-white/5 rounded-lg mb-1 overflow-hidden bg-black/30 shadow-sm">
-                    <button onclick="toggleAcordeon('${idLimpio}')" class="w-full text-left p-3 flex justify-between items-center text-white font-bold text-[10px] uppercase hover:bg-white/5 transition">
-                        <span><i class="fas fa-map-marker-alt text-yellow-500/70 mr-2"></i> ${pais}</span>
-                        <i id="icon_${idLimpio}" class="fas fa-chevron-down text-gray-500 transition-transform duration-200"></i>
+                html += `<div class="border border-white/5 rounded-lg mb-1 overflow-hidden bg-black/30">
+                    <button onclick="toggleAcordeon('${idLimpio}')" class="w-full text-left p-3 flex justify-between items-center text-white font-bold text-[10px] uppercase">
+                        <span><i class="fas fa-map-marker-alt text-yellow-500/70 mr-2"></i> ${pais}</span><i id="icon_${idLimpio}" class="fas fa-chevron-down text-gray-500 transition-transform"></i>
                     </button>
                     <div id="acc_${idLimpio}" class="hidden flex-col bg-black/60 px-2 py-1 border-t border-white/5">`;
-                
                 agrupado[pais].sort((a,b)=>a.title.localeCompare(b.title)).forEach(liga => {
-                    html += `
-                        <button onclick="ejecutarFiltroFinal('${liga.key}', '${liga.title}')" class="text-left text-[9px] text-gray-300 hover:text-yellow-500 p-2.5 rounded hover:bg-white/5 transition border-b border-white/5 last:border-0 flex justify-between items-center">
-                            <span>${liga.title}</span><i class="fas fa-play text-[8px] text-yellow-500/50"></i>
-                        </button>`;
+                    html += `<button onclick="ejecutarFiltroFinal('${liga.key}', '${liga.title}')" class="text-left text-[9px] text-gray-300 hover:text-yellow-500 p-2.5 rounded hover:bg-white/5 border-b border-white/5 last:border-0 flex justify-between"><span>${liga.title}</span><i class="fas fa-play text-[8px] text-yellow-500/50"></i></button>`;
                 });
                 html += `</div></div>`;
             });
@@ -311,15 +395,9 @@
         }
 
         window.toggleAcordeon = function(id) {
-            const acc = document.getElementById('acc_' + id);
-            const icon = document.getElementById('icon_' + id);
-            if(acc.classList.contains('hidden')) {
-                acc.classList.remove('hidden'); acc.classList.add('flex');
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                acc.classList.add('hidden'); acc.classList.remove('flex');
-                icon.style.transform = 'rotate(0deg)';
-            }
+            const acc = document.getElementById('acc_' + id); const icon = document.getElementById('icon_' + id);
+            acc.classList.toggle('hidden'); acc.classList.toggle('flex');
+            icon.style.transform = acc.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         };
 
         window.abrirMenuLateral = function() { document.getElementById('overlayMenu').classList.remove('hidden'); document.getElementById('menuLateral').classList.remove('-translate-x-full'); };
@@ -328,121 +406,76 @@
         window.aplicarFiltrosLocales = function() {
             const texto = document.getElementById('buscadorEquipos').value.toLowerCase();
             const fechaFiltro = document.getElementById('filtroFecha').value; 
-            
             partidosFiltrados = partidosGlobales.filter(p => {
                 const cumpleTexto = p.home_team.toLowerCase().includes(texto) || p.away_team.toLowerCase().includes(texto);
                 let cumpleFecha = true;
                 if(fechaFiltro) {
-                    const dateObj = new Date(p.commence_time);
-                    const localYear = dateObj.getFullYear();
-                    const localMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-                    const localDay = String(dateObj.getDate()).padStart(2, '0');
-                    cumpleFecha = (`${localYear}-${localMonth}-${localDay}` === fechaFiltro);
+                    const d = new Date(p.commence_time);
+                    cumpleFecha = (`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` === fechaFiltro);
                 }
                 return cumpleTexto && cumpleFecha;
             });
-            
             document.getElementById('contadorPartidosActivos').innerText = `${partidosFiltrados.length} Eventos`;
             if(modoVipActivo) renderizarPartidosVIP(); else renderizarPartidosFree();
         };
 
         window.ejecutarTopFutbol = async function() {
-            cerrarMenuLateral();
-            document.getElementById('nombreLigaActiva').innerText = 'Fútbol Elite (Top 5 Ligas)';
-            document.getElementById('buscadorEquipos').value = ''; 
-            document.getElementById('filtroFecha').value = ''; 
-            
-            const cFree = document.getElementById('containerPartidos');
-            const cVip = document.getElementById('containerPartidosVIP');
+            cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = 'Fútbol Elite (Top 5 Ligas)';
+            document.getElementById('buscadorEquipos').value = ''; document.getElementById('filtroFecha').value = ''; 
+            const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
             cFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Escaneando Europa...</div>`;
             if(modoVipActivo) cVip.innerHTML = cFree.innerHTML;
-
-            const ligasTop = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_uefa_champs_league', 'soccer_italy_serie_a'];
-            
             try {
-                const promesas = ligasTop.map(liga => fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals,spreads`).catch(() => []));
+                const ligasTop = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_uefa_champs_league', 'soccer_italy_serie_a'];
+                const promesas = ligasTop.map(liga => fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals,spreads`).catch(()=>[]));
                 const resultados = await Promise.all(promesas);
-                partidosGlobales = resultados.flat().filter(m => m.bookmakers && m.bookmakers.length > 0);
+                partidosGlobales = resultados.flat().filter(m => m.bookmakers?.length > 0);
                 partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time));
                 aplicarFiltrosLocales();
-            } catch (e) {
-                const errHtml = `<p class="text-center text-red-500 text-[10px] font-bold p-6 bg-red-500/5 rounded-lg border border-red-500/20">Error de conexión.</p>`;
-                cFree.innerHTML = errHtml; if(modoVipActivo) cVip.innerHTML = errHtml;
-            }
+            } catch (e) { cFree.innerHTML = `<p class="text-red-500 text-center">Error de red.</p>`; }
         };
 
         window.ejecutarFiltroFinal = async function(keyLiga, nombreMostrar) {
-            cerrarMenuLateral();
-            document.getElementById('nombreLigaActiva').innerText = nombreMostrar;
-            document.getElementById('buscadorEquipos').value = ''; 
-            document.getElementById('filtroFecha').value = ''; 
-            
-            const cFree = document.getElementById('containerPartidos');
-            const cVip = document.getElementById('containerPartidosVIP');
-            cFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Extrayendo Cuotas...</div>`;
+            cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = nombreMostrar;
+            document.getElementById('buscadorEquipos').value = ''; document.getElementById('filtroFecha').value = ''; 
+            const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
+            cFree.innerHTML = `<div class="text-center p-10 opacity-50"><i class="fas fa-spinner animate-spin text-yellow-500 text-xl"></i></div>`;
             if(modoVipActivo) cVip.innerHTML = cFree.innerHTML;
-
             try {
                 partidosGlobales = await fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${keyLiga}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals,spreads`);
-                partidosGlobales = partidosGlobales.filter(m => m.bookmakers && m.bookmakers.length > 0);
+                partidosGlobales = partidosGlobales.filter(m => m.bookmakers?.length > 0);
                 aplicarFiltrosLocales();
-            } catch (e) {
-                const errHtml = `<p class="text-center text-red-500 text-[10px] font-bold p-6 bg-red-500/5 rounded-lg border border-red-500/20">Límites agotados o red inestable.</p>`;
-                cFree.innerHTML = errHtml; if(modoVipActivo) cVip.innerHTML = errHtml;
-            }
+            } catch (e) { cFree.innerHTML = `<p class="text-red-500 text-center">Error.</p>`; }
         };
 
+        // RENDERIZADO
         function renderizarPartidosFree() {
-            const container = document.getElementById('containerPartidos');
-            container.innerHTML = '';
-            if(partidosFiltrados.length === 0) {
-                container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5 shadow-inner"><i class="fas fa-calendar-times text-gray-500 text-3xl mb-3"></i><p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">No hay eventos para estos filtros.</p></div>`;
-                return;
-            }
+            const container = document.getElementById('containerPartidos'); container.innerHTML = '';
+            if(partidosFiltrados.length === 0) { container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5"><p class="text-gray-400 text-[10px] font-bold uppercase">No hay eventos.</p></div>`; return; }
             partidosFiltrados.slice(0, 15).forEach(partido => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const dateDay = new Date(partido.commence_time).toLocaleDateString([], {month: 'short', day: 'numeric'});
-                
                 container.innerHTML += `
                     <div class="card-glass p-5 animate-slide-up relative overflow-hidden mb-4 shadow-lg border border-white/5">
-                        <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md">OPORTUNIDAD DETECTADA</div>
-                        <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-gray-500 border-b border-white/5 pb-2 mt-2">
-                            <span class="uppercase tracking-widest"><i class="fas fa-trophy mr-1 text-yellow-500/50"></i> ${partido.sport_title}</span>
-                            <span class="bg-gray-800 px-2 py-0.5 rounded text-gray-300"><i class="far fa-clock mr-1"></i> ${dateDay} ${date}</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-5 px-1">
-                            <div class="text-center w-2/5"><p class="font-bold text-xs text-white drop-shadow">${partido.home_team}</p></div>
-                            <div class="text-yellow-500 font-black italic text-sm bg-black/50 px-3 py-1 rounded-full border border-yellow-500/20 shadow-inner">VS</div>
-                            <div class="text-center w-2/5"><p class="font-bold text-xs text-white drop-shadow">${partido.away_team}</p></div>
-                        </div>
-                        <button onclick="verProbabilidadFree('${partido.home_team}')" class="w-full py-3 bg-gradient-to-r from-gray-800 to-gray-900 border border-yellow-500/30 hover:border-yellow-500 rounded-lg text-[10px] font-black text-yellow-500 transition shadow-[0_4px_10px_rgba(0,0,0,0.5)] active:scale-95 flex justify-center items-center gap-2 tracking-widest">
-                            <i class="fas fa-lock"></i> VER PREDICCIÓN ALGORÍTMICA
-                        </button>
+                        <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md">OPORTUNIDAD</div>
+                        <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-gray-500 border-b border-white/5 pb-2 mt-2"><span class="uppercase">${partido.sport_title}</span><span class="bg-gray-800 px-2 py-0.5 rounded">${date}</span></div>
+                        <div class="flex justify-between items-center mb-5 px-1"><div class="w-2/5 text-center"><p class="font-bold text-xs text-white">${partido.home_team}</p></div><div class="text-yellow-500 font-black italic text-sm">VS</div><div class="w-2/5 text-center"><p class="font-bold text-xs text-white">${partido.away_team}</p></div></div>
+                        <button onclick="verProbabilidadFree('${partido.home_team}')" class="w-full py-3 bg-gray-800 rounded-lg text-[10px] font-black text-yellow-500 shadow-lg flex justify-center items-center gap-2 tracking-widest"><i class="fas fa-lock"></i> VER PREDICCIÓN</button>
                     </div>`;
             });
         }
 
         function renderizarPartidosVIP() {
-            const container = document.getElementById('containerPartidosVIP');
-            container.innerHTML = '';
-            if(partidosFiltrados.length === 0) {
-                container.innerHTML = `<div class="text-center bg-black/30 p-6 rounded-xl border border-white/5"><i class="fas fa-search text-gray-500 text-2xl mb-2"></i><p class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Sin resultados</p></div>`;
-                return;
-            }
+            const container = document.getElementById('containerPartidosVIP'); container.innerHTML = '';
+            if(partidosFiltrados.length === 0) { container.innerHTML = `<p class="text-center opacity-50 text-[10px] uppercase pt-10">Sin resultados</p>`; return; }
             partidosFiltrados.forEach((partido) => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const dateDay = new Date(partido.commence_time).toLocaleDateString([], {month: 'short', day: 'numeric'});
                 const estaSeleccionado = seleccionesVIPGlobal.some(s => s.id === partido.id);
-                
                 container.innerHTML += `
                     <div class="bg-black/40 border ${estaSeleccionado ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-white/5'} p-3 rounded-xl flex items-center justify-between mb-2 hover:border-yellow-500/30 transition shadow-sm fade-in-right">
                         <div class="flex items-center gap-3 w-full">
-                            <input type="checkbox" id="check_${partido.id}" value="${partido.id}" onchange="toggleSeleccionVIP('${partido.id}')" class="checkbox-vip w-5 h-5 ml-1" ${estaSeleccionado ? 'checked' : ''}>
+                            <input type="checkbox" id="check_${partido.id}" onchange="toggleSeleccionVIP('${partido.id}')" class="checkbox-vip w-5 h-5 ml-1" ${estaSeleccionado ? 'checked' : ''}>
                             <label for="check_${partido.id}" class="flex flex-col cursor-pointer w-full pl-2">
-                                <div class="flex justify-between items-center mb-1">
-                                    <span class="text-[8px] text-yellow-500 font-bold uppercase tracking-widest">${partido.sport_title}</span>
-                                    <span class="text-[8px] text-gray-500 font-bold">${dateDay} ${date}</span>
-                                </div>
+                                <div class="flex justify-between items-center mb-1"><span class="text-[8px] text-yellow-500 font-bold uppercase tracking-widest">${partido.sport_title}</span><span class="text-[8px] text-gray-500 font-bold">${date}</span></div>
                                 <span class="text-xs font-bold text-white">${partido.home_team} <span class="text-gray-500 font-normal text-[10px] mx-1 italic">vs</span> ${partido.away_team}</span>
                             </label>
                         </div>
@@ -451,38 +484,24 @@
             actualizarContadorVIP(); 
         }
 
-        window.toggleSeleccionVIP = function(partidoId) {
-            const cb = document.getElementById('check_' + partidoId);
+        window.toggleSeleccionVIP = function(id) {
+            const cb = document.getElementById('check_' + id);
             if(cb.checked) {
-                if(!modoIlimitadoActivo && seleccionesVIPGlobal.length >= 5) {
-                    cb.checked = false;
-                    alert("Límite VIP alcanzado (5 partidos). Pide el código PREMIUM para liberar restricciones.");
-                    return;
-                }
-                const p = partidosGlobales.find(x => x.id === partidoId);
-                if(p && !seleccionesVIPGlobal.some(s=>s.id === partidoId)) seleccionesVIPGlobal.push(p);
-            } else {
-                seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== partidoId);
-            }
+                if(!modoIlimitadoActivo && seleccionesVIPGlobal.length >= 5) { cb.checked = false; alert("Límite VIP (Máx 5). Usa código PREMIUM para ilimitado."); return; }
+                const p = partidosGlobales.find(x => x.id === id); if(p && !seleccionesVIPGlobal.some(s=>s.id===id)) seleccionesVIPGlobal.push(p);
+            } else { seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== id); }
             
             const card = cb.closest('.bg-black\\/40');
-            if(cb.checked) {
-                card.classList.add('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.remove('border-white/5');
-            } else {
-                card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5');
-            }
+            if(cb.checked) { card.classList.add('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.remove('border-white/5'); } 
+            else { card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5'); }
             actualizarContadorVIP();
         };
 
         function actualizarContadorVIP() {
-            const btn = document.getElementById('btnGenerarTicket');
-            const contador = document.getElementById('contadorSeleccion');
+            const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion');
             const cantidad = seleccionesVIPGlobal.length;
-            
             contador.innerText = `${cantidad} Seleccionados`;
-            if(!modoIlimitadoActivo) {
-                document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); });
-            }
+            if(!modoIlimitadoActivo) document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); });
 
             if(cantidad >= 2 && (modoIlimitadoActivo || cantidad <= 5)) {
                 btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -494,301 +513,357 @@
         }
 
         // ==========================================
-        // MOTOR ALGORÍTMICO DE TICKETS (CON INTERRUPTOR)
+        // ALGORITMO Y TICKETS (CON GUARDADO A HISTORIAL)
         // ==========================================
         function obtenerOpcionesRentables(partido) {
             let opciones = [];
-            partido.bookmakers.forEach(broker => {
-                broker.markets.forEach(mercado => {
-                    mercado.outcomes.forEach(resultado => {
-                        if(resultado.price >= 1.15 && resultado.price <= 4.50) {
-                            let prob = Math.floor((1 / resultado.price) * 100);
-                            opciones.push({
-                                broker: broker.title, mercadoKey: mercado.key, nombre: resultado.name, point: resultado.point, cuota: resultado.price,
-                                probabilidad: prob + Math.floor(Math.random() * 6) + 1 
-                            });
-                        }
-                    });
-                });
-            });
+            partido.bookmakers.forEach(b => b.markets.forEach(m => m.outcomes.forEach(o => {
+                if(o.price >= 1.15 && o.price <= 4.50) {
+                    opciones.push({ broker: b.title, mercadoKey: m.key, nombre: o.name, point: o.point, cuota: o.price, probabilidad: Math.floor((1/o.price)*100) + Math.floor(Math.random()*6)+1 });
+                }
+            })));
             opciones.sort((a,b) => b.probabilidad - a.probabilidad);
-            let unicas = []; let combinacionesVistas = new Set();
-            opciones.forEach(op => {
-                let idUnico = `${op.mercadoKey}-${op.nombre}-${op.point || ''}`;
-                if(!combinacionesVistas.has(idUnico)) { combinacionesVistas.add(idUnico); unicas.push(op); }
-            });
+            let unicas = []; let vistos = new Set();
+            opciones.forEach(op => { let k = `${op.mercadoKey}-${op.nombre}-${op.point||''}`; if(!vistos.has(k)){ vistos.add(k); unicas.push(op); }});
             return unicas;
         }
 
         window.procesarTicketVIP = function() {
             if(seleccionesVIPGlobal.length < 2) return;
             const resDiv = document.getElementById('resultadoVIP');
-            resDiv.innerHTML = `
-                <div class="p-10 text-center bg-black/40 rounded-xl border border-white/5 shadow-inner">
-                    <i class="fas fa-satellite-dish animate-pulse text-yellow-500 mb-4 text-4xl"></i>
-                    <p class="text-[11px] uppercase tracking-widest text-yellow-500 font-black mb-2">Construyendo Arbitraje...</p>
-                    <p class="text-[9px] text-gray-400 uppercase tracking-widest">Ocultando Origen de Datos (Nube)</p>
-                </div>`;
+            resDiv.innerHTML = `<div class="p-10 text-center bg-black/40 rounded-xl border border-white/5"><i class="fas fa-satellite-dish animate-pulse text-yellow-500 mb-4 text-4xl"></i><p class="text-[11px] uppercase text-yellow-500 font-black">Construyendo Arbitraje...</p></div>`;
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-
             setTimeout(() => {
                 ticketDinamicoVIP = []; modoMercadoGlobal = 'mixto';
-                seleccionesVIPGlobal.forEach(partido => {
-                    const opcionesDisponibles = obtenerOpcionesRentables(partido);
-                    if(opcionesDisponibles.length > 0) ticketDinamicoVIP.push({ partido: partido, opciones: opcionesDisponibles, indexSeleccionado: 0 });
-                });
-                dibujarTicketDinamico();
-            }, 2500);
+                seleccionesVIPGlobal.forEach(p => { const o = obtenerOpcionesRentables(p); if(o.length > 0) ticketDinamicoVIP.push({ partido: p, opciones: o, indexSeleccionado: 0 }); });
+                dibujarTicketDinamico(false);
+            }, 2000);
         };
 
         window.cambiarModoMercado = function(modo) {
             modoMercadoGlobal = modo;
             ticketDinamicoVIP.forEach(item => {
-                if(modo === 'h2h') {
-                    const idxH2h = item.opciones.findIndex(o => o.mercadoKey === 'h2h');
-                    if(idxH2h !== -1) item.indexSeleccionado = idxH2h;
-                } else { item.indexSeleccionado = 0; }
+                if(modo === 'h2h') { const idx = item.opciones.findIndex(o => o.mercadoKey === 'h2h'); if(idx !== -1) item.indexSeleccionado = idx; } 
+                else item.indexSeleccionado = 0;
             });
-            dibujarTicketDinamico();
+            dibujarTicketDinamico(false);
         };
 
-        function dibujarTicketDinamico() {
+        window.rotarPickIndividual = function(id) { let i = ticketDinamicoVIP.find(t => t.partido.id === id); if(i) { i.indexSeleccionado = (i.indexSeleccionado + 1) % i.opciones.length; dibujarTicketDinamico(false); } };
+        window.regenerarTicketCompleto = function() {
+            ticketDinamicoVIP.forEach(item => {
+                if(modoMercadoGlobal === 'h2h') { const idx = item.opciones.findIndex(o => o.mercadoKey === 'h2h'); if(idx !== -1) item.indexSeleccionado = idx; } 
+                else { let max = item.opciones.length > 6 ? 6 : item.opciones.length; item.indexSeleccionado = Math.floor(Math.random() * max); }
+            });
+            dibujarTicketDinamico(false);
+        };
+
+        function dibujarTicketDinamico(esRadarAuto) {
             const resDiv = document.getElementById('resultadoVIP');
             if(ticketDinamicoVIP.length === 0) return;
             let htmlPartidos = '', cuotaTotal = 1.0, probPromedio = 0;
 
-            ticketDinamicoVIP.forEach((item, index) => {
-                const partido = item.partido; const opcionElegida = item.opciones[item.indexSeleccionado];
-                cuotaTotal *= opcionElegida.cuota; probPromedio += opcionElegida.probabilidad;
-
-                let tipoApuestaTxt = "Ganador (Moneyline)"; let iconMarket = "fa-handshake";
-                if(opcionElegida.mercadoKey === 'totals') { tipoApuestaTxt = "Línea de Goles/Puntos (Totales)"; iconMarket = "fa-futbol"; }
-                if(opcionElegida.mercadoKey === 'spreads') { tipoApuestaTxt = "Handicap / Ventaja (Spreads)"; iconMarket = "fa-balance-scale"; }
-
-                let pickTexto = opcionElegida.nombre;
-                if(opcionElegida.mercadoKey === 'totals') pickTexto = `${opcionElegida.nombre} de ${opcionElegida.point}`;
-                if(opcionElegida.mercadoKey === 'spreads') pickTexto = `${opcionElegida.nombre} (${opcionElegida.point > 0 ? '+' : ''}${opcionElegida.point})`;
-
-                let bgEspecial = index % 2 === 0 ? 'bg-black/40' : 'bg-gray-900/50';
+            ticketDinamicoVIP.forEach((item, idx) => {
+                const p = item.partido; const o = item.opciones[item.indexSeleccionado];
+                cuotaTotal *= o.cuota; probPromedio += o.probabilidad;
+                let txt = "Ganador", ico = "fa-handshake";
+                if(o.mercadoKey === 'totals') { txt = "Totales"; ico = "fa-futbol"; } if(o.mercadoKey === 'spreads') { txt = "Handicap"; ico = "fa-balance-scale"; }
+                let pickTxt = o.nombre + (o.point ? ` (${o.point>0?'+':''}${o.point})` : '');
+                let bg = idx % 2 === 0 ? 'bg-black/40' : 'bg-gray-900/50';
 
                 htmlPartidos += `
-                    <div class="${bgEspecial} p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden fade-in-right shadow-lg">
-                        <div class="absolute top-0 right-0 bg-gradient-to-l from-green-600 to-green-500 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md">CONF: ${opcionElegida.probabilidad > 96 ? 96 : opcionElegida.probabilidad}%</div>
-                        <div class="flex items-center mb-2"><span class="text-[9px] text-gray-400 font-bold uppercase tracking-widest"><i class="fas ${iconMarket} text-gray-600 mr-1"></i> ${tipoApuestaTxt}</span></div>
-                        <div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-3 pr-10">${partido.home_team} <span class="text-gray-500 text-[10px] mx-1 font-normal italic">vs</span> ${partido.away_team}</div>
+                    <div class="${bg} p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden shadow-lg">
+                        <div class="absolute top-0 right-0 bg-green-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md">CONF: ${o.probabilidad > 96 ? 96 : o.probabilidad}%</div>
+                        <div class="text-[9px] text-gray-400 font-bold uppercase mb-2"><i class="fas ${ico} mr-1"></i> ${txt}</div>
+                        <div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-3">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div>
                         <div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-gray-700 shadow-inner">
-                            <div class="flex flex-col"><span class="text-[11px] text-yellow-500 font-black uppercase tracking-wide"><i class="fas fa-crosshairs mr-1"></i> PICK: ${pickTexto}</span><span class="text-[8px] text-green-500/90 mt-1.5 uppercase tracking-widest font-bold"><i class="fas fa-shield-alt mr-1"></i> Origen: Algoritmo Privado</span></div>
-                            <div class="flex items-center gap-3"><span class="text-white font-black text-[15px]">${opcionElegida.cuota.toFixed(2)}</span><button onclick="rotarPickIndividual('${partido.id}')" class="bg-gradient-to-b from-yellow-500/20 to-yellow-500/5 text-yellow-500 p-2.5 rounded-lg border border-yellow-500/30 hover:border-yellow-500 hover:text-white transition shadow-lg active:scale-90"><i class="fas fa-sync-alt"></i></button></div>
+                            <div class="flex flex-col"><span class="text-[11px] ${esRadarAuto?'text-purple-400':'text-yellow-500'} font-black uppercase">PICK: ${pickTxt}</span><span class="text-[8px] text-green-500/90 mt-1 uppercase">Origen: Privado</span></div>
+                            <div class="flex items-center gap-3"><span class="text-white font-black text-sm">${o.cuota.toFixed(2)}</span>
+                            ${!esRadarAuto ? `<button onclick="rotarPickIndividual('${p.id}')" class="text-yellow-500 bg-yellow-500/10 p-2 rounded-lg hover:bg-yellow-500/30 transition"><i class="fas fa-sync-alt"></i></button>` : ''}
+                            </div>
                         </div>
                     </div>`;
             });
+            probPromedio = Math.floor(probPromedio / ticketDinamicoVIP.length); if(probPromedio > 96) probPromedio = 96;
 
-            probPromedio = Math.floor(probPromedio / ticketDinamicoVIP.length);
-            if(probPromedio > 96) probPromedio = 96;
-
-            let claseBtnMixto = modoMercadoGlobal === 'mixto' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-400 hover:text-white';
-            let claseBtnH2h = modoMercadoGlobal === 'h2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-400 hover:text-white';
+            let c1 = modoMercadoGlobal === 'mixto' ? 'bg-yellow-500 text-black' : 'text-gray-400';
+            let c2 = modoMercadoGlobal === 'h2h' ? 'bg-yellow-500 text-black' : 'text-gray-400';
+            let ctrls = esRadarAuto ? '' : `<div class="flex bg-black/60 p-1 rounded-lg mb-4 gap-1"><button onclick="cambiarModoMercado('mixto')" class="flex-1 py-2 text-[9px] font-black uppercase rounded ${c1}">Mixta</button><button onclick="cambiarModoMercado('h2h')" class="flex-1 py-2 text-[9px] font-black uppercase rounded ${c2}">Ganador</button></div>`;
+            let btnBar = esRadarAuto ? '' : `<button onclick="regenerarTicketCompleto()" class="w-full mt-4 py-3 border border-yellow-500/30 text-yellow-500 rounded-xl text-[10px] font-black uppercase"><i class="fas fa-random mr-1"></i> Barajar Opciones</button>`;
+            
+            // BOTÓN DE GUARDAR EN HISTORIAL
+            let idUnicoBtn = 'btnGuardar_' + Date.now();
 
             resDiv.innerHTML = `
-                <div class="card-glass p-1 border-t-2 border-yellow-500 shadow-[0_15px_30px_rgba(212,175,55,0.15)] animate-slide-up bg-gradient-to-b from-yellow-500/10 to-transparent rounded-xl">
-                    <div class="p-4">
-                        <div class="flex justify-between items-center mb-4 border-b border-yellow-500/20 pb-4"><div class="flex flex-col"><span class="text-[14px] font-black text-yellow-500 uppercase tracking-widest italic drop-shadow-md"><i class="fas fa-ticket-alt mr-2"></i> Ticket Combinado</span><span class="text-[9px] text-gray-400 mt-1 uppercase tracking-widest font-bold">Nivel ${modoIlimitadoActivo ? 'Premium (Ilimitado)' : 'Elite VIP'}</span></div><span class="text-[11px] text-green-400 font-black bg-green-400/10 border border-green-500/30 px-3 py-1.5 rounded-full">Índice: ${probPromedio}%</span></div>
-                        
-                        <div class="flex bg-black/60 p-1.5 rounded-lg border border-white/5 mb-5 mx-auto w-full shadow-inner gap-1">
-                            <button onclick="cambiarModoMercado('mixto')" class="flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded transition-all ${claseBtnMixto}">Inteligencia Mixta</button>
-                            <button onclick="cambiarModoMercado('h2h')" class="flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded transition-all ${claseBtnH2h}">Solo Quién Gana</button>
-                        </div>
-
-                        <div class="mb-4">${htmlPartidos}</div>
-                        <div class="pt-5 flex justify-between items-end bg-black/60 p-5 rounded-xl border border-yellow-500/20 shadow-inner mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cuota Final</span><span class="text-[9px] text-green-400 font-black mt-1 uppercase tracking-widest"><i class="fas fa-check-circle mr-1"></i> Stake Sugerido: 5%</span></div><div class="text-right"><span class="text-4xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">${cuotaTotal.toFixed(2)}</span></div></div>
-                        <button onclick="regenerarTicketCompleto()" class="w-full mt-4 py-4 border border-yellow-500/30 text-yellow-500 bg-black/40 rounded-xl text-[10px] font-black hover:bg-yellow-500 hover:text-black transition-all uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 shadow-lg"><i class="fas fa-random text-lg"></i> Barajar Opciones Globales</button>
+                <div class="card-glass p-4 border-t-2 ${esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5'} rounded-xl shadow-2xl mb-10">
+                    <div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${esRadarAuto?'text-purple-500':'text-yellow-500'} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Ticket</span><span class="text-[10px] text-green-400 font-black bg-green-400/10 px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>
+                    ${ctrls} ${htmlPartidos}
+                    <div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4">
+                        <div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final</span></div>
+                        <span class="text-3xl font-black text-white">${cuotaTotal.toFixed(2)}</span>
                     </div>
+                    ${btnBar}
+                    <button id="${idUnicoBtn}" onclick="guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN MI HISTORIAL</button>
                 </div>`;
         }
 
-        window.rotarPickIndividual = function(partidoId) {
-            let item = ticketDinamicoVIP.find(t => t.partido.id === partidoId);
-            if(item) { item.indexSeleccionado = (item.indexSeleccionado + 1) % item.opciones.length; dibujarTicketDinamico(); }
-        };
-
-        window.regenerarTicketCompleto = function() {
-            ticketDinamicoVIP.forEach(item => {
-                if(modoMercadoGlobal === 'h2h') {
-                    const idxH2h = item.opciones.findIndex(o => o.mercadoKey === 'h2h');
-                    if(idxH2h !== -1) item.indexSeleccionado = idxH2h;
-                } else {
-                    let maxOpciones = item.opciones.length > 6 ? 6 : item.opciones.length;
-                    let nuevoIndex; do { nuevoIndex = Math.floor(Math.random() * maxOpciones); } while (nuevoIndex === item.indexSeleccionado && maxOpciones > 1);
-                    item.indexSeleccionado = nuevoIndex;
-                }
+        // ==========================================
+        // VISTA 2: HISTORIAL Y ESTADÍSTICAS PERSONALES
+        // ==========================================
+        window.guardarTicketHistorial = function(cuota) {
+            if(!codigoActivoUsuario) { alert("Error: Sesión no válida"); return; }
+            let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || [];
+            
+            // Crear objeto limpio del ticket
+            let picks = ticketDinamicoVIP.map(t => {
+                const o = t.opciones[t.indexSeleccionado];
+                return `${t.partido.home_team} vs ${t.partido.away_team} -> ${o.nombre} (${o.cuota})`;
             });
-            dibujarTicketDinamico();
+
+            let nuevoTicket = { id: Date.now(), fecha: new Date().toLocaleDateString(), cuota: cuota, picks: picks, estado: 'pendiente' }; // pending, won, lost
+            hist.unshift(nuevoTicket); // Agregar al inicio
+            localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist));
+            
+            alert("✅ Ticket guardado exitosamente. Búscalo en la pestaña 'Historial'.");
+            cambiarVista('historial');
+        };
+
+        window.renderizarHistorial = function() {
+            if(!codigoActivoUsuario) return;
+            let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || [];
+            const cont = document.getElementById('contenedorHistorial');
+            cont.innerHTML = '';
+            
+            let ganados = 0, perdidos = 0, generados = hist.length;
+
+            if(hist.length === 0) {
+                cont.innerHTML = `<div class="text-center opacity-50 py-10"><i class="fas fa-folder-open text-4xl mb-3"></i><p class="text-[10px] uppercase font-bold tracking-widest">Aún no has guardado ningún ticket.</p></div>`;
+            } else {
+                hist.forEach(t => {
+                    if(t.estado === 'won') ganados++; if(t.estado === 'lost') perdidos++;
+                    
+                    let bgStatus = 'bg-black/40 border-white/10';
+                    let txtStatus = '<span class="text-gray-400"><i class="far fa-clock"></i> Pendiente</span>';
+                    if(t.estado === 'won') { bgStatus = 'bg-green-900/20 border-green-500/50'; txtStatus = '<span class="text-green-400 font-black"><i class="fas fa-check-circle"></i> ACERTADO</span>'; }
+                    if(t.estado === 'lost') { bgStatus = 'bg-red-900/20 border-red-500/50'; txtStatus = '<span class="text-red-400 font-black"><i class="fas fa-times-circle"></i> FALLADO</span>'; }
+
+                    let picksHtml = t.picks.map(p => `<li class="text-[9px] text-gray-300 border-b border-white/5 py-1 last:border-0">${p}</li>`).join('');
+
+                    cont.innerHTML += `
+                        <div class="${bgStatus} p-4 rounded-xl border relative shadow-md">
+                            <div class="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
+                                <span class="text-[10px] font-bold text-gray-400">${t.fecha} • Cuota: <span class="text-white">${t.cuota}</span></span>
+                                <div class="text-[10px] uppercase tracking-widest">${txtStatus}</div>
+                            </div>
+                            <ul class="mb-4 pl-2 border-l-2 border-yellow-500/50">${picksHtml}</ul>
+                            <div class="flex gap-2">
+                                <button onclick="marcarTicket(${t.id}, 'won')" class="flex-1 py-2 bg-green-600/20 text-green-500 text-[9px] font-black rounded border border-green-600/30 uppercase tracking-widest hover:bg-green-600/40">MARCAR GANADO</button>
+                                <button onclick="marcarTicket(${t.id}, 'lost')" class="flex-1 py-2 bg-red-600/20 text-red-500 text-[9px] font-black rounded border border-red-600/30 uppercase tracking-widest hover:bg-red-600/40">MARCAR PERDIDO</button>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            // Actualizar Stats Header
+            document.getElementById('statGenerados').innerText = generados;
+            document.getElementById('statPerdidos').innerText = perdidos;
+            let resueltos = ganados + perdidos;
+            let winRate = resueltos > 0 ? Math.floor((ganados / resueltos) * 100) : 0;
+            document.getElementById('statWinRate').innerText = `${winRate}%`;
+        };
+
+        window.marcarTicket = function(id, estado) {
+            let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || [];
+            let index = hist.findIndex(t => t.id === id);
+            if(index !== -1) { hist[index].estado = estado; localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist)); renderizarHistorial(); }
+        };
+
+        window.limpiarHistorial = function() {
+            if(confirm("¿Seguro que deseas borrar tu historial? Esto no se puede deshacer.")) {
+                localStorage.removeItem('oracle_historial_' + codigoActivoUsuario); renderizarHistorial();
+            }
         };
 
         // ==========================================
-        // EMBUDO FREE FOMO
+        // VISTA 3: CLUB ESCALERA & FIREBASE ADMIN
         // ==========================================
-        window.verProbabilidadFree = function(equipo) {
-            const modal = document.getElementById('modalAnalisis'); const contenido = document.getElementById('contenidoModalAnalisis');
-            contenido.innerHTML = `<i class="fas fa-satellite-dish animate-pulse text-yellow-500 text-4xl mb-4 mt-2"></i><h3 class="text-lg font-bold mb-2 uppercase italic text-white">Escaneando Servidores...</h3><p class="text-[10px] text-gray-400 uppercase tracking-widest mt-4 mb-2">Calculando valor para ${equipo}</p>`;
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                const probAltaSimulada = Math.floor(Math.random() * (94 - 84 + 1)) + 84; const cuotaSimulada = (Math.random() * (2.90 - 1.80) + 1.80).toFixed(2);
-                contenido.innerHTML = `
-                    <button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
-                    <i class="fas fa-lock text-yellow-500 text-5xl mb-4 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"></i>
-                    <h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Predicción Protegida</h3>
-                    <div class="bg-black/60 p-6 rounded-xl border border-red-500/40 my-6 relative overflow-hidden shadow-[0_0_30px_rgba(220,38,38,0.15)]">
-                        <div class="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex flex-col items-center justify-center z-10 p-4">
-                            <span class="bg-gradient-to-r from-red-600 to-red-500 text-white text-[11px] font-black px-4 py-2 rounded uppercase tracking-widest shadow-[0_5px_15px_rgba(220,38,38,0.4)] flex items-center gap-2 mb-3"><i class="fas fa-key"></i> EXCLUSIVO VIP / PREMIUM</span>
-                            <span class="text-[9px] text-center text-gray-300 font-bold uppercase leading-relaxed">Ingresa tu credencial para revelar la jugada exacta.</span>
-                        </div>
-                        <div class="blur-[5px] opacity-50"><p class="text-sm text-white font-black uppercase tracking-widest mb-3 border-b border-gray-600 pb-3">Pick: Gana ${equipo}</p><div class="flex justify-between items-center"><span class="text-yellow-500 font-bold text-xs">Prob: ${probAltaSimulada}%</span><span class="text-green-400 font-black text-lg">${cuotaSimulada}</span></div></div>
-                    </div>
-                    <a href="https://wa.me/573005191112?text=Hola%20Félix,%20estoy%20en%20la%20App%20y%20quiero%20comprar%20un%20código%20VIP/Premium." target="_blank" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(34,197,94,0.3)] flex items-center justify-center gap-2 hover:brightness-110 transition active:scale-95">
-                        <i class="fab fa-whatsapp text-xl"></i> SOLICITAR ACCESO
-                    </a>`;
-            }, 1800);
+        window.chequearEstadoEscaleraUI = function() {
+            const btn = document.getElementById('btnSolicitarEscalera');
+            const msg = document.getElementById('msgEscalera');
+            const divBloqueada = document.getElementById('escaleraBloqueada');
+            const divAprobada = document.getElementById('escaleraAprobada');
+            
+            if(!codigoActivoUsuario) {
+                btn.disabled = true; btn.innerText = "REQUIERE LOGIN";
+                divBloqueada.style.display = 'block'; divAprobada.style.display = 'none';
+                return;
+            }
+
+            if(estadoEscalera === 'none') {
+                btn.disabled = false; btn.innerText = "SOLICITAR INVITACIÓN"; btn.classList.replace('bg-gray-600', 'bg-blue-600');
+                msg.innerText = "Presiona el botón para enviar tu solicitud al administrador.";
+                divBloqueada.style.display = 'block'; divAprobada.style.display = 'none';
+            } else if (estadoEscalera === 'pending') {
+                btn.disabled = true; btn.innerText = "SOLICITUD EN REVISIÓN..."; btn.classList.replace('bg-blue-600', 'bg-gray-600');
+                msg.innerText = "Tu solicitud ha sido enviada. Espera a que el Admin la apruebe.";
+                divBloqueada.style.display = 'block'; divAprobada.style.display = 'none';
+            } else if (estadoEscalera === 'approved') {
+                divBloqueada.style.display = 'none'; divAprobada.style.display = 'block';
+                cargarRetoEscaleraNube();
+            }
         };
-        window.cerrarModal = function() { document.getElementById('modalAnalisis').classList.add('hidden'); };
+
+        window.solicitarAccesoEscalera = async function() {
+            if(!codigoActivoUsuario) return;
+            const btn = document.getElementById('btnSolicitarEscalera');
+            btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> ENVIANDO...`; btn.disabled = true;
+            try {
+                await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' });
+                estadoEscalera = 'pending'; chequearEstadoEscaleraUI(); alert("✅ Solicitud enviada al administrador.");
+            } catch (e) { alert("Error de conexión con la nube."); btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; }
+        };
+
+        async function cargarRetoEscaleraNube() {
+            const divTexto = document.getElementById('textoRetoAdmin');
+            try {
+                const snap = await getDoc(doc(db, "global", "escalera"));
+                if(snap.exists()) divTexto.innerText = snap.data().mensaje || "Aún no hay reto publicado hoy.";
+                else divTexto.innerText = "Aún no hay reto publicado hoy.";
+            } catch(e) { divTexto.innerText = "Error cargando el reto."; }
+        }
 
         // ==========================================
-        // FIREBASE: VERIFICACIÓN Y ANTI-PIRATERÍA
+        // FIREBASE LOGINS Y ADMIN PANEL
         // ==========================================
         window.validarCodigo = async function() {
             const input = document.getElementById('vipCode').value.toUpperCase().trim();
             if(input === "") return;
 
             if(input === MASTER_CODE) {
-                cerrarModalLogin();
-                document.getElementById('freeSection').style.display = 'none';
-                document.getElementById('adminSection').style.display = 'block';
-                document.getElementById('filtrosGlobales').style.display = 'none';
-                
-                const btnTop = document.getElementById('btnTopLogin');
-                btnTop.innerHTML = '<i class="fas fa-user-shield"></i> MODO ADMIN';
-                btnTop.className = "bg-gray-800 text-red-500 text-[10px] px-4 py-2 rounded-full font-black border border-red-500/50 flex items-center gap-2";
-                btnTop.onclick = null;
-
-                renderizarListaAdmin();
-                document.getElementById('vipCode').value = '';
-                return;
+                cerrarModalLogin(); document.getElementById('freeSection').style.display = 'none'; document.getElementById('adminSection').style.display = 'block'; document.getElementById('filtrosGlobales').style.display = 'none'; document.getElementById('bottomNav').style.display = 'none'; document.getElementById('footerApp').style.display = 'none';
+                const btnTop = document.getElementById('btnTopLogin'); btnTop.innerHTML = '<i class="fas fa-user-shield"></i> ADMIN'; btnTop.className = "bg-gray-800 text-red-500 text-[10px] px-4 py-2 rounded-full font-black border border-red-500/50 flex items-center gap-2"; btnTop.onclick = null;
+                renderizarListaAdmin(); renderizarSolicitudesAdmin(); document.getElementById('vipCode').value = ''; return;
             }
 
-            const btn = document.getElementById('btnValidarCodigo');
-            const txtOriginal = btn.innerHTML;
+            const btn = document.getElementById('btnValidarCodigo'); const txtOriginal = btn.innerHTML;
             btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> VERIFICANDO...`; btn.disabled = true;
 
             try {
-                const docRef = doc(db, "codigos_nube", input);
-                const docSnap = await getDoc(docRef);
-
+                const docRef = doc(db, "codigos_nube", input); const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-
                     if (!data.deviceID) {
-                        await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR });
-                        concederAcceso(data.ilimitado);
-                    } else if (data.deviceID === HUELLA_ESTE_CELULAR) {
-                        concederAcceso(data.ilimitado);
-                    } else {
-                        alert("⚠️ ACCESO DENEGADO ⚠️\nEste código ya fue activado en otro dispositivo y no puede ser compartido.");
-                    }
-                } else {
-                    alert("Código no válido o expirado.");
-                }
-            } catch (error) {
-                console.error("Error BD:", error);
-                alert("Error conectando con la Base de Datos segura.");
-            } finally {
-                btn.innerHTML = txtOriginal; btn.disabled = false;
-            }
+                        await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR, ladderStatus: 'none' }); concederAcceso(data.ilimitado, input, 'none');
+                    } else if (data.deviceID === HUELLA_ESTE_CELULAR) { concederAcceso(data.ilimitado, input, data.ladderStatus || 'none');
+                    } else { alert("⚠️ ACCESO DENEGADO ⚠️\nCódigo vinculado a otro dispositivo."); }
+                } else { alert("Código no válido."); }
+            } catch (e) { alert("Error de conexión Segura."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
         };
 
-        function concederAcceso(esIlimitado) {
+        function concederAcceso(esIlimitado, codeString, ladderStat) {
             cerrarModalLogin();
-            modoVipActivo = true;
-            modoIlimitadoActivo = esIlimitado;
+            modoVipActivo = true; modoIlimitadoActivo = esIlimitado; codigoActivoUsuario = codeString; estadoEscalera = ladderStat;
             
-            document.getElementById('vipSection').style.display = 'block';
-            document.getElementById('freeSection').style.display = 'none';
-            
-            const btnTop = document.getElementById('btnTopLogin');
-            btnTop.onclick = null; 
+            document.getElementById('vipSection').style.display = 'block'; document.getElementById('freeSection').style.display = 'none'; document.getElementById('membershipSection').style.display = 'none';
+            const btnTop = document.getElementById('btnTopLogin'); btnTop.onclick = null; 
             
             if(modoIlimitadoActivo) {
-                btnTop.innerHTML = `<i class="fas fa-infinity text-white"></i> PREMIUM`;
-                btnTop.className = "bg-purple-600 text-white text-[10px] px-4 py-2 rounded-full font-black uppercase tracking-widest shadow-[0_0_15px_rgba(147,51,234,0.5)] flex items-center gap-2 border border-purple-400/50";
-                document.getElementById('txtTituloVip').innerText = "CREADOR PREMIUM";
-                document.getElementById('txtInstruccionVip').innerText = "Sin restricciones. Genera combinadas globales masivas.";
+                btnTop.innerHTML = `<i class="fas fa-infinity text-white"></i> PREMIUM`; btnTop.className = "bg-purple-600 text-white text-[10px] px-4 py-2 rounded-full font-black uppercase shadow-[0_0_15px_rgba(147,51,234,0.5)] flex items-center gap-2 border border-purple-400/50";
+                document.getElementById('txtTituloVip').innerText = "CREADOR PREMIUM"; document.getElementById('btnAutoPremium').style.display = 'flex';
             } else {
-                btnTop.innerHTML = `<i class="fas fa-crown text-black"></i> VIP ACTIVO`;
-                btnTop.className = "bg-yellow-500 text-black text-[10px] px-4 py-2 rounded-full font-black uppercase tracking-widest shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center gap-2 border border-yellow-400/50";
-                document.getElementById('txtTituloVip').innerText = "CREADOR VIP";
-                document.getElementById('txtInstruccionVip').innerText = "Selecciona entre 2 y 5 eventos de máxima probabilidad.";
+                btnTop.innerHTML = `<i class="fas fa-crown text-black"></i> VIP ACTIVO`; btnTop.className = "bg-yellow-500 text-black text-[10px] px-4 py-2 rounded-full font-black uppercase shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center gap-2 border border-yellow-400/50";
+                document.getElementById('txtTituloVip').innerText = "CREADOR VIP"; document.getElementById('btnAutoPremium').style.display = 'none';
             }
-            
-            renderizarPartidosVIP(); 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            renderizarPartidosVIP(); window.scrollTo(0,0); cambiarVista('picks');
         }
 
-        window.crearCodigo = async function(esIlimitado) {
-            const nuevo = document.getElementById('newCodeInput').value.toUpperCase().trim();
-            if(nuevo === "") return;
-            
-            const btnId = esIlimitado ? 'btnCrearPrem' : 'btnCrearVip';
-            const btn = document.getElementById(btnId);
-            btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
+        window.verProbabilidadFree = function(eq) {
+            const m = document.getElementById('modalAnalisis'); const c = document.getElementById('contenidoModalAnalisis');
+            c.innerHTML = `<i class="fas fa-satellite-dish animate-pulse text-yellow-500 text-4xl mb-4 mt-2"></i><h3 class="text-white font-bold uppercase italic">Escaneando...</h3>`;
+            m.classList.remove('hidden');
+            setTimeout(() => {
+                c.innerHTML = `<button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button><i class="fas fa-lock text-yellow-500 text-5xl mb-4 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"></i><h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Acceso Protegido</h3><div class="bg-black/60 p-6 rounded-xl border border-red-500/40 mb-6 relative overflow-hidden"><div class="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex flex-col items-center justify-center z-10 p-4"><span class="bg-red-600 text-white text-[11px] font-black px-4 py-2 rounded uppercase shadow-lg flex items-center gap-2 mb-3"><i class="fas fa-key"></i> VIP REQUERIDO</span><span class="text-[9px] text-gray-300 font-bold uppercase text-center">Ingresa código para ver cuota y pick</span></div><p class="blur-[5px] opacity-50 text-white font-black mb-3">Gana ${eq}</p></div><a href="https://wa.me/573005191112" target="_blank" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg flex justify-center gap-2 active:scale-95"><i class="fab fa-whatsapp text-xl"></i> SOLICITAR ACCESO</a>`;
+            }, 1500);
+        };
 
+        // ADMIN FIREBASE
+        window.crearCodigo = async function(esIl) {
+            const nuevo = document.getElementById('newCodeInput').value.toUpperCase().trim(); if(nuevo==="") return;
+            const btn = document.getElementById(esIl ? 'btnCrearPrem' : 'btnCrearVip'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
             try {
-                const docRef = doc(db, "codigos_nube", nuevo);
-                const snap = await getDoc(docRef);
-                if(!snap.exists()) {
-                    await setDoc(docRef, {
-                        code: nuevo, ilimitado: esIlimitado, deviceID: null, creado: Date.now()
-                    });
-                    document.getElementById('newCodeInput').value = '';
-                    renderizarListaAdmin();
-                } else { alert("Este código ya existe en la Nube."); }
-            } catch (e) { alert("Error creando código en la Nube"); } 
-            finally { btn.innerHTML = esIlimitado ? 'Crear PREMIUM (∞)' : 'Crear VIP (Máx 5)'; btn.disabled = false; }
+                const ref = doc(db, "codigos_nube", nuevo); const snap = await getDoc(ref);
+                if(!snap.exists()) { await setDoc(ref, { code: nuevo, ilimitado: esIl, deviceID: null, ladderStatus: 'none', creado: Date.now() }); document.getElementById('newCodeInput').value=''; renderizarListaAdmin(); } 
+                else alert("Ya existe.");
+            } catch (e) { alert("Error."); } finally { btn.innerHTML = esIl ? 'Crear PREMIUM' : 'Crear VIP'; btn.disabled = false; }
         };
 
-        window.eliminarCodigo = async function(codigo) {
-            try { await deleteDoc(doc(db, "codigos_nube", codigo)); renderizarListaAdmin(); } 
-            catch(e) { alert("Error borrando código."); }
-        };
+        window.eliminarCodigo = async function(c) { try { await deleteDoc(doc(db, "codigos_nube", c)); renderizarListaAdmin(); renderizarSolicitudesAdmin(); } catch(e){} };
 
         async function renderizarListaAdmin() {
-            const lista = document.getElementById('codesList');
-            lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-yellow-500 text-2xl"></i><p class="text-[9px] text-gray-500 mt-2 uppercase">Sincronizando Firebase...</p></div>';
+            const l = document.getElementById('codesList'); l.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-yellow-500"></i></div>';
             try {
-                const querySnapshot = await getDocs(collection(db, "codigos_nube"));
-                lista.innerHTML = '';
-                let codigosArray = [];
-                querySnapshot.forEach((d) => codigosArray.push(d.data()));
-                codigosArray.sort((a,b) => b.creado - a.creado);
-
-                codigosArray.forEach(c => {
-                    let badgeColor = c.ilimitado ? 'bg-purple-600/20 text-purple-400 border-purple-500/30' : 'bg-blue-600/20 text-blue-400 border-blue-500/30';
-                    let textoMembresia = c.ilimitado ? 'PREMIUM (∞)' : 'VIP (5)';
-                    let estado = c.deviceID ? '<span class="text-red-400"><i class="fas fa-lock mr-1"></i> Usado</span>' : '<span class="text-green-400"><i class="fas fa-unlock mr-1"></i> Libre</span>';
-
-                    lista.innerHTML += `
-                        <div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/10 mb-2 shadow-sm">
-                            <div class="flex flex-col gap-1.5">
-                                <span class="text-white font-black tracking-widest text-sm drop-shadow">${c.code}</span>
-                                <div class="flex items-center gap-2"><span class="text-[7px] uppercase font-bold border px-1.5 py-0.5 rounded ${badgeColor}">${textoMembresia}</span><span class="text-[8px] font-bold uppercase bg-white/5 px-2 py-0.5 rounded">${estado}</span></div>
-                            </div>
-                            <button onclick="eliminarCodigo('${c.code}')" class="text-red-500 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 p-2.5 rounded-lg transition"><i class="fas fa-trash"></i></button>
-                        </div>`;
+                const snap = await getDocs(collection(db, "codigos_nube")); l.innerHTML = '';
+                let arr = []; snap.forEach(d => arr.push(d.data())); arr.sort((a,b) => b.creado - a.creado);
+                arr.forEach(c => {
+                    let col = c.ilimitado ? 'text-purple-400 bg-purple-900/20' : 'text-blue-400 bg-blue-900/20';
+                    let std = c.deviceID ? '<span class="text-red-400"><i class="fas fa-lock"></i> Usado</span>' : '<span class="text-green-400"><i class="fas fa-unlock"></i> Libre</span>';
+                    l.innerHTML += `<div class="flex justify-between items-center bg-black/40 p-2 rounded border border-white/10 mb-1"><div class="flex flex-col"><span class="text-white font-black text-xs">${c.code}</span><div class="flex gap-2 text-[7px] uppercase font-bold"><span class="px-1 rounded ${col}">${c.ilimitado?'PREM':'VIP'}</span>${std}</div></div><button onclick="eliminarCodigo('${c.code}')" class="text-red-500 p-2"><i class="fas fa-trash"></i></button></div>`;
                 });
-            } catch (e) { lista.innerHTML = `<p class="text-red-500 text-xs">Error Firebase.</p>`; }
+            } catch (e) { l.innerHTML = `<p class="text-red-500 text-xs">Error.</p>`; }
         }
-        
+
+        // ADMIN ESCALERA
+        async function renderizarSolicitudesAdmin() {
+            const l = document.getElementById('solicitudesList'); l.innerHTML = '';
+            try {
+                const snap = await getDocs(collection(db, "codigos_nube"));
+                snap.forEach(d => {
+                    let c = d.data();
+                    if(c.ladderStatus === 'pending') {
+                        l.innerHTML += `<div class="flex justify-between items-center bg-black/60 p-2 rounded border border-blue-500/30 mb-1"><span class="text-white font-bold text-[10px] uppercase">${c.code}</span><button onclick="aprobarEscalera('${c.code}')" class="bg-green-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase">Aprobar</button></div>`;
+                    }
+                });
+            } catch(e){}
+        }
+
+        window.aprobarEscalera = async function(c) {
+            try { await updateDoc(doc(db, "codigos_nube", c), { ladderStatus: 'approved' }); alert("Usuario Aprobado."); renderizarSolicitudesAdmin(); } catch(e){}
+        };
+
+        window.publicarRetoEscalera = async function() {
+            const txt = document.getElementById('inputAdminReto').value; if(!txt) return;
+            const btn = document.getElementById('btnPublicarReto'); btn.innerText = "Publicando..."; btn.disabled = true;
+            try { await setDoc(doc(db, "global", "escalera"), { mensaje: txt, timestamp: Date.now() }); alert("Reto publicado a la comunidad."); document.getElementById('inputAdminReto').value=''; } 
+            catch(e){ alert("Error."); } finally { btn.innerText = "Actualizar Reto"; btn.disabled = false; }
+        };
+
         window.cerrarAdmin = function() { location.reload(); };
 
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.warn('PWA:', err));
+        // RADAR 90%+ PREMIUM
+        window.generarParlaySeguro = async function(dep) {
+            cerrarModalRadarPremium();
+            const resDiv = document.getElementById('resultadoVIP');
+            resDiv.innerHTML = `<div class="p-10 text-center bg-black/40 rounded-xl border border-purple-500/50 shadow-[0_0_20px_rgba(147,51,234,0.3)]"><i class="fas fa-robot animate-spin text-purple-500 mb-4 text-4xl"></i><p class="text-[11px] uppercase tracking-widest text-purple-400 font-black">Buscando Cuotas Ultra-Seguras...</p></div>`;
+            window.scrollTo(0, document.body.scrollHeight);
+            try {
+                let eps = dep==='mixto'?['upcoming']:(dep==='futbol'?['soccer_epl','soccer_spain_la_liga','soccer_italy_serie_a','soccer_germany_bundesliga']:(dep==='baloncesto'?['basketball_nba']:(dep==='tenis'?['tennis_atp']:[])));
+                let todos = [];
+                for(let ep of eps) { const d = await fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${ep}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals`); todos = todos.concat(d.filter(m=>m.bookmakers?.length>0)); }
+                let ops = [];
+                todos.forEach(p => p.bookmakers.forEach(b => b.markets.forEach(m => m.outcomes.forEach(o => {
+                    if(o.price >= 1.01 && o.price <= 1.12) ops.push({ partido: p, broker: b.title, mercadoKey: m.key, nombre: o.name, point: o.point, cuota: o.price, probabilidad: Math.floor((1/o.price)*100)+1 });
+                }))));
+                ops.sort((a,b) => b.probabilidad - a.probabilidad);
+                let unicas = []; let vistos = new Set();
+                ops.forEach(op => { if(!vistos.has(op.partido.id)){ vistos.add(op.partido.id); unicas.push(op); }});
+                ticketDinamicoVIP = []; let cAcum = 1.0;
+                for(let op of unicas) { ticketDinamicoVIP.push({ partido: op.partido, opciones: [op], indexSeleccionado: 0 }); cAcum *= op.cuota; if(cAcum >= 4.0) break; }
+                if(ticketDinamicoVIP.length < 2) { resDiv.innerHTML = `<div class="p-6 text-center border border-red-500"><p class="text-red-400 text-[10px] uppercase font-bold">Sin eventos >90% suficientes para cuota 4.0.</p></div>`; return; }
+                dibujarTicketDinamico(true);
+            } catch(e) { resDiv.innerHTML = `<p class="text-red-400 text-center">Error Radar.</p>`; }
+        };
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err=>console.warn(err));
     </script>
 </body>
 </html>
