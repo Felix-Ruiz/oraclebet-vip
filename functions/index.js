@@ -22,12 +22,11 @@ async function ejecutarEscaneoGlobal() {
     let totalGuardados = 0;
     let ligasActivasEncontradas = [];
 
-    // 1. Descargar el catálogo completo de deportes del planeta
+    // 1. Descargar el catálogo completo de deportes
     let deportes = [];
     try {
         const urlDeportes = `https://api.the-odds-api.com/v4/sports/?apiKey=${API_KEYS[indexLlaveActual]}`;
         const resDeportes = await axios.get(urlDeportes);
-        // Filtramos apuestas a largo plazo (outrights) para quedarnos solo con partidos reales
         deportes = resDeportes.data.filter(s => s.active && !s.has_outrights);
     } catch(e) {
         console.error("Fallo al obtener la lista mundial de deportes.");
@@ -46,7 +45,8 @@ async function ejecutarEscaneoGlobal() {
             const url = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[indexLlaveActual]}&regions=eu,us&markets=h2h,totals,spreads`;
             
             try {
-                await new Promise(r => setTimeout(r, 1000)); // Anti-Spam de 1 segundo
+                // Anti-Spam de 1 segundo (Esto es lo que hace que tarde más de 1 minuto)
+                await new Promise(r => setTimeout(r, 1000)); 
                 
                 const response = await axios.get(url, { headers: { 'Accept-Encoding': 'identity' } });
                 const partidos = response.data;
@@ -64,7 +64,6 @@ async function ejecutarEscaneoGlobal() {
                     });
                     await batch.commit();
                     
-                    // Guardamos la liga para inyectarla dinámicamente en tu página web
                     ligasActivasEncontradas.push({ key: liga, title: deporte.title, group: deporte.group });
                     console.log(`✅ [${liga}] Guardada: ${partidos.length} eventos.`);
                 }
@@ -75,7 +74,6 @@ async function ejecutarEscaneoGlobal() {
                     indexLlaveActual = (indexLlaveActual + 1) % API_KEYS.length;
                     intentos++;
                 } else if (error.response && error.response.status === 422) {
-                    // Rescate Cascada: Si la liga no soporta Totales o Handicap, intentamos solo Ganador
                     try {
                         await new Promise(r => setTimeout(r, 1000)); 
                         const urlRescate = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[indexLlaveActual]}&regions=eu&markets=h2h`;
@@ -104,7 +102,7 @@ async function ejecutarEscaneoGlobal() {
         }
     }
     
-    // 3. Crear el Menú Dinámico para la página web
+    // 3. Crear el Menú Dinámico
     if(ligasActivasEncontradas.length > 0) {
         await db.collection('global').doc('menu_ligas').set({ ligas: ligasActivasEncontradas, actualizado: Date.now() });
     }
@@ -113,6 +111,17 @@ async function ejecutarEscaneoGlobal() {
     return { exito: true, cantidad: totalGuardados, ligas: ligasActivasEncontradas.length };
 }
 
-// Despierta cada 12 horas para no quemar las llaves con todo el mundo
-exports.robotSincronizador = onSchedule("every 12 hours", async (event) => { await ejecutarEscaneoGlobal(); });
-exports.disparadorManual = onRequest(async (req, res) => { const resultado = await ejecutarEscaneoGlobal(); res.json(resultado); });
+// ⚠️ AQUÍ ESTÁ LA MAGIA: LE DAMOS 300 SEGUNDOS (5 MINUTOS) DE TIEMPO LÍMITE
+exports.robotSincronizador = onSchedule({
+    schedule: "every 12 hours",
+    timeoutSeconds: 300 
+}, async (event) => { 
+    await ejecutarEscaneoGlobal(); 
+});
+
+exports.disparadorManual = onRequest({
+    timeoutSeconds: 300 
+}, async (req, res) => { 
+    const resultado = await ejecutarEscaneoGlobal(); 
+    res.json(resultado); 
+});

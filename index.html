@@ -25,7 +25,11 @@
         .fade-in-right { animation: fadeInRight 0.2s ease-out forwards; }
         @keyframes fadeInRight { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
         input[type="date"] { color-scheme: dark; }
-        #contenidoMenuLateral::-webkit-scrollbar { display: none; }
+        
+        /* Ocultar barra de scroll para el Banner Top y Menú */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
         .neon-premium { box-shadow: 0 0 15px rgba(168, 85, 247, 0.5), inset 0 0 10px rgba(168, 85, 247, 0.3); border: 1px solid #a855f7; }
         .view-section { display: none; }
         .view-active { display: block; animation: fadeIn 0.3s ease-out; }
@@ -36,25 +40,25 @@
 
     <div id="overlayMenu" onclick="cerrarMenuLateral()" class="fixed inset-0 bg-black/80 z-[60] hidden transition-opacity duration-300 backdrop-blur-sm"></div>
     
-    <div id="menuLateral" class="fixed inset-y-0 left-0 w-4/5 max-w-sm bg-gray-900 border-r border-yellow-500/50 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+    <div id="menuLateral" class="fixed inset-y-0 left-0 w-[85%] max-w-sm bg-gray-900 border-r border-yellow-500/50 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
         <div class="p-5 border-b border-gray-800 flex justify-between items-center bg-black/50">
             <h2 class="text-yellow-500 font-black uppercase tracking-widest text-sm"><i class="fas fa-globe mr-2"></i> Base Global</h2>
             <button onclick="cerrarMenuLateral()" class="text-gray-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
         </div>
         <div class="p-3 border-b border-gray-800">
             <button onclick="ejecutarTopFutbol()" class="w-full text-left bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/30 p-3 rounded-lg text-yellow-500 font-bold text-xs flex justify-between items-center shadow-lg active:scale-95 transition">
-                <span><i class="fas fa-star mr-2"></i> Fútbol Elite (Top 5 Ligas)</span>
+                <span><i class="fas fa-star mr-2"></i> Partidos Destacados Hoy</span>
                 <i class="fas fa-bolt text-[10px]"></i>
             </button>
         </div>
-        <div id="contenidoMenuLateral" class="flex-grow overflow-y-auto p-2 space-y-1 pb-10">
+        <div id="contenidoMenuLateral" class="flex-grow overflow-y-auto p-3 space-y-1 pb-10 hide-scrollbar">
             <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Sincronizando Servidor...</div>
         </div>
     </div>
 
     <div class="p-4">
         
-        <header class="flex justify-between items-center mb-6 pt-2">
+        <header class="flex justify-between items-center mb-5 pt-2">
             <div>
                 <h1 class="text-2xl font-black text-yellow-500 tracking-tighter italic">ORACLE<span class="text-white">BET</span></h1>
                 <p class="text-[10px] text-gray-400 uppercase tracking-widest">Inteligencia Deportiva</p>
@@ -65,6 +69,39 @@
         </header>
 
         <div id="vista_picks" class="view-section view-active">
+
+            <div class="mb-5">
+                <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2 border-l-2 border-yellow-500 pl-2"><i class="fas fa-fire text-red-500 animate-pulse"></i> Competiciones Top</h3>
+                <div class="flex overflow-x-auto gap-3 pb-2 snap-x snap-mandatory hide-scrollbar">
+                    
+                    <button onclick="ejecutarFiltroFinal('soccer_epl', 'Premier League')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#38003c] to-[#00ff85]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png" onerror="this.style.display='none'" alt="Premier" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Premier</span>
+                    </button>
+                    <button onclick="ejecutarFiltroFinal('soccer_spain_la_liga', 'La Liga')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#ea0437] to-[#ff4b4b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png" onerror="this.style.display='none'" alt="La Liga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">La Liga</span>
+                    </button>
+                    <button onclick="ejecutarFiltroFinal('soccer_italy_serie_a', 'Serie A')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#003cb2] to-[#0281ff]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Serie_A_logo_%282022%29.svg/512px-Serie_A_logo_%282022%29.svg.png" onerror="this.style.display='none'" alt="Serie A" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Serie A</span>
+                    </button>
+                    <button onclick="ejecutarFiltroFinal('soccer_germany_bundesliga', 'Bundesliga')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#d3010c] to-[#ff3b3b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/512px-Bundesliga_logo_%282017%29.svg.png" onerror="this.style.display='none'" alt="Bundesliga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Bundesliga</span>
+                    </button>
+                    <button onclick="ejecutarFiltroFinal('soccer_france_ligue_one', 'Ligue 1')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#dae025] to-[#0a1c2b]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors"></div>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Ligue1.svg/512px-Ligue1.svg.png" onerror="this.style.display='none'" alt="Ligue 1" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Ligue 1</span>
+                    </button>
+
+                </div>
+            </div>
             
             <div id="filtrosGlobales" class="mb-6 flex flex-col gap-3">
                 <div class="flex gap-2 h-10">
@@ -77,7 +114,7 @@
                     </div>
                 </div>
                 <button onclick="abrirMenuLateral()" class="w-full bg-gray-800 border border-yellow-500/50 rounded-lg py-3 text-yellow-500 hover:bg-gray-700 transition flex justify-center items-center gap-2 text-xs font-bold shadow-[0_0_15px_rgba(212,175,55,0.15)] active:scale-95">
-                    <i class="fas fa-bars"></i> EXPLORAR PAÍSES Y COMPETICIONES
+                    <i class="fas fa-bars"></i> EXPLORAR POR DEPORTE Y PAÍS
                 </button>
                 <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/5 px-3 py-2 rounded flex justify-between items-center border border-white/5">
                     <div class="flex items-center gap-2 truncate">
@@ -310,7 +347,6 @@
 
         window.obtenerLigasDisponibles = async function() {
             try {
-                // Descarga la lista de ligas que el Robot encontró y guardó en Firebase
                 const snap = await getDoc(doc(db, "global", "menu_ligas"));
                 if(snap.exists()) {
                     competicionesGlobales = snap.data().ligas || [];
@@ -320,7 +356,7 @@
         }
 
         // ==========================================
-        // UI & NAVEGACIÓN
+        // UI & NAVEGACIÓN (MENÚ 3 NIVELES)
         // ==========================================
         window.cambiarVista = function(vista) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('view-active'));
@@ -345,17 +381,57 @@
         window.abrirModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.remove('hidden'); };
         window.cerrarModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.add('hidden'); };
 
+        function extraerPais(titulo) {
+            if (titulo.includes(' - ')) return titulo.split(' - ')[0].trim();
+            return 'Internacional';
+        }
+
         function construirMenuLateral() {
             const contenedor = document.getElementById('contenidoMenuLateral'); 
-            let agrupado = {};
-            competicionesGlobales.forEach(l => { if(!agrupado[l.group]) agrupado[l.group] = []; agrupado[l.group].push(l); });
+            let arbol = {}; 
+            
+            competicionesGlobales.forEach(liga => {
+                let deporte = liga.group || 'Otros';
+                // Traducción de deportes
+                const traducciones = { 'Soccer': 'Fútbol', 'Basketball': 'Baloncesto', 'Tennis': 'Tenis', 'Ice Hockey': 'Hockey Hielo', 'American Football': 'Fútbol Americano', 'Baseball': 'Béisbol', 'Mixed Martial Arts': 'Artes Marciales' };
+                deporte = traducciones[deporte] || deporte;
+                
+                let pais = extraerPais(liga.title);
+                let nombreLiga = liga.title.includes(' - ') ? liga.title.split(' - ')[1].trim() : liga.title;
+
+                if(!arbol[deporte]) arbol[deporte] = {};
+                if(!arbol[deporte][pais]) arbol[deporte][pais] = [];
+                
+                arbol[deporte][pais].push({ key: liga.key, name: nombreLiga });
+            });
+
             let html = '';
-            Object.keys(agrupado).sort().forEach(grupo => {
-                const idLimpio = grupo.replace(/[^a-zA-Z0-9]/g, '');
-                html += `<div class="border border-white/5 rounded-lg mb-1 overflow-hidden bg-black/30">
-                    <button onclick="toggleAcordeon('${idLimpio}')" class="w-full text-left p-3 flex justify-between items-center text-white font-bold text-[10px] uppercase"><span><i class="fas fa-map-marker-alt text-yellow-500/70 mr-2"></i> ${grupo}</span><i id="icon_${idLimpio}" class="fas fa-chevron-down text-gray-500 transition-transform"></i></button>
-                    <div id="acc_${idLimpio}" class="hidden flex-col bg-black/60 px-2 py-1 border-t border-white/5">`;
-                agrupado[grupo].forEach(liga => { html += `<button onclick="ejecutarFiltroFinal('${liga.key}', '${liga.title}')" class="text-left text-[9px] text-gray-300 hover:text-yellow-500 p-2.5 border-b border-white/5 flex justify-between"><span>${liga.title}</span><i class="fas fa-play text-[8px] text-yellow-500/50"></i></button>`; });
+            Object.keys(arbol).sort().forEach(deporte => {
+                const idDeporte = deporte.replace(/[^a-zA-Z0-9]/g, '');
+                html += `<div class="mb-2">
+                    <button onclick="toggleAcordeon('dep_${idDeporte}')" class="w-full text-left p-3 flex justify-between items-center bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md">
+                        <span><i class="fas fa-trophy mr-2 text-yellow-500/70"></i> ${deporte}</span>
+                        <i id="icon_dep_${idDeporte}" class="fas fa-chevron-down transition-transform"></i>
+                    </button>
+                    <div id="acc_dep_${idDeporte}" class="hidden flex-col gap-1 mt-1 pl-2">`;
+                
+                Object.keys(arbol[deporte]).sort().forEach(pais => {
+                    const idPais = idDeporte + '_' + pais.replace(/[^a-zA-Z0-9]/g, '');
+                    html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1">
+                        <button onclick="toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between items-center text-white font-bold text-[10px] uppercase hover:text-yellow-400">
+                            <span><i class="fas fa-flag text-gray-500 mr-2"></i> ${pais}</span>
+                            <i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i>
+                        </button>
+                        <div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`;
+                    
+                    arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { 
+                        html += `<button onclick="ejecutarFiltroFinal('${liga.key}', '${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between items-center group">
+                            <span class="truncate pr-2">${liga.name}</span>
+                            <i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i>
+                        </button>`; 
+                    });
+                    html += `</div></div>`;
+                });
                 html += `</div></div>`;
             });
             contenedor.innerHTML = html;
@@ -390,7 +466,7 @@
         // EJECUCIÓN CENTRAL
         // ==========================================
         window.ejecutarTopFutbol = async function() {
-            window.cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = 'Fútbol Elite (Top 5 Ligas)';
+            window.cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = 'Partidos Destacados Hoy';
             const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
             cFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando Nube...</div>`;
             if(modoVipActivo) cVip.innerHTML = cFree.innerHTML;
