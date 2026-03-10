@@ -6,55 +6,87 @@ const axios = require("axios");
 admin.initializeApp();
 const db = admin.firestore();
 
-// ⚠️ ASEGÚRATE QUE ESTA LLAVE SEA NUEVA Y ESTÉ ACTIVA
-const API_KEY = '1428ffa5315c791e176a2c6e5a0ebac4'; 
+// ⚠️ PON TUS 3 LLAVES AQUÍ (El robot las rotará inteligentemente)
+const API_KEYS = [
+    'f9f7716fcf820abf2976ba5ca0fcd322', 
+    '6bce6b0eb3202dfd23f1246a67257fd5', 
+    '1428ffa5315c791e176a2c6e5a0ebac4'
+];
+let indexLlaveActual = 0;
 
-async function ejecutarEscaneo() {
-    console.log("🤖 INICIANDO ESCÁNER DE EMERGENCIA...");
+// EL CATÁLOGO GLOBAL DE ORACLEBET (18 Competiciones Elite)
+const LIGAS_GLOBALES = [
+    'soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 
+    'soccer_germany_bundesliga', 'soccer_france_ligue_one', 
+    'soccer_uefa_champs_league', 'soccer_uefa_europa_league',
+    'soccer_conmebol_libertadores', 'soccer_colombia_primera_a', 
+    'soccer_mexico_ligamx', 'soccer_argentina_primera_division', 
+    'soccer_usa_mls',
+    'basketball_nba', 'basketball_euroleague',
+    'tennis_atp', 'tennis_wta',
+    'baseball_mlb', 'americanfootball_nfl'
+];
+
+async function ejecutarEscaneoGlobal() {
+    console.log("🌍 INICIANDO ESCÁNER MUNDIAL ORACLEBET...");
     let totalGuardados = 0;
-    let logErrores = [];
 
-    // Probamos con la Premier League primero (es la más estable)
-    const ligaPrueba = 'soccer_epl';
-    const url = `https://api.the-odds-api.com/v4/sports/${ligaPrueba}/odds/?apiKey=${API_KEY}&regions=eu&markets=h2h,totals`;
+    for (const liga of LIGAS_GLOBALES) {
+        let exitoLiga = false;
+        let intentos = 0;
 
-    try {
-        const response = await axios.get(url, {
-            headers: { 'Accept-Encoding': 'identity' } // Obliga a la API a responder en texto plano
-        });
-        
-        const partidos = response.data;
+        while (!exitoLiga && intentos < API_KEYS.length) {
+            const url = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[indexLlaveActual]}&regions=eu,us&markets=h2h,totals`;
+            
+            try {
+                // Retraso de 1 segundo por regla anti-spam de la API
+                await new Promise(r => setTimeout(r, 1000)); 
+                
+                const response = await axios.get(url, { headers: { 'Accept-Encoding': 'identity' } });
+                const partidos = response.data;
 
-        if (Array.isArray(partidos) && partidos.length > 0) {
-            const batch = db.batch();
-            partidos.forEach(p => {
-                const docRef = db.collection('eventos_sincronizados').doc(p.id);
-                p.ultima_actualizacion = Date.now();
-                p.sport_key = ligaPrueba;
-                batch.set(docRef, p);
-                totalGuardados++;
-            });
-            await batch.commit();
-            return { exito: true, cantidad: totalGuardados };
-        } else {
-            return { exito: false, detalle: "La API respondió vacío (Sin partidos hoy en esta liga)." };
+                if (Array.isArray(partidos) && partidos.length > 0) {
+                    const batch = db.batch();
+                    partidos.forEach(p => {
+                        const docRef = db.collection('eventos_sincronizados').doc(p.id);
+                        p.ultima_actualizacion = Date.now();
+                        p.sport_key = liga; // Sello de identidad de la liga
+                        batch.set(docRef, p);
+                        totalGuardados++;
+                    });
+                    await batch.commit();
+                    console.log(`✅ [${liga}] Guardada con éxito.`);
+                }
+                exitoLiga = true; // Salió bien, rompemos el ciclo while y pasamos a la siguiente liga
+
+            } catch (error) {
+                // Si el error es 429 (Límite de spam) o 401 (Límite mensual), rotamos la llave
+                if (error.response && (error.response.status === 429 || error.response.status === 401)) {
+                    console.warn(`🔄 Llave ${indexLlaveActual} agotada/bloqueada. Cambiando de llave...`);
+                    indexLlaveActual = (indexLlaveActual + 1) % API_KEYS.length;
+                    intentos++;
+                } else if (error.response && error.response.status === 422) {
+                    // La liga no soporta estos mercados hoy, la ignoramos silenciosamente
+                    exitoLiga = true; 
+                } else {
+                    console.error(`❌ Error en [${liga}]:`, error.message);
+                    exitoLiga = true; // Para no quedarnos atrapados en un bucle infinito
+                }
+            }
         }
-
-    } catch (error) {
-        console.error("❌ ERROR DETECTADO:", error.response ? error.response.data : error.message);
-        return { 
-            exito: false, 
-            detalle: error.message, 
-            api_dice: error.response ? error.response.data : "No hubo respuesta del servidor" 
-        };
     }
+    
+    console.log(`🏆 CICLO TERMINADO: ${totalGuardados} partidos almacenados en la Nube.`);
+    return { exito: true, cantidad: totalGuardados };
 }
 
-exports.robotSincronizador = onSchedule("every 60 minutes", async (event) => {
-    await ejecutarEscaneo();
+// EL ROBOT DESPIERTA CADA 3 HORAS (Para ahorrar saldo mensual)
+exports.robotSincronizador = onSchedule("every 3 hours", async (event) => {
+    await ejecutarEscaneoGlobal();
 });
 
+// DISPARADOR MANUAL PARA TUS PRUEBAS
 exports.disparadorManual = onRequest(async (req, res) => {
-    const resultado = await ejecutarEscaneo();
-    res.json(resultado); // Ahora nos devolverá un JSON con el error detallado
+    const resultado = await ejecutarEscaneoGlobal();
+    res.json(resultado);
 });
