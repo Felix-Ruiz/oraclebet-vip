@@ -162,26 +162,74 @@
 
         function cerrarModal() { document.getElementById('modalAnalisis').classList.add('hidden'); }
 
-        function generarTicketVIP(n) {
-            const res = document.getElementById('resultadoVIP');
-            res.innerHTML = `<div class="p-10 text-center"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2"></i><p class="text-[10px] uppercase tracking-widest opacity-50">Escaneando Brokers...</p></div>`;
+        // NUEVA LÓGICA VIP REAL (Algoritmo de cuotas matemáticas)
+        async function generarTicketVIP(n) {
+            const resDiv = document.getElementById('resultadoVIP');
+            resDiv.innerHTML = `<div class="p-10 text-center"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-2xl"></i><p class="text-[10px] uppercase tracking-widest opacity-50 mt-2">Calculando Algoritmo y Cuotas...</p></div>`;
             
-            setTimeout(() => {
-                const cuota = (Math.random() * (15.0 - 5.0) + 5.0).toFixed(2);
-                res.innerHTML = `
-                    <div class="card-glass p-5 border-t-2 border-yellow-500 bg-yellow-500/5">
-                        <div class="flex justify-between mb-4">
-                            <span class="text-[10px] font-black text-yellow-500 uppercase italic">Ticket Sugerido</span>
-                            <span class="text-[10px] text-green-400 font-bold">Confianza 96%</span>
+            try {
+                const res = await fetch(`https://api.the-odds-api.com/v4/sports/${SPORT}/odds/?apiKey=${API_KEY}&regions=eu&markets=h2h`);
+                const data = await res.json();
+                
+                // Filtramos partidos que sí tengan datos de casas de apuestas
+                const validMatches = data.filter(m => m.bookmakers && m.bookmakers.length > 0);
+                
+                if(validMatches.length < n) {
+                    resDiv.innerHTML = `<p class="text-center text-red-500 text-xs">No hay suficientes partidos en la API en este momento para generar una combinada de ${n}.</p>`;
+                    return;
+                }
+
+                // Barajamos aleatoriamente para que los picks sean distintos cada vez
+                const shuffled = validMatches.sort(() => 0.5 - Math.random());
+                const selectedMatches = shuffled.slice(0, n);
+                
+                let htmlPartidos = '';
+                let cuotaTotal = 1.0;
+                
+                selectedMatches.forEach(partido => {
+                    const market = partido.bookmakers[0].markets[0]; // Tomamos el mercado H2H del primer broker
+                    
+                    // Lógica para asegurar buenas cuotas: buscamos un pick que pague más de 1.65
+                    let bestOutcome = market.outcomes[0];
+                    market.outcomes.forEach(o => {
+                        if (o.price >= 1.65 && o.price <= 2.80) {
+                            bestOutcome = o;
+                        }
+                    });
+                    
+                    cuotaTotal *= bestOutcome.price; // Multiplicamos la cuota
+                    
+                    htmlPartidos += `
+                        <div class="flex justify-between items-center bg-black/20 p-3 rounded-lg mb-2 border border-white/5">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-gray-400 mb-1">${partido.home_team} vs ${partido.away_team}</span>
+                                <span class="text-xs font-bold text-white uppercase"><span class="text-yellow-500">Pick:</span> ${bestOutcome.name}</span>
+                            </div>
+                            <span class="text-yellow-500 font-black text-sm text-right bg-yellow-500/10 px-2 py-1 rounded">${bestOutcome.price.toFixed(2)}</span>
                         </div>
-                        <p class="text-sm text-gray-300">Algoritmo procesó ${n} partidos con éxito.</p>
-                        <div class="mt-4 pt-3 border-t border-white/5 flex justify-between items-center">
-                            <span class="text-xs font-bold text-gray-500 italic uppercase">Cuota Total</span>
-                            <span class="text-2xl font-black text-yellow-500">${cuota}</span>
+                    `;
+                });
+                
+                resDiv.innerHTML = `
+                    <div class="card-glass p-5 border-t-2 border-yellow-500 bg-yellow-500/5 animate-slide-up shadow-2xl">
+                        <div class="flex justify-between items-center mb-5">
+                            <span class="text-[10px] font-black text-yellow-500 uppercase tracking-widest italic">Ticket Sugerido</span>
+                            <span class="text-[10px] text-green-400 font-bold bg-green-400/10 px-2 py-1 rounded"><i class="fas fa-check-circle"></i> Alta Probabilidad</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            ${htmlPartidos}
+                        </div>
+                        
+                        <div class="pt-4 border-t border-white/10 flex justify-between items-center">
+                            <span class="text-xs font-bold text-gray-500 italic uppercase">Cuota Combinada</span>
+                            <span class="text-3xl font-black text-yellow-500 drop-shadow-md">${cuotaTotal.toFixed(2)}</span>
                         </div>
                     </div>
                 `;
-            }, 1500);
+            } catch (error) {
+                resDiv.innerHTML = `<p class="text-center text-red-500 text-xs">Error de conexión con brokers VIP. Intenta de nuevo.</p>`;
+            }
         }
 
         // Registro del Service Worker para PWA
