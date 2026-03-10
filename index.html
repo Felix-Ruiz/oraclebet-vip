@@ -75,7 +75,9 @@
         }
         .carrusel-activo .bg-black\/40 { background-color: rgba(0,0,0,0.1); }
 
-        /* ANIMACIONES DE LUJO PARA EL HEADER */
+        /* ========================================================== */
+        /* ANIMACIONES DE LUJO (Sparkles & Movimiento) PARA EL HEADER */
+        /* ========================================================== */
         .oracle-brand {
             background: linear-gradient(135deg, #f1d27b 0%, #ffffff 40%, #D4AF37 50%, #f1d27b 100%);
             -webkit-background-clip: text;
@@ -392,7 +394,7 @@
             </div>
 
             <div class="card-glass p-6 border-2 border-blue-500/50 bg-blue-500/5 text-center shadow-lg mb-4">
-                <h3 class="text-lg font-black mb-4 text-blue-400"><i class="fas fa-magic mr-2"></i> Crear Reto Escalera</h3>
+                <h3 class="text-lg font-black mb-4 text-blue-400"><i class="fas fa-magic mr-2"></i> Generador de Retos IA</h3>
                 
                 <div class="mb-3 text-left">
                     <label class="text-[9px] text-gray-400 font-bold uppercase mb-1 block">1. Seleccionar Fecha del Reto:</label>
@@ -402,25 +404,26 @@
                 <div class="flex gap-2 mb-3">
                     <div class="w-1/2 text-left">
                         <label class="text-[9px] text-gray-400 font-bold uppercase mb-1 block">Cuota Meta:</label>
-                        <input type="number" id="inputCuotaObjetivo" step="0.1" placeholder="Ej: 1.50" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-500 text-center font-bold shadow-inner">
+                        <input type="number" id="inputCuotaObjetivo" step="0.1" placeholder="Meta (Ej: 1.50)" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-500 text-center font-bold shadow-inner">
                     </div>
                     <div class="w-1/2 text-left">
                         <label class="text-[9px] text-gray-400 font-bold uppercase mb-1 block">Seguridad Mín %:</label>
-                        <input type="number" id="inputProbMinima" placeholder="Ej: 85" value="90" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-500 text-center font-bold shadow-inner">
+                        <input type="number" id="inputProbMinima" placeholder="Min % (Ej: 85)" value="90" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-500 text-center font-bold shadow-inner">
                     </div>
                 </div>
                 
                 <button onclick="generarRetoAdmin()" class="w-full mb-4 bg-blue-600 text-white py-3 rounded-lg text-[10px] font-black uppercase hover:bg-blue-500 transition-all flex justify-center items-center gap-2 shadow-lg active:scale-95">
-                    <i class="fas fa-robot text-lg"></i> Buscar Partidos
+                    <i class="fas fa-robot text-lg"></i> BUSCAR PARTIDOS (GLOBAL)
                 </button>
                 
-                <div id="previewRetoAdmin" class="mb-4 text-left hidden"></div>
+                <div id="previewRetoAdmin" class="mb-4 text-left hidden">
+                    </div>
 
-                <div class="text-left mb-2 text-[9px] text-gray-400 font-bold uppercase block">Mensaje / Nota Adicional (Opcional):</div>
+                <div class="text-left mb-2 text-[9px] text-gray-400 font-bold uppercase block">Mensaje Personalizado:</div>
                 <textarea id="inputAdminReto" rows="3" placeholder="Ej: Apuesta con stake fijo de 10%..." class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-500 mb-3 shadow-inner"></textarea>
                 
                 <button onclick="publicarRetoEscalera()" id="btnPublicarReto" class="w-full bg-green-600 text-white py-3.5 rounded-xl text-[11px] font-black uppercase shadow-[0_0_15px_rgba(34,197,94,0.4)] active:scale-95 transition">
-                    Publicar Ticket Oficial
+                    PUBLICAR TICKET OFICIAL
                 </button>
             </div>
 
@@ -428,11 +431,11 @@
                 <h3 class="text-lg font-black mb-4 text-yellow-500"><i class="fas fa-eye mr-2"></i> Monitor de Operaciones</h3>
                 
                 <button onclick="cargarMonitorTickets()" class="w-full bg-gray-800 text-yellow-500 py-3 rounded-lg text-[10px] font-black uppercase shadow-lg mb-4 active:scale-95 border border-yellow-500/30">
-                    <i class="fas fa-sync-alt mr-1"></i> Actualizar Tickets Guardados
+                    <i class="fas fa-sync-alt mr-1"></i> Actualizar Tickets Globales
                 </button>
                 
                 <div id="monitorTicketsList" class="space-y-3 max-h-64 overflow-y-auto pr-1 text-left hide-scrollbar">
-                    <p class="text-[10px] text-gray-500 text-center py-4">Haz clic en actualizar para ver los tickets recientes de los usuarios.</p>
+                    <p class="text-[10px] text-gray-500 text-center py-4">Sincroniza para ver los movimientos de los usuarios.</p>
                 </div>
             </div>
 
@@ -1282,7 +1285,7 @@
         }
 
         // ==========================================
-        // HISTORIAL Y GUARDADO EN LA NUBE
+        // HISTORIAL
         // ==========================================
         window.guardarTicketHistorial = async function(cuota) {
             if(!codigoActivoUsuario) return;
@@ -1423,7 +1426,7 @@
         };
 
         // ==========================================
-        // CLUB ESCALERA Y GENERADOR IA (ADMIN)
+        // CLUB ESCALERA 
         // ==========================================
         window.chequearEstadoEscaleraUI = function() {
             const btn = document.getElementById('btnSolicitarEscalera'); 
@@ -1431,14 +1434,33 @@
             const divAprobada = document.getElementById('escaleraAprobada');
             
             if(!codigoActivoUsuario) { 
-                btn.disabled = true; btn.innerText = "REQUIERE LOGIN"; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; return; 
+                btn.disabled = false; 
+                btn.innerText = "INICIAR SESIÓN"; 
+                btn.className = "w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(220,38,38,0.3)] transition active:scale-95";
+                btn.onclick = window.abrirModalLogin;
+                divBloqueada.style.display = 'block'; 
+                divAprobada.style.display = 'none'; 
+                return; 
             }
+            
             if(estadoEscalera === 'none') { 
-                btn.disabled = false; btn.innerText = "SOLICITAR INVITACIÓN"; btn.classList.replace('bg-gray-600', 'bg-blue-600'); divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; 
+                btn.disabled = false; 
+                btn.innerText = "SOLICITAR INVITACIÓN"; 
+                btn.className = "w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition active:scale-95";
+                btn.onclick = window.solicitarAccesoEscalera;
+                divBloqueada.style.display = 'block'; 
+                divAprobada.style.display = 'none'; 
             } else if (estadoEscalera === 'pending') { 
-                btn.disabled = true; btn.innerText = "REVISIÓN PENDIENTE..."; btn.classList.replace('bg-blue-600', 'bg-gray-600'); divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; 
+                btn.disabled = true; 
+                btn.innerText = "REVISIÓN PENDIENTE..."; 
+                btn.className = "w-full py-4 bg-gray-600 text-white rounded-lg font-black text-[11px] uppercase tracking-widest transition";
+                btn.onclick = null;
+                divBloqueada.style.display = 'block'; 
+                divAprobada.style.display = 'none'; 
             } else if (estadoEscalera === 'approved') { 
-                divBloqueada.style.display = 'none'; divAprobada.style.display = 'block'; window.cargarRetoEscaleraNube(); 
+                divBloqueada.style.display = 'none'; 
+                divAprobada.style.display = 'block'; 
+                window.cargarRetoEscaleraNube(); 
             }
         };
 
@@ -1448,11 +1470,13 @@
             btn.disabled = true;
             try { 
                 await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' }); 
-                estadoEscalera = 'pending'; window.chequearEstadoEscaleraUI(); 
+                estadoEscalera = 'pending'; 
+                window.chequearEstadoEscaleraUI(); 
                 window.mostrarAlerta("Solicitud Enviada", "Tu solicitud para el Club Escalera está en revisión por el Administrador.", "success"); 
             } catch (e) { 
                 window.mostrarAlerta("Error", "Ocurrió un error de red al enviar la solicitud.", "error"); 
-                btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; 
+                btn.innerText = "SOLICITAR INVITACIÓN"; 
+                btn.disabled = false; 
             }
         };
 
@@ -1464,7 +1488,6 @@
                     const data = snap.data();
                     let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`;
 
-                    // RENDERIZAR TICKET VISUAL PARA USUARIO SI EXISTE
                     if(data.ticket_data && data.ticket_data.picks) {
                         html += `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]">`;
                         html += `<div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2">
@@ -1498,6 +1521,9 @@
             }
         };
 
+        // ==========================================
+        // GENERADOR DE IA ADMIN (REESCRITO Y MEJORADO)
+        // ==========================================
         window.retoPendientePublicar = null; 
 
         window.generarRetoAdmin = async function() {
@@ -1515,11 +1541,11 @@
             btn.disabled = true;
 
             try {
-                // ESCANEO MUNDIAL TOTAL: Buscamos todas las ligas de fútbol (soccer)
+                // ESCANEO MUNDIAL TOTAL
                 let soccerLigas = competicionesGlobales.filter(l => l.key.includes('soccer')).map(l => l.key);
                 let todos = await obtenerPartidosDesdeNube(soccerLigas) || [];
                 
-                // Filtro por Fecha Exacta elegida en el Input
+                // Filtro estricto por fecha sin importar la zona horaria
                 let partidosDelDia = todos.filter(p => {
                     const d = new Date(p.commence_time);
                     const fechaP = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -1559,12 +1585,11 @@
                 
                 for(let op of unicas) {
                     if(cuotaAcum >= meta) break;
-                    if(seleccionados.length >= 6) break; // Máximo 6 eventos para no dañar el UI del ticket
+                    if(seleccionados.length >= 6) break; // Máximo 6 eventos
                     seleccionados.push(op);
                     cuotaAcum *= op.cuota;
                 }
 
-                // Guardar JSON Temporal para publicarlo
                 window.retoPendientePublicar = {
                     picks: seleccionados.map(s => ({
                         home_team: s.partido.home_team,
@@ -1579,7 +1604,6 @@
                     fechaFiltro: fechaElegida
                 };
 
-                // DIBUJAR PREVISUALIZACION EXACTA EN EL PANEL ADMIN
                 let previewHtml = `
                     <div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
                         <div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2">
@@ -1637,7 +1661,6 @@
             btn.disabled = true;
             
             try { 
-                // Guardamos el mensaje de texto + el JSON del ticket estructurado en Firebase
                 await setDoc(doc(db, "global", "escalera"), { 
                     mensaje: txt, 
                     ticket_data: window.retoPendientePublicar, 
@@ -1649,7 +1672,7 @@
                 document.getElementById('inputAdminReto').value=''; 
                 document.getElementById('previewRetoAdmin').innerHTML=''; 
                 document.getElementById('previewRetoAdmin').classList.add('hidden');
-                window.retoPendientePublicar = null; // Limpiar memoria
+                window.retoPendientePublicar = null; 
                 
             } catch(e){ 
                 window.mostrarAlerta("Error", "Error al conectar con la base de datos.", "error"); 
@@ -1671,7 +1694,7 @@
             btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; 
             btn.disabled = true;
             
-            // VALIDACIÓN ADMIN (INSENSIBLE A MAYÚSCULAS)
+            // VALIDACIÓN ADMIN
             if(input.toUpperCase() === MASTER_CODE.toUpperCase()) {
                 try {
                     const adminRef = doc(db, "global", "admin_security"); 
@@ -1694,8 +1717,8 @@
                     document.getElementById('adminSection').style.display = 'block'; 
                     
                     const btnTop = document.getElementById('btnTopLogin'); 
-                    btnTop.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>SALIR ADMIN</span>'; 
-                    btnTop.className = "shrink-0 bg-gray-800 text-red-500 text-[9px] sm:text-[10px] px-3 py-2 sm:px-4 sm:py-2 rounded-full font-black border border-red-500/50 flex items-center gap-1.5 sm:gap-2 transition-all"; 
+                    btnTop.innerHTML = '<i class="fas fa-sign-out-alt"></i> SALIR ADMIN'; 
+                    btnTop.className = "bg-gray-800 text-red-500 text-[10px] px-4 py-2 rounded-full font-black border border-red-500/50 flex items-center gap-2 transition-all"; 
                     btnTop.onclick = window.cerrarAdminSeguro;
                     
                     window.renderizarListaAdmin(); 
