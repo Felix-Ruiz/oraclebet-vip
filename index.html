@@ -29,7 +29,6 @@
         #contenidoMenuLateral::-webkit-scrollbar { display: none; }
         .neon-premium { box-shadow: 0 0 15px rgba(168, 85, 247, 0.5), inset 0 0 10px rgba(168, 85, 247, 0.3); border: 1px solid #a855f7; }
         
-        /* Ocultar secciones de vista dinámicamente */
         .view-section { display: none; }
         .view-active { display: block; animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -51,7 +50,7 @@
             </button>
         </div>
         <div id="contenidoMenuLateral" class="flex-grow overflow-y-auto p-2 space-y-1 pb-10">
-            <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando Países...</div>
+            <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Conectando Nodo Híbrido...</div>
         </div>
     </div>
 
@@ -76,7 +75,7 @@
                         <input type="text" id="buscadorEquipos" onkeyup="aplicarFiltrosLocales()" placeholder="Buscar equipo..." class="w-full h-full bg-gray-900 border border-gray-700 rounded-lg py-2 pl-10 pr-3 text-white text-xs font-bold outline-none focus:border-yellow-500 transition-colors">
                     </div>
                     <div class="relative w-[130px] h-full">
-                        <input type="date" id="filtroFecha" onchange="aplicarFiltrosLocales()" class="w-full h-full bg-gray-900 border border-gray-700 rounded-lg px-2 text-white text-[11px] font-bold outline-none focus:border-yellow-500 cursor-pointer shadow-inner">
+                        <input type="date" id="filtroFecha" onchange="aplicarFiltrosLocales()" class="w-full h-full bg-gray-900 border border-gray-700 rounded-lg px-2 text-white text-[11px] font-bold outline-none focus:border-yellow-500 cursor-pointer shadow-inner transition-colors">
                     </div>
                 </div>
                 <button onclick="abrirMenuLateral()" class="w-full bg-gray-800 border border-yellow-500/50 rounded-lg py-3 text-yellow-500 hover:bg-gray-700 transition flex justify-center items-center gap-2 text-xs font-bold shadow-[0_0_15px_rgba(212,175,55,0.15)] active:scale-95">
@@ -92,9 +91,12 @@
 
             <div id="wrapperFree">
                 <section class="space-y-4">
-                    <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2">Pronósticos Disponibles</h2>
+                    <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2 flex justify-between items-center">
+                        Pronósticos Disponibles
+                        <span id="badgeConexion" class="text-[8px] bg-green-500/20 text-green-500 px-2 py-0.5 rounded border border-green-500/50 uppercase tracking-widest font-black"><i class="fas fa-satellite"></i> Híbrido Activo</span>
+                    </h2>
                     <div id="containerPartidos" class="space-y-4">
-                        <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Sincronizando brokers...</div>
+                        <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Consultando Sistema Central...</div>
                     </div>
                 </section>
             </div>
@@ -146,7 +148,6 @@
                 <h3 class="text-xs font-bold text-gray-300 uppercase tracking-widest border-l-2 border-yellow-500 pl-2">Tus Tickets Guardados</h3>
                 <button onclick="limpiarHistorial()" class="text-[9px] text-red-400 bg-red-400/10 px-2 py-1 rounded hover:bg-red-400/20 transition"><i class="fas fa-trash"></i> Limpiar</button>
             </div>
-            
             <div id="contenedorHistorial" class="space-y-4 pb-10"></div>
         </div>
 
@@ -213,16 +214,13 @@
 
     </div> <nav id="bottomNav" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t border-gray-800 flex justify-around items-center pb-safe pt-2 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
         <button onclick="cambiarVista('picks')" id="nav_picks" class="flex flex-col items-center p-2 text-yellow-500 transition-colors w-1/3">
-            <i class="fas fa-crosshairs text-xl mb-1"></i>
-            <span class="text-[9px] font-bold uppercase tracking-widest">Picks</span>
+            <i class="fas fa-crosshairs text-xl mb-1"></i><span class="text-[9px] font-bold uppercase tracking-widest">Picks</span>
         </button>
         <button onclick="cambiarVista('historial')" id="nav_historial" class="flex flex-col items-center p-2 text-gray-500 hover:text-gray-300 transition-colors w-1/3">
-            <i class="fas fa-chart-line text-xl mb-1"></i>
-            <span class="text-[9px] font-bold uppercase tracking-widest">Historial</span>
+            <i class="fas fa-chart-line text-xl mb-1"></i><span class="text-[9px] font-bold uppercase tracking-widest">Historial</span>
         </button>
         <button onclick="cambiarVista('escalera')" id="nav_escalera" class="flex flex-col items-center p-2 text-gray-500 hover:text-gray-300 transition-colors w-1/3">
-            <i class="fas fa-users text-xl mb-1"></i>
-            <span class="text-[9px] font-bold uppercase tracking-widest">Escalera</span>
+            <i class="fas fa-users text-xl mb-1"></i><span class="text-[9px] font-bold uppercase tracking-widest">Escalera</span>
         </button>
     </nav>
 
@@ -269,9 +267,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, query, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // CREDENCIALES
         const firebaseConfig = {
             apiKey: "AIzaSyAUB1hC-JSQcrJ68ayl9rEUhP4Qz9xz7Uk",
             authDomain: "oraclebet-db.firebaseapp.com",
@@ -283,7 +280,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ANTI-PIRATERÍA (Device ID)
         function obtenerHuellaDispositivo() {
             let miHuella = localStorage.getItem('oraclebet_huella_secreta');
             if (!miHuella) { miHuella = 'disp_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36); localStorage.setItem('oraclebet_huella_secreta', miHuella); }
@@ -291,51 +287,95 @@
         }
         const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo();
 
-        // APIS ROTATIVAS
+        // ⚠️ AQUÍ PUEDES PONER NUEVAS LLAVES SI SE TE ACABÓ EL SALDO ⚠️
         const API_KEYS = ['f9f7716fcf820abf2976ba5ca0fcd322', '6bce6b0eb3202dfd23f1246a67257fd5', '3de65f75eaa239d32fab9092aa0a0d17'];
         let currentApiIndex = 0;
         
-        // ESTADOS GLOBALES
         const MASTER_CODE = "FELIX_ADMIN_777";
-        let modoVipActivo = false;
-        let modoIlimitadoActivo = false;
-        let codigoActivoUsuario = ''; 
-        let estadoEscalera = 'none'; 
-
+        let modoVipActivo = false, modoIlimitadoActivo = false, codigoActivoUsuario = '', estadoEscalera = 'none';
         let partidosGlobales = [], partidosFiltrados = [], competicionesGlobales = []; 
         let seleccionesVIPGlobal = [], ticketDinamicoVIP = []; 
         let modoMercadoGlobal = 'mixto'; 
 
-        // MOTOR FETCH PROTEGIDO (Ignora errores 422/404 sin romper el código)
-        async function fetchConRotacion(endpointTemplate) {
-            let intentos = 0;
-            while(intentos < API_KEYS.length) {
-                const url = endpointTemplate.replace('API_KEY_PLACEHOLDER', API_KEYS[currentApiIndex]);
-                try {
-                    const res = await fetch(url);
-                    if(res.status === 429 || res.status === 401) { 
-                        currentApiIndex = (currentApiIndex + 1) % API_KEYS.length; 
-                        intentos++; 
-                    } else if (!res.ok) {
-                        return []; // Graceful fail: Si no hay cuotas para esa liga hoy, retorna vacío en vez de romper la app
-                    } else {
-                        return await res.json();
+        // ======================================================================
+        // EL CEREBRO HÍBRIDO: INTENTA LEER DE FIREBASE, SI FALLA USA API LOCAL
+        // ======================================================================
+        async function obtenerPartidosHibrido(ligasArray, cacheKey) {
+            
+            // 1. INTENTO NUBE (Costo 0 de API - Robot en Firestore)
+            try {
+                const q = query(collection(db, "eventos_sincronizados"), limit(250));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    let nube = [];
+                    snap.forEach(doc => {
+                        let d = doc.data();
+                        if (ligasArray.includes(d.sport_key) || ligasArray[0] === 'upcoming') nube.push(d);
+                    });
+                    if(nube.length > 0) {
+                        document.getElementById('badgeConexion').innerHTML = '<i class="fas fa-cloud text-blue-400"></i> Nube Activa';
+                        return nube; 
                     }
-                } catch(e) {
-                    console.warn("Fallo de red al conectar con la API.");
-                    return []; // Previene que la UI colapse por fallos de internet
                 }
+            } catch(e) { console.warn("Robot de nube inactivo. Cambiando a consumo local..."); }
+
+            document.getElementById('badgeConexion').innerHTML = '<i class="fas fa-server text-yellow-500"></i> Fallback Local';
+
+            // 2. INTENTO CACHÉ LOCAL (15 MINUTOS DE AHORRO)
+            const cacheStr = sessionStorage.getItem('oracle_cache_' + cacheKey);
+            if(cacheStr) {
+                const cacheObj = JSON.parse(cacheStr);
+                if(Date.now() - cacheObj.time < 900000) return cacheObj.data; // 15 mins
             }
-            return { isQuotaError: true }; // Flag especial para avisar que se acabaron los limites
+
+            // 3. CONSUMO REAL DE THE ODDS API (Modo Anti-Spam)
+            let resultadosTemporales = [];
+            let errorDeSaldo = false;
+
+            for (let liga of ligasArray) {
+                let intentos = 0;
+                let dataLiga = null;
+                
+                while(intentos < API_KEYS.length) {
+                    const url = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[currentApiIndex]}&regions=eu&markets=h2h,totals`;
+                    try {
+                        await new Promise(r => setTimeout(r, 400)); // Retraso obligatorio anti-bloqueo 429
+                        const res = await fetch(url);
+                        if(res.status === 429 || res.status === 401) { currentApiIndex = (currentApiIndex + 1) % API_KEYS.length; intentos++; } 
+                        else if (!res.ok) { dataLiga = []; break; } // Ignora fallos 404 de ligas vacías
+                        else { dataLiga = await res.json(); break; }
+                    } catch(e) { dataLiga = []; break; } // Falla de internet
+                }
+                
+                if(!dataLiga && intentos >= API_KEYS.length) { errorDeSaldo = true; break; }
+                if(Array.isArray(dataLiga)) resultadosTemporales = resultadosTemporales.concat(dataLiga);
+            }
+
+            if(errorDeSaldo) return { isQuotaError: true };
+
+            sessionStorage.setItem('oracle_cache_' + cacheKey, JSON.stringify({time: Date.now(), data: resultadosTemporales}));
+            return resultadosTemporales;
         }
 
         function mostrarErrorLimites(contenedor) {
-            contenedor.innerHTML = `<div class="p-6 text-center bg-red-900/20 border border-red-500/50 rounded-xl"><i class="fas fa-ban text-red-500 text-3xl mb-3"></i><p class="text-red-400 text-[10px] uppercase font-bold tracking-widest">Límite mensual de 1500 peticiones agotado en todas las cuentas.<br><br>Por favor, añade nuevas API Keys en el código.</p></div>`;
+            contenedor.innerHTML = `<div class="p-6 text-center bg-red-900/20 border border-red-500/50 rounded-xl shadow-inner mb-4"><i class="fas fa-ban text-red-500 text-4xl mb-3"></i><p class="text-red-400 text-[10px] uppercase font-bold tracking-widest leading-relaxed">Límite mensual de API Agotado.<br><br>Añade nuevas llaves en el código o despliega el Robot Backend.</p></div>`;
         }
 
         // ==========================================
-        // FUNCIONES GLOBALES (Window Binding)
+        // UI & NAVEGACIÓN
         // ==========================================
+        window.cambiarVista = function(vista) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('view-active'));
+            document.getElementById('vista_' + vista).classList.add('view-active');
+            ['picks', 'historial', 'escalera'].forEach(b => {
+                const btn = document.getElementById('nav_' + b);
+                if(b === vista) { btn.classList.remove('text-gray-500'); btn.classList.add('text-yellow-500'); } 
+                else { btn.classList.add('text-gray-500'); btn.classList.remove('text-yellow-500'); }
+            });
+            if(vista === 'historial') window.renderizarHistorial();
+            if(vista === 'escalera') window.chequearEstadoEscaleraUI();
+        };
+
         window.iniciarApp = async function() {
             document.getElementById('filtroFecha').value = ""; 
             await window.obtenerLigasDisponibles();
@@ -348,34 +388,41 @@
         window.cerrarModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.add('hidden'); };
 
         window.obtenerLigasDisponibles = async function() {
-            const data = await fetchConRotacion(`https://api.the-odds-api.com/v4/sports/?apiKey=API_KEY_PLACEHOLDER`);
-            if(data && data.isQuotaError) return; // Si no hay saldo, simplemente no carga el menu lateral
-            competicionesGlobales = data.filter(l => l.active);
-            construirMenuLateral();
+            const data = await obtenerPartidosHibrido([], 'lista_ligas_solo_cache'); // Hack para usar la misma función si quisiéramos, pero ligas usa otro endpoint.
+            
+            // Ligas siempre se lee directo de la API porque es 1 sola peticion muy barata
+            let intentos = 0; let jsonLigas = null;
+            while(intentos < API_KEYS.length) {
+                try {
+                    const res = await fetch(`https://api.the-odds-api.com/v4/sports/?apiKey=${API_KEYS[currentApiIndex]}`);
+                    if(res.status === 429 || res.status === 401) { currentApiIndex = (currentApiIndex + 1) % API_KEYS.length; intentos++; }
+                    else if(res.ok) { jsonLigas = await res.json(); break; }
+                } catch(e) { break; }
+            }
+
+            if(jsonLigas) {
+                competicionesGlobales = jsonLigas.filter(l => l.active);
+                construirMenuLateral();
+            }
         }
 
         function extraerPais(liga) {
             if (liga.title.includes(' - ')) return liga.title.split(' - ')[1].trim();
-            if (liga.group.includes('Basketball') && liga.title.includes('NBA')) return 'USA / NBA';
-            if (liga.group.includes('Baseball') && liga.title.includes('MLB')) return 'USA / MLB';
+            if (liga.group.includes('Basketball')) return 'USA / Baloncesto';
+            if (liga.group.includes('Baseball')) return 'USA / Béisbol';
             return 'Internacional';
         }
 
         function construirMenuLateral() {
-            const contenedor = document.getElementById('contenidoMenuLateral');
-            let agrupado = {};
+            const contenedor = document.getElementById('contenidoMenuLateral'); let agrupado = {};
             competicionesGlobales.forEach(l => { let p = extraerPais(l); if(!agrupado[p]) agrupado[p] = []; agrupado[p].push(l); });
             let html = '';
             Object.keys(agrupado).sort().forEach(pais => {
                 const idLimpio = pais.replace(/[^a-zA-Z0-9]/g, '');
                 html += `<div class="border border-white/5 rounded-lg mb-1 overflow-hidden bg-black/30">
-                    <button onclick="toggleAcordeon('${idLimpio}')" class="w-full text-left p-3 flex justify-between items-center text-white font-bold text-[10px] uppercase">
-                        <span><i class="fas fa-map-marker-alt text-yellow-500/70 mr-2"></i> ${pais}</span><i id="icon_${idLimpio}" class="fas fa-chevron-down text-gray-500 transition-transform"></i>
-                    </button>
+                    <button onclick="toggleAcordeon('${idLimpio}')" class="w-full text-left p-3 flex justify-between items-center text-white font-bold text-[10px] uppercase"><span><i class="fas fa-map-marker-alt text-yellow-500/70 mr-2"></i> ${pais}</span><i id="icon_${idLimpio}" class="fas fa-chevron-down text-gray-500 transition-transform"></i></button>
                     <div id="acc_${idLimpio}" class="hidden flex-col bg-black/60 px-2 py-1 border-t border-white/5">`;
-                agrupado[pais].sort((a,b)=>a.title.localeCompare(b.title)).forEach(liga => {
-                    html += `<button onclick="ejecutarFiltroFinal('${liga.key}', '${liga.title}')" class="text-left text-[9px] text-gray-300 hover:text-yellow-500 p-2.5 rounded hover:bg-white/5 border-b border-white/5 last:border-0 flex justify-between"><span>${liga.title}</span><i class="fas fa-play text-[8px] text-yellow-500/50"></i></button>`;
-                });
+                agrupado[pais].sort((a,b)=>a.title.localeCompare(b.title)).forEach(liga => { html += `<button onclick="ejecutarFiltroFinal('${liga.key}', '${liga.title}')" class="text-left text-[9px] text-gray-300 hover:text-yellow-500 p-2.5 border-b border-white/5 flex justify-between"><span>${liga.title}</span><i class="fas fa-play text-[8px] text-yellow-500/50"></i></button>`; });
                 html += `</div></div>`;
             });
             contenedor.innerHTML = html;
@@ -406,52 +453,46 @@
             if(modoVipActivo) window.renderizarPartidosVIP(); else window.renderizarPartidosFree();
         };
 
+        // ==========================================
+        // EJECUCIÓN CENTRAL DE DATOS
+        // ==========================================
         window.ejecutarTopFutbol = async function() {
             window.cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = 'Fútbol Elite (Top 5 Ligas)';
-            document.getElementById('buscadorEquipos').value = ''; document.getElementById('filtroFecha').value = ''; 
             const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
-            cFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Escaneando Europa...</div>`;
+            cFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando...</div>`;
             if(modoVipActivo) cVip.innerHTML = cFree.innerHTML;
             
             const ligasTop = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_uefa_champs_league', 'soccer_italy_serie_a'];
             
-            // ATENCIÓN: Se quitó "spreads" del request para evitar errores 422 de The Odds API
-            const promesas = ligasTop.map(liga => fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals`));
-            const resultados = await Promise.all(promesas);
+            const data = await obtenerPartidosHibrido(ligasTop, 'top_futbol');
             
-            if(resultados.some(r => r && r.isQuotaError)) {
-                mostrarErrorLimites(cFree); if(modoVipActivo) mostrarErrorLimites(cVip);
-                return;
-            }
+            if(data && data.isQuotaError) { mostrarErrorLimites(cFree); if(modoVipActivo) mostrarErrorLimites(cVip); return; }
 
-            partidosGlobales = resultados.flat().filter(m => m && m.bookmakers?.length > 0);
+            partidosGlobales = data.filter(m => m && m.bookmakers?.length > 0);
             partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time));
             window.aplicarFiltrosLocales();
         };
 
         window.ejecutarFiltroFinal = async function(keyLiga, nombreMostrar) {
             window.cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = nombreMostrar;
-            document.getElementById('buscadorEquipos').value = ''; document.getElementById('filtroFecha').value = ''; 
             const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
             cFree.innerHTML = `<div class="text-center p-10 opacity-50"><i class="fas fa-spinner animate-spin text-yellow-500 text-2xl"></i></div>`;
             if(modoVipActivo) cVip.innerHTML = cFree.innerHTML;
             
-            // ATENCIÓN: Se quitó "spreads" del request para evitar colapsos
-            const data = await fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${keyLiga}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals`);
+            const data = await obtenerPartidosHibrido([keyLiga], 'filtro_' + keyLiga);
             
-            if(data && data.isQuotaError) {
-                mostrarErrorLimites(cFree); if(modoVipActivo) mostrarErrorLimites(cVip);
-                return;
-            }
+            if(data && data.isQuotaError) { mostrarErrorLimites(cFree); if(modoVipActivo) mostrarErrorLimites(cVip); return; }
 
-            partidosGlobales = (data || []).filter(m => m && m.bookmakers?.length > 0);
+            partidosGlobales = data.filter(m => m && m.bookmakers?.length > 0);
             window.aplicarFiltrosLocales();
         };
 
-        // RENDERIZADO
+        // ==========================================
+        // UI TICKETS & SELECCIONES
+        // ==========================================
         window.renderizarPartidosFree = function() {
             const container = document.getElementById('containerPartidos'); container.innerHTML = '';
-            if(partidosFiltrados.length === 0) { container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5"><p class="text-gray-400 text-[10px] font-bold uppercase">No hay eventos para la fecha o búsqueda.</p></div>`; return; }
+            if(partidosFiltrados.length === 0) { container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5"><p class="text-gray-400 text-[10px] font-bold uppercase">No hay eventos.</p></div>`; return; }
             partidosFiltrados.slice(0, 15).forEach(partido => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 container.innerHTML += `
@@ -490,7 +531,6 @@
                 if(!modoIlimitadoActivo && seleccionesVIPGlobal.length >= 5) { cb.checked = false; alert("Límite VIP (Máx 5). Usa código PREMIUM para ilimitado."); return; }
                 const p = partidosGlobales.find(x => x.id === id); if(p && !seleccionesVIPGlobal.some(s=>s.id===id)) seleccionesVIPGlobal.push(p);
             } else { seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== id); }
-            
             const card = cb.closest('.bg-black\\/40');
             if(cb.checked) { card.classList.add('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.remove('border-white/5'); } 
             else { card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5'); }
@@ -502,23 +542,14 @@
             const cantidad = seleccionesVIPGlobal.length;
             contador.innerText = `${cantidad} Seleccionados`;
             if(!modoIlimitadoActivo) document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); });
-
-            if(cantidad >= 2 && (modoIlimitadoActivo || cantidad <= 5)) {
-                btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                btn.innerHTML = `<span>GENERAR TICKET INTELIGENTE</span><span class="text-[10px] font-normal mt-0.5">Analizar ${cantidad} eventos</span>`;
-            } else {
-                btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed');
-                btn.innerHTML = `<span>GENERAR TICKET INTELIGENTE</span><span class="text-[10px] font-normal mt-0.5">Mínimo 2 selecciones</span>`;
-            }
+            if(cantidad >= 2 && (modoIlimitadoActivo || cantidad <= 5)) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); btn.innerHTML = `<span>GENERAR TICKET INTELIGENTE</span>`; } 
+            else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.innerHTML = `<span>GENERAR TICKET INTELIGENTE</span>`; }
         };
 
-        // ALGORITMO Y TICKETS
         function obtenerOpcionesRentables(partido) {
             let opciones = [];
             partido.bookmakers.forEach(b => b.markets.forEach(m => m.outcomes.forEach(o => {
-                if(o.price >= 1.15 && o.price <= 4.50) {
-                    opciones.push({ broker: b.title, mercadoKey: m.key, nombre: o.name, point: o.point, cuota: o.price, probabilidad: Math.floor((1/o.price)*100) + Math.floor(Math.random()*6)+1 });
-                }
+                if(o.price >= 1.15 && o.price <= 4.50) opciones.push({ broker: b.title, mercadoKey: m.key, nombre: o.name, point: o.point, cuota: o.price, probabilidad: Math.floor((1/o.price)*100) + Math.floor(Math.random()*6)+1 });
             })));
             opciones.sort((a,b) => b.probabilidad - a.probabilidad);
             let unicas = []; let vistos = new Set();
@@ -548,7 +579,6 @@
         };
 
         window.rotarPickIndividual = function(id) { let i = ticketDinamicoVIP.find(t => t.partido.id === id); if(i) { i.indexSeleccionado = (i.indexSeleccionado + 1) % i.opciones.length; window.dibujarTicketDinamico(false); } };
-        
         window.regenerarTicketCompleto = function() {
             ticketDinamicoVIP.forEach(item => {
                 if(modoMercadoGlobal === 'h2h') { const idx = item.opciones.findIndex(o => o.mercadoKey === 'h2h'); if(idx !== -1) item.indexSeleccionado = idx; } 
@@ -566,7 +596,7 @@
                 const p = item.partido; const o = item.opciones[item.indexSeleccionado];
                 cuotaTotal *= o.cuota; probPromedio += o.probabilidad;
                 let txt = "Ganador", ico = "fa-handshake";
-                if(o.mercadoKey === 'totals') { txt = "Totales"; ico = "fa-futbol"; } if(o.mercadoKey === 'spreads') { txt = "Handicap"; ico = "fa-balance-scale"; }
+                if(o.mercadoKey === 'totals') { txt = "Totales"; ico = "fa-futbol"; }
                 let pickTxt = o.nombre + (o.point ? ` (${o.point>0?'+':''}${o.point})` : '');
                 let bg = idx % 2 === 0 ? 'bg-black/40' : 'bg-gray-900/50';
 
@@ -596,27 +626,20 @@
                 <div class="card-glass p-4 border-t-2 ${esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5'} rounded-xl shadow-2xl mb-10">
                     <div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${esRadarAuto?'text-purple-500':'text-yellow-500'} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Ticket</span><span class="text-[10px] text-green-400 font-black bg-green-400/10 px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>
                     ${ctrls} ${htmlPartidos}
-                    <div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4">
-                        <div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final</span></div>
-                        <span class="text-3xl font-black text-white">${cuotaTotal.toFixed(2)}</span>
-                    </div>
+                    <div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final</span></div><span class="text-3xl font-black text-white">${cuotaTotal.toFixed(2)}</span></div>
                     ${btnBar}
                     <button id="${idUnicoBtn}" onclick="guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button>
                 </div>`;
         }
 
-        // ==========================================
-        // VISTA 2: HISTORIAL
-        // ==========================================
+        // HISTORIAL
         window.guardarTicketHistorial = function(cuota) {
             if(!codigoActivoUsuario) { alert("Error: Sesión no válida"); return; }
             let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || [];
             let picks = ticketDinamicoVIP.map(t => { const o = t.opciones[t.indexSeleccionado]; return `${t.partido.home_team} vs ${t.partido.away_team} -> ${o.nombre} (${o.cuota})`; });
-            let nuevoTicket = { id: Date.now(), fecha: new Date().toLocaleDateString(), cuota: cuota, picks: picks, estado: 'pendiente' };
-            hist.unshift(nuevoTicket); 
+            hist.unshift({ id: Date.now(), fecha: new Date().toLocaleDateString(), cuota: cuota, picks: picks, estado: 'pendiente' }); 
             localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist));
-            alert("✅ Ticket guardado. Búscalo en la pestaña 'Historial'.");
-            window.cambiarVista('historial');
+            alert("✅ Guardado en Historial."); window.cambiarVista('historial');
         };
 
         window.renderizarHistorial = function() {
@@ -625,9 +648,8 @@
             const cont = document.getElementById('contenedorHistorial'); cont.innerHTML = '';
             let ganados = 0, perdidos = 0, generados = hist.length;
 
-            if(hist.length === 0) {
-                cont.innerHTML = `<div class="text-center opacity-50 py-10"><i class="fas fa-folder-open text-4xl mb-3"></i><p class="text-[10px] uppercase font-bold tracking-widest">Aún no has guardado ningún ticket.</p></div>`;
-            } else {
+            if(hist.length === 0) { cont.innerHTML = `<div class="text-center opacity-50 py-10"><i class="fas fa-folder-open text-4xl mb-3"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin tickets guardados.</p></div>`; } 
+            else {
                 hist.forEach(t => {
                     if(t.estado === 'won') ganados++; if(t.estado === 'lost') perdidos++;
                     let bgStatus = 'bg-black/40 border-white/10'; let txtStatus = '<span class="text-gray-400"><i class="far fa-clock"></i> Pendiente</span>';
@@ -647,105 +669,70 @@
                 });
             }
             document.getElementById('statGenerados').innerText = generados; document.getElementById('statPerdidos').innerText = perdidos;
-            let resueltos = ganados + perdidos; let winRate = resueltos > 0 ? Math.floor((ganados / resueltos) * 100) : 0;
-            document.getElementById('statWinRate').innerText = `${winRate}%`;
+            document.getElementById('statWinRate').innerText = `${generados > 0 ? Math.floor((ganados / generados) * 100) : 0}%`;
         };
 
-        window.marcarTicket = function(id, estado) {
-            let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || [];
-            let index = hist.findIndex(t => t.id === id);
-            if(index !== -1) { hist[index].estado = estado; localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist)); window.renderizarHistorial(); }
-        };
+        window.marcarTicket = function(id, estado) { let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)); let index = hist.findIndex(t => t.id === id); if(index !== -1) { hist[index].estado = estado; localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist)); window.renderizarHistorial(); } };
+        window.limpiarHistorial = function() { if(confirm("¿Seguro?")) { localStorage.removeItem('oracle_historial_' + codigoActivoUsuario); window.renderizarHistorial(); } };
 
-        window.limpiarHistorial = function() {
-            if(confirm("¿Seguro que deseas borrar tu historial?")) { localStorage.removeItem('oracle_historial_' + codigoActivoUsuario); window.renderizarHistorial(); }
-        };
-
-        // ==========================================
-        // VISTA 3: CLUB ESCALERA
-        // ==========================================
+        // ESCALERA
         window.chequearEstadoEscaleraUI = function() {
-            const btn = document.getElementById('btnSolicitarEscalera'); const msg = document.getElementById('msgEscalera');
-            const divBloqueada = document.getElementById('escaleraBloqueada'); const divAprobada = document.getElementById('escaleraAprobada');
-            
+            const btn = document.getElementById('btnSolicitarEscalera'); const msg = document.getElementById('msgEscalera'); const divBloqueada = document.getElementById('escaleraBloqueada'); const divAprobada = document.getElementById('escaleraAprobada');
             if(!codigoActivoUsuario) { btn.disabled = true; btn.innerText = "REQUIERE LOGIN"; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; return; }
-
-            if(estadoEscalera === 'none') { btn.disabled = false; btn.innerText = "SOLICITAR INVITACIÓN"; btn.classList.replace('bg-gray-600', 'bg-blue-600'); msg.innerText = "Presiona el botón para enviar tu solicitud al administrador."; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; } 
-            else if (estadoEscalera === 'pending') { btn.disabled = true; btn.innerText = "REVISIÓN PENDIENTE..."; btn.classList.replace('bg-blue-600', 'bg-gray-600'); msg.innerText = "Tu solicitud ha sido enviada. Espera a que el Admin la apruebe."; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; } 
-            else if (estadoEscalera === 'approved') { divBloqueada.style.display = 'none'; divAprobada.style.display = 'block'; cargarRetoEscaleraNube(); }
+            if(estadoEscalera === 'none') { btn.disabled = false; btn.innerText = "SOLICITAR INVITACIÓN"; btn.classList.replace('bg-gray-600', 'bg-blue-600'); divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; } 
+            else if (estadoEscalera === 'pending') { btn.disabled = true; btn.innerText = "REVISIÓN PENDIENTE..."; btn.classList.replace('bg-blue-600', 'bg-gray-600'); divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; } 
+            else if (estadoEscalera === 'approved') { divBloqueada.style.display = 'none'; divAprobada.style.display = 'block'; window.cargarRetoEscaleraNube(); }
         };
-
         window.solicitarAccesoEscalera = async function() {
-            if(!codigoActivoUsuario) return;
-            const btn = document.getElementById('btnSolicitarEscalera'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> ENVIANDO...`; btn.disabled = true;
-            try { await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' }); estadoEscalera = 'pending'; window.chequearEstadoEscaleraUI(); alert("✅ Solicitud enviada."); } 
-            catch (e) { alert("Error de red."); btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; }
+            const btn = document.getElementById('btnSolicitarEscalera'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
+            try { await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' }); estadoEscalera = 'pending'; window.chequearEstadoEscaleraUI(); alert("✅ Enviada."); } catch (e) { alert("Error de red."); btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; }
+        };
+        window.cargarRetoEscaleraNube = async function() {
+            const divTexto = document.getElementById('textoRetoAdmin');
+            try { const snap = await getDoc(doc(db, "global", "escalera")); divTexto.innerText = snap.exists() ? snap.data().mensaje : "Sin reto hoy."; } catch(e) { divTexto.innerText = "Error cargando el reto."; }
         };
 
-        async function cargarRetoEscaleraNube() {
-            const divTexto = document.getElementById('textoRetoAdmin');
-            try { const snap = await getDoc(doc(db, "global", "escalera")); if(snap.exists()) divTexto.innerText = snap.data().mensaje || "Aún no hay reto publicado."; else divTexto.innerText = "Aún no hay reto publicado."; } 
-            catch(e) { divTexto.innerText = "Error cargando el reto."; }
-        }
-
-        // ==========================================
-        // FIREBASE LOGINS Y ADMIN PANEL
-        // ==========================================
+        // FIREBASE Y ADMIN
         window.validarCodigo = async function() {
-            const input = document.getElementById('vipCode').value.toUpperCase().trim();
-            if(input === "") return;
-
+            const input = document.getElementById('vipCode').value.toUpperCase().trim(); if(input === "") return;
             if(input === MASTER_CODE) {
                 window.cerrarModalLogin(); document.getElementById('vista_picks').style.display = 'none'; document.getElementById('vista_historial').style.display = 'none'; document.getElementById('vista_escalera').style.display = 'none'; document.getElementById('bottomNav').style.display = 'none'; document.getElementById('footerApp').style.display = 'none'; document.getElementById('adminSection').style.display = 'block'; 
                 const btnTop = document.getElementById('btnTopLogin'); btnTop.innerHTML = '<i class="fas fa-user-shield"></i> ADMIN'; btnTop.className = "bg-gray-800 text-red-500 text-[10px] px-4 py-2 rounded-full font-black border border-red-500/50 flex items-center gap-2"; btnTop.onclick = null;
                 window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); document.getElementById('vipCode').value = ''; return;
             }
-
-            const btn = document.getElementById('btnValidarCodigo'); const txtOriginal = btn.innerHTML;
-            btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> VERIFICANDO...`; btn.disabled = true;
-
+            const btn = document.getElementById('btnValidarCodigo'); const txtOriginal = btn.innerHTML; btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
             try {
                 const docRef = doc(db, "codigos_nube", input); const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR, ladderStatus: 'none' }); concederAcceso(data.ilimitado, input, 'none'); } 
-                    else if (data.deviceID === HUELLA_ESTE_CELULAR) { concederAcceso(data.ilimitado, input, data.ladderStatus || 'none'); } 
+                    if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR, ladderStatus: 'none' }); window.concederAcceso(data.ilimitado, input, 'none'); } 
+                    else if (data.deviceID === HUELLA_ESTE_CELULAR) { window.concederAcceso(data.ilimitado, input, data.ladderStatus || 'none'); } 
                     else { alert("⚠️ ACCESO DENEGADO ⚠️\nCódigo vinculado a otro dispositivo."); }
                 } else { alert("Código no válido."); }
             } catch (e) { alert("Error de red Segura."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
         };
 
-        function concederAcceso(esIlimitado, codeString, ladderStat) {
+        window.concederAcceso = function(esIlimitado, codeString, ladderStat) {
             window.cerrarModalLogin(); modoVipActivo = true; modoIlimitadoActivo = esIlimitado; codigoActivoUsuario = codeString; estadoEscalera = ladderStat;
             document.getElementById('wrapperVIP').style.display = 'block'; document.getElementById('wrapperFree').style.display = 'none'; 
             const btnTop = document.getElementById('btnTopLogin'); btnTop.onclick = null; 
-            if(modoIlimitadoActivo) {
-                btnTop.innerHTML = `<i class="fas fa-infinity text-white"></i> PREMIUM`; btnTop.className = "bg-purple-600 text-white text-[10px] px-4 py-2 rounded-full font-black uppercase shadow-[0_0_15px_rgba(147,51,234,0.5)] flex items-center gap-2 border border-purple-400/50";
-                document.getElementById('txtTituloVip').innerText = "CREADOR PREMIUM"; document.getElementById('btnAutoPremium').style.display = 'flex';
-            } else {
-                btnTop.innerHTML = `<i class="fas fa-crown text-black"></i> VIP ACTIVO`; btnTop.className = "bg-yellow-500 text-black text-[10px] px-4 py-2 rounded-full font-black uppercase shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center gap-2 border border-yellow-400/50";
-                document.getElementById('txtTituloVip').innerText = "CREADOR VIP"; document.getElementById('btnAutoPremium').style.display = 'none';
-            }
+            if(modoIlimitadoActivo) { btnTop.innerHTML = `<i class="fas fa-infinity text-white"></i> PREMIUM`; btnTop.className = "bg-purple-600 text-white text-[10px] px-4 py-2 rounded-full font-black uppercase shadow-[0_0_15px_rgba(147,51,234,0.5)] flex items-center gap-2 border border-purple-400/50"; document.getElementById('txtTituloVip').innerText = "CREADOR PREMIUM"; document.getElementById('btnAutoPremium').style.display = 'flex'; } 
+            else { btnTop.innerHTML = `<i class="fas fa-crown text-black"></i> VIP ACTIVO`; btnTop.className = "bg-yellow-500 text-black text-[10px] px-4 py-2 rounded-full font-black uppercase shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center gap-2 border border-yellow-400/50"; document.getElementById('txtTituloVip').innerText = "CREADOR VIP"; document.getElementById('btnAutoPremium').style.display = 'none'; }
             window.renderizarPartidosVIP(); window.scrollTo(0,0); window.cambiarVista('picks');
         }
 
         window.verProbabilidadFree = function(eq) {
             const m = document.getElementById('modalAnalisis'); const c = document.getElementById('contenidoModalAnalisis');
-            c.innerHTML = `<i class="fas fa-satellite-dish animate-pulse text-yellow-500 text-4xl mb-4 mt-2"></i><h3 class="text-white font-bold uppercase italic">Escaneando...</h3>`;
-            m.classList.remove('hidden');
-            setTimeout(() => {
-                c.innerHTML = `<button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button><i class="fas fa-lock text-yellow-500 text-5xl mb-4 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"></i><h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Acceso Protegido</h3><div class="bg-black/60 p-6 rounded-xl border border-red-500/40 mb-6 relative overflow-hidden"><div class="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex flex-col items-center justify-center z-10 p-4"><span class="bg-red-600 text-white text-[11px] font-black px-4 py-2 rounded uppercase shadow-lg flex items-center gap-2 mb-3"><i class="fas fa-key"></i> VIP REQUERIDO</span></div><p class="blur-[5px] opacity-50 text-white font-black mb-3">Gana ${eq}</p></div><a href="https://wa.me/573005191112" target="_blank" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-xs uppercase shadow-lg flex justify-center gap-2"><i class="fab fa-whatsapp text-xl"></i> SOLICITAR ACCESO</a>`;
-            }, 1500);
+            c.innerHTML = `<i class="fas fa-satellite-dish animate-pulse text-yellow-500 text-4xl mb-4 mt-2"></i><h3 class="text-white font-bold uppercase italic">Escaneando...</h3>`; m.classList.remove('hidden');
+            setTimeout(() => { c.innerHTML = `<button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button><i class="fas fa-lock text-yellow-500 text-5xl mb-4 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"></i><h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Acceso Protegido</h3><div class="bg-black/60 p-6 rounded-xl border border-red-500/40 mb-6 relative overflow-hidden"><div class="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex flex-col items-center justify-center z-10 p-4"><span class="bg-red-600 text-white text-[11px] font-black px-4 py-2 rounded uppercase shadow-lg flex items-center gap-2 mb-3"><i class="fas fa-key"></i> VIP REQUERIDO</span></div><p class="blur-[5px] opacity-50 text-white font-black mb-3">Gana ${eq}</p></div><a href="https://wa.me/573005191112" target="_blank" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-xs uppercase shadow-lg flex justify-center gap-2"><i class="fab fa-whatsapp text-xl"></i> SOLICITAR ACCESO</a>`; }, 1500);
         };
 
-        // ADMIN FIREBASE
         window.crearCodigo = async function(esIl) {
             const nuevo = document.getElementById('newCodeInput').value.toUpperCase().trim(); if(nuevo==="") return;
             const btn = document.getElementById(esIl ? 'btnCrearPrem' : 'btnCrearVip'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
             try {
                 const ref = doc(db, "codigos_nube", nuevo); const snap = await getDoc(ref);
-                if(!snap.exists()) { await setDoc(ref, { code: nuevo, ilimitado: esIl, deviceID: null, ladderStatus: 'none', creado: Date.now() }); document.getElementById('newCodeInput').value=''; window.renderizarListaAdmin(); } 
-                else alert("Ya existe.");
+                if(!snap.exists()) { await setDoc(ref, { code: nuevo, ilimitado: esIl, deviceID: null, ladderStatus: 'none', creado: Date.now() }); document.getElementById('newCodeInput').value=''; window.renderizarListaAdmin(); } else alert("Ya existe.");
             } catch (e) { alert("Error."); } finally { btn.innerHTML = esIl ? 'Crear PREMIUM' : 'Crear VIP'; btn.disabled = false; }
         };
 
@@ -768,12 +755,7 @@
             const l = document.getElementById('solicitudesList'); l.innerHTML = '';
             try {
                 const snap = await getDocs(collection(db, "codigos_nube"));
-                snap.forEach(d => {
-                    let c = d.data();
-                    if(c.ladderStatus === 'pending') {
-                        l.innerHTML += `<div class="flex justify-between items-center bg-black/60 p-2 rounded border border-blue-500/30 mb-1"><span class="text-white font-bold text-[10px] uppercase">${c.code}</span><button onclick="aprobarEscalera('${c.code}')" class="bg-green-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase">Aprobar</button></div>`;
-                    }
-                });
+                snap.forEach(d => { let c = d.data(); if(c.ladderStatus === 'pending') l.innerHTML += `<div class="flex justify-between items-center bg-black/60 p-2 rounded border border-blue-500/30 mb-1"><span class="text-white font-bold text-[10px] uppercase">${c.code}</span><button onclick="aprobarEscalera('${c.code}')" class="bg-green-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase">Aprobar</button></div>`; });
             } catch(e){}
         }
 
@@ -781,40 +763,39 @@
         window.publicarRetoEscalera = async function() {
             const txt = document.getElementById('inputAdminReto').value; if(!txt) return;
             const btn = document.getElementById('btnPublicarReto'); btn.innerText = "Publicando..."; btn.disabled = true;
-            try { await setDoc(doc(db, "global", "escalera"), { mensaje: txt, timestamp: Date.now() }); alert("Reto publicado a la comunidad."); document.getElementById('inputAdminReto').value=''; } 
-            catch(e){ alert("Error."); } finally { btn.innerText = "Actualizar Reto"; btn.disabled = false; }
+            try { await setDoc(doc(db, "global", "escalera"), { mensaje: txt, timestamp: Date.now() }); alert("Reto publicado."); document.getElementById('inputAdminReto').value=''; } catch(e){ alert("Error."); } finally { btn.innerText = "Actualizar Reto"; btn.disabled = false; }
         };
         window.cerrarAdmin = function() { location.reload(); };
 
-        // RADAR 90%+ PREMIUM (RESISTENTE A FALLOS DE RED Y LÍMITES)
+        // RADAR 90%+ PREMIUM (HÍBRIDO)
         window.generarParlaySeguro = async function(dep) {
             window.cerrarModalRadarPremium();
             const resDiv = document.getElementById('resultadoVIP');
-            resDiv.innerHTML = `<div class="p-10 text-center bg-black/40 rounded-xl border border-purple-500/50 shadow-[0_0_20px_rgba(147,51,234,0.3)]"><i class="fas fa-robot animate-spin text-purple-500 mb-4 text-4xl"></i><p class="text-[11px] uppercase tracking-widest text-purple-400 font-black">Buscando Cuotas Ultra-Seguras...</p></div>`;
+            resDiv.innerHTML = `<div class="p-10 text-center bg-black/40 rounded-xl border border-purple-500/50 shadow-[0_0_20px_rgba(147,51,234,0.3)]"><i class="fas fa-robot animate-spin text-purple-500 mb-4 text-4xl"></i><p class="text-[11px] uppercase text-purple-400 font-black">Buscando Cuotas Seguras...</p></div>`;
             window.scrollTo(0, document.body.scrollHeight);
+            
             try {
                 let eps = dep==='mixto'?['upcoming']:(dep==='futbol'?['soccer_epl','soccer_spain_la_liga','soccer_italy_serie_a','soccer_germany_bundesliga']:(dep==='baloncesto'?['basketball_nba']:(dep==='tenis'?['tennis_atp']:[])));
-                let todos = [];
-                for(let ep of eps) { 
-                    const d = await fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${ep}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals`); 
-                    if(d && !d.isQuotaError) todos = todos.concat(d.filter(m=>m.bookmakers?.length>0)); 
-                }
+                const data = await obtenerPartidosHibrido(eps, 'radar_' + dep);
+                if(data && data.isQuotaError) { mostrarErrorLimites(resDiv); return; }
                 
-                if(todos.length === 0) {
-                    resDiv.innerHTML = `<div class="p-6 text-center border border-red-500 bg-red-900/20 rounded-xl"><p class="text-red-400 text-[10px] uppercase font-bold">Límites agotados o no hay partidos hoy en ese deporte.</p></div>`; return;
-                }
+                let todos = data || [];
+                if(todos.length === 0) { resDiv.innerHTML = `<div class="p-6 text-center border border-red-500 bg-red-900/20 rounded-xl"><p class="text-red-400 text-[10px] uppercase font-bold">No hay eventos hoy para este deporte.</p></div>`; return; }
 
                 let ops = [];
-                todos.forEach(p => p.bookmakers.forEach(b => b.markets.forEach(m => m.outcomes.forEach(o => {
-                    // Ampliado a 1.15 para lograr alcanzar la cuota 4 en dias con pocos eventos
+                todos.forEach(p => p.bookmakers?.forEach(b => b.markets?.forEach(m => m.outcomes?.forEach(o => {
                     if(o.price >= 1.01 && o.price <= 1.15) ops.push({ partido: p, broker: b.title, mercadoKey: m.key, nombre: o.name, point: o.point, cuota: o.price, probabilidad: Math.floor((1/o.price)*100)+1 });
                 }))));
                 ops.sort((a,b) => b.probabilidad - a.probabilidad);
+                
                 let unicas = []; let vistos = new Set();
                 ops.forEach(op => { if(!vistos.has(op.partido.id)){ vistos.add(op.partido.id); unicas.push(op); }});
+                
                 ticketDinamicoVIP = []; let cAcum = 1.0;
                 for(let op of unicas) { ticketDinamicoVIP.push({ partido: op.partido, opciones: [op], indexSeleccionado: 0 }); cAcum *= op.cuota; if(cAcum >= 4.0) break; }
+                
                 if(ticketDinamicoVIP.length < 2) { resDiv.innerHTML = `<div class="p-6 text-center border border-red-500 bg-red-900/20 rounded-xl"><p class="text-red-400 text-[10px] uppercase font-bold">Sin eventos >90% suficientes hoy para lograr cuota 4.0.</p></div>`; return; }
+                
                 window.dibujarTicketDinamico(true);
             } catch(e) { resDiv.innerHTML = `<p class="text-red-400 text-center">Error Radar.</p>`; }
         };
