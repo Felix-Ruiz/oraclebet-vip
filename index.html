@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OracleBet VIP - Alta Probabilidad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary-gold: #D4AF37; --dark-bg: #0f172a; }
+        body { background-color: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; }
+        .card-glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; }
+        .gold-border { border: 1px solid var(--primary-gold); }
+        .vip-section { display: none; }
+        .btn-gold { background: linear-gradient(135deg, #D4AF37 0%, #f1d27b 100%); color: #000; }
+    </style>
+</head>
+<body class="p-4 pb-20">
+
+    <header class="flex justify-between items-center mb-8 pt-4">
+        <div>
+            <h1 class="text-2xl font-black text-yellow-500 tracking-tighter">ORACLE<span class="text-white">BET</span></h1>
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest">Algorithmic Betting Intelligence</p>
+        </div>
+        <div id="statusBadge" class="bg-red-500 text-[10px] px-3 py-1 rounded-full font-bold animate-pulse">MODO FREE</div>
+    </header>
+
+    <section id="freeSection" class="space-y-4">
+        <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2">Partidos Destacados</h2>
+        <div id="containerPartidos" class="space-y-4">
+            <div class="card-glass p-4">
+                <div class="flex justify-around items-center mb-4">
+                    <p class="font-bold">Equipo A</p>
+                    <div class="text-yellow-500 font-bold italic text-lg">VS</div>
+                    <p class="font-bold">Equipo B</p>
+                </div>
+                <button onclick="alert('Analizando...')" class="w-full py-2.5 btn-gold rounded-lg text-xs font-black shadow-lg">
+                    VER PROBABILIDAD
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="mt-10 space-y-4">
+        <div class="card-glass p-6 gold-border text-center">
+            <h3 class="text-xl font-bold mb-2">ACCESO ELITE VIP</h3>
+            <p class="text-[10px] text-gray-400 mb-4">Habla conmigo para obtener tu código mensual.</p>
+            <div class="flex flex-col gap-3">
+                <input type="text" id="vipCode" placeholder="Ingresa tu código" class="bg-gray-900 border border-gray-700 rounded-lg p-3 text-center text-yellow-500 font-bold outline-none">
+                <button onclick="validarCodigo()" class="bg-white text-black font-extrabold py-3 rounded-lg uppercase text-sm">Validar</button>
+                <a href="https://wa.me/TUNUMEROAQUI" target="_blank" class="bg-green-600/10 text-green-500 p-3 rounded-lg text-xs font-bold border border-green-600/20">
+                    WHATSAPP ADMINISTRADOR
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const CODIGOS_VALIDOS = ["ORACLE2026", "FELIX_VIP"];
+        function validarCodigo() {
+            const input = document.getElementById('vipCode').value.toUpperCase();
+            if(CODIGOS_VALIDOS.includes(input)) {
+                alert("¡Bienvenido VIP!");
+            } else {
+                alert("Código inválido.");
+            }
+        }
+    </script>
+</body>
+</html>
