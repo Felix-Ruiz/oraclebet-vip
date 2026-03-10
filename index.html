@@ -34,13 +34,8 @@
         .view-active { display: block; animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* EFECTO DE LIGA SELECCIONADA EN EL CARRUSEL */
         .carrusel-btn { transition: all 0.3s ease; }
-        .carrusel-activo { 
-            border: 2px solid var(--primary-gold) !important; 
-            transform: scale(1.05); 
-            box-shadow: 0 0 20px rgba(212,175,55,0.6) !important; 
-        }
+        .carrusel-activo { border: 2px solid var(--primary-gold) !important; transform: scale(1.05); box-shadow: 0 0 20px rgba(212,175,55,0.6) !important; }
         .carrusel-activo .bg-black\/40 { background-color: rgba(0,0,0,0.1); }
     </style>
 </head>
@@ -80,47 +75,47 @@
 
             <div class="mb-5">
                 <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2 border-l-2 border-yellow-500 pl-2"><i class="fas fa-fire text-red-500 animate-pulse"></i> Competiciones Top</h3>
-                <div class="flex overflow-x-auto gap-3 pb-2 snap-x snap-mandatory hide-scrollbar">
+                <div class="flex overflow-x-auto gap-2 pb-2 snap-x snap-mandatory hide-scrollbar">
                     
-                    <button id="btn_carrusel_soccer_epl" onclick="ejecutarFiltroFinal('soccer_epl', 'Premier League')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#38003c] to-[#00ff85]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                    <button id="btn_carrusel_soccer_epl" onclick="ejecutarFiltroFinal('soccer_epl', 'Premier League')" class="carrusel-btn snap-start shrink-0 min-w-[95px] h-[80px] bg-gradient-to-br from-[#38003c] to-[#00ff85]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="./img/premier.png" onerror="this.src='https://media.api-sports.io/football/leagues/39.png'" alt="Premier" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
-                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Premier</span>
+                        <img src="./img/premier.png" onerror="this.src='https://media.api-sports.io/football/leagues/39.png'" alt="Premier" class="h-7 max-w-[85%] mb-1.5 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">Premier</span>
                     </button>
-                    <button id="btn_carrusel_soccer_spain_la_liga" onclick="ejecutarFiltroFinal('soccer_spain_la_liga', 'La Liga')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#ea0437] to-[#ff4b4b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                    <button id="btn_carrusel_soccer_spain_la_liga" onclick="ejecutarFiltroFinal('soccer_spain_la_liga', 'La Liga')" class="carrusel-btn snap-start shrink-0 min-w-[95px] h-[80px] bg-gradient-to-br from-[#ea0437] to-[#ff4b4b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="./img/laliga.png" onerror="this.src='https://media.api-sports.io/football/leagues/140.png'" alt="La Liga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
-                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">La Liga</span>
+                        <img src="./img/laliga.png" onerror="this.src='https://media.api-sports.io/football/leagues/140.png'" alt="La Liga" class="h-7 max-w-[85%] mb-1.5 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">La Liga</span>
                     </button>
-                    <button id="btn_carrusel_soccer_italy_serie_a" onclick="ejecutarFiltroFinal('soccer_italy_serie_a', 'Serie A')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#003cb2] to-[#0281ff]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                    <button id="btn_carrusel_soccer_italy_serie_a" onclick="ejecutarFiltroFinal('soccer_italy_serie_a', 'Serie A')" class="carrusel-btn snap-start shrink-0 min-w-[95px] h-[80px] bg-gradient-to-br from-[#003cb2] to-[#0281ff]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="./img/seriea.png" onerror="this.src='https://media.api-sports.io/football/leagues/135.png'" alt="Serie A" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
-                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Serie A</span>
+                        <img src="./img/seriea.png" onerror="this.src='https://media.api-sports.io/football/leagues/135.png'" alt="Serie A" class="h-7 max-w-[85%] mb-1.5 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">Serie A</span>
                     </button>
-                    <button id="btn_carrusel_soccer_germany_bundesliga" onclick="ejecutarFiltroFinal('soccer_germany_bundesliga', 'Bundesliga')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#d3010c] to-[#ff3b3b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                    <button id="btn_carrusel_soccer_germany_bundesliga" onclick="ejecutarFiltroFinal('soccer_germany_bundesliga', 'Bundesliga')" class="carrusel-btn snap-start shrink-0 min-w-[95px] h-[80px] bg-gradient-to-br from-[#d3010c] to-[#ff3b3b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="./img/bundesliga.png" onerror="this.src='https://media.api-sports.io/football/leagues/78.png'" alt="Bundesliga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
-                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Bundesliga</span>
+                        <img src="./img/bundesliga.png" onerror="this.src='https://media.api-sports.io/football/leagues/78.png'" alt="Bundesliga" class="h-7 max-w-[85%] mb-1.5 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">Bundesliga</span>
                     </button>
-                    <button id="btn_carrusel_soccer_france_ligue_one" onclick="ejecutarFiltroFinal('soccer_france_ligue_one', 'Ligue 1')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#dae025] to-[#0a1c2b]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                    <button id="btn_carrusel_soccer_france_ligue_one" onclick="ejecutarFiltroFinal('soccer_france_ligue_one', 'Ligue 1')" class="carrusel-btn snap-start shrink-0 min-w-[95px] h-[80px] bg-gradient-to-br from-[#dae025] to-[#0a1c2b]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors"></div>
-                        <img src="./img/ligue1.png" onerror="this.src='https://media.api-sports.io/football/leagues/61.png'" alt="Ligue 1" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
-                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Ligue 1</span>
+                        <img src="./img/ligue1.png" onerror="this.src='https://media.api-sports.io/football/leagues/61.png'" alt="Ligue 1" class="h-7 max-w-[85%] mb-1.5 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">Ligue 1</span>
                     </button>
-                    <button id="btn_carrusel_soccer_uefa_champs_league" onclick="ejecutarFiltroFinal('soccer_uefa_champs_league', 'Champions League')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#001489] to-[#030b42]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                    <button id="btn_carrusel_soccer_uefa_champs_league" onclick="ejecutarFiltroFinal('soccer_uefa_champs_league', 'Champions League')" class="carrusel-btn snap-start shrink-0 min-w-[95px] h-[80px] bg-gradient-to-br from-[#001489] to-[#030b42]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="./img/champions.png" onerror="this.src='https://media.api-sports.io/football/leagues/2.png'" alt="Champions" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
-                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Champions</span>
+                        <img src="./img/champions.png" onerror="this.src='https://media.api-sports.io/football/leagues/2.png'" alt="Champions" class="h-7 max-w-[85%] mb-1.5 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Champions</span>
                     </button>
-                    <button id="btn_carrusel_soccer_uefa_europa_league" onclick="ejecutarFiltroFinal('soccer_uefa_europa_league', 'Europa League')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#f68e00] to-[#1e1e1e]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                    <button id="btn_carrusel_soccer_uefa_europa_league" onclick="ejecutarFiltroFinal('soccer_uefa_europa_league', 'Europa League')" class="carrusel-btn snap-start shrink-0 min-w-[95px] h-[80px] bg-gradient-to-br from-[#f68e00] to-[#1e1e1e]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="./img/europa.png" onerror="this.src='https://media.api-sports.io/football/leagues/3.png'" alt="Europa League" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
-                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Europa L.</span>
+                        <img src="./img/europa.png" onerror="this.src='https://media.api-sports.io/football/leagues/3.png'" alt="Europa League" class="h-7 max-w-[85%] mb-1.5 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Europa L.</span>
                     </button>
-                    <button id="btn_carrusel_soccer_uefa_europa_conference_league" onclick="ejecutarFiltroFinal('soccer_uefa_europa_conference_league', 'Conference League')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#00b067] to-[#1e1e1e]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                    <button id="btn_carrusel_soccer_uefa_europa_conference_league" onclick="ejecutarFiltroFinal('soccer_uefa_europa_conference_league', 'Conference League')" class="carrusel-btn snap-start shrink-0 min-w-[95px] h-[80px] bg-gradient-to-br from-[#00b067] to-[#1e1e1e]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-1.5 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="./img/conference.png" onerror="this.src='https://media.api-sports.io/football/leagues/848.png'" alt="Conference League" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
-                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Conference</span>
+                        <img src="./img/conference.png" onerror="this.src='https://media.api-sports.io/football/leagues/848.png'" alt="Conference League" class="h-7 max-w-[85%] mb-1.5 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Conference</span>
                     </button>
 
                 </div>
@@ -301,6 +296,18 @@
         </div>
     </div>
 
+    <div id="modalNotificacionEscalera" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-[110] backdrop-blur-md">
+        <div class="bg-gray-900 p-8 w-full max-w-sm text-center border-2 border-green-500/50 rounded-2xl relative shadow-[0_0_50px_rgba(34,197,94,0.3)] animate-slide-up">
+            <button onclick="document.getElementById('modalNotificacionEscalera').classList.add('hidden')" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
+            <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/50">
+                <i class="fas fa-check-circle text-green-500 text-5xl"></i>
+            </div>
+            <h3 class="text-xl font-black mb-2 uppercase text-white tracking-tighter">¡SOLICITUD APROBADA!</h3>
+            <p class="text-[11px] text-gray-400 mb-6 uppercase tracking-widest leading-relaxed">El administrador te ha dado acceso exclusivo al Club Escalera. Ya puedes ver los retos agresivos.</p>
+            <button onclick="document.getElementById('modalNotificacionEscalera').classList.add('hidden'); cambiarVista('escalera');" class="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-lg text-sm uppercase shadow-lg transition active:scale-95">IR AL CLUB ESCALERA</button>
+        </div>
+    </div>
+
     <div id="modalRadarPremium" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-[100] backdrop-blur-md">
         <div class="bg-gray-900 p-8 w-full max-w-sm text-center border-2 border-purple-500/50 rounded-2xl relative overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.3)]">
             <button onclick="cerrarModalRadarPremium()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
@@ -344,13 +351,56 @@
             return miHuella;
         }
         const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo();
-        const MASTER_CODE = "FELIX_ADMIN_777";
+        const MASTER_CODE = "Staycy_Admin_0627"; // NUEVA CLAVE ADMINISTRADOR
         
         let modoVipActivo = false, modoIlimitadoActivo = false, codigoActivoUsuario = '', estadoEscalera = 'none';
         let partidosGlobales = [], partidosFiltrados = [], competicionesGlobales = []; 
         let seleccionesVIPGlobal = [], ticketDinamicoVIP = []; 
         let modoMercadoGlobal = 'mixto'; 
         let modoRiesgoGlobal = false; 
+
+        // ======================================================================
+        // SISTEMA DE SEGURIDAD E INACTIVIDAD (3 MINUTOS)
+        // ======================================================================
+        let tiempoInactividad = 0;
+        const TIEMPO_MAXIMO_SEGUNDOS = 180; // 3 minutos
+        let timerInactividad;
+
+        function resetearInactividad() { tiempoInactividad = 0; }
+        // Sensores de actividad humana
+        window.addEventListener('mousemove', resetearInactividad);
+        window.addEventListener('scroll', resetearInactividad);
+        window.addEventListener('touchstart', resetearInactividad);
+        window.addEventListener('keydown', resetearInactividad);
+
+        function iniciarMonitorInactividad() {
+            clearInterval(timerInactividad);
+            tiempoInactividad = 0;
+            timerInactividad = setInterval(() => {
+                if(modoVipActivo) {
+                    tiempoInactividad++;
+                    if(tiempoInactividad >= TIEMPO_MAXIMO_SEGUNDOS) {
+                        window.cerrarSesionLocal();
+                        alert("⏳ Por tu seguridad, la sesión VIP se ha cerrado tras 3 minutos de inactividad.");
+                    }
+                }
+            }, 1000);
+        }
+
+        window.cerrarSesionLocal = function() {
+            if(confirm("¿Estás seguro que deseas cerrar sesión?")) {
+                modoVipActivo = false; modoIlimitadoActivo = false; codigoActivoUsuario = ''; estadoEscalera = 'none';
+                clearInterval(timerInactividad);
+                document.getElementById('wrapperVIP').style.display = 'none';
+                document.getElementById('wrapperFree').style.display = 'block';
+                const btnTop = document.getElementById('btnTopLogin');
+                btnTop.innerHTML = '<i class="fas fa-lock"></i> INGRESAR';
+                btnTop.className = "bg-gradient-to-r from-red-600 to-red-500 text-white text-[10px] px-4 py-2 rounded-full font-black uppercase tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.4)] flex items-center gap-2 pulse-green border border-red-400/50 transition-all";
+                btnTop.onclick = window.abrirModalLogin;
+                window.ejecutarTopFutbol();
+                window.cambiarVista('picks');
+            }
+        };
 
         // ======================================================================
         // EL MOTOR DE EXTRACCIÓN (100% FIRESTORE)
@@ -412,7 +462,6 @@
                 let btnActivo = document.getElementById('btn_carrusel_' + keyLiga);
                 if(btnActivo) {
                     btnActivo.classList.add('carrusel-activo');
-                    // Hace scroll automático para centrar el botón elegido
                     btnActivo.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 }
             }
@@ -812,41 +861,72 @@
         };
 
         // ==========================================
-        // FIREBASE LOGINS Y ADMIN PANEL
+        // FIREBASE LOGINS Y ADMIN PANEL BLINDADO
         // ==========================================
         window.validarCodigo = async function() {
-            const input = document.getElementById('vipCode').value.toUpperCase().trim(); if(input === "") return;
-            if(input === MASTER_CODE) {
-                window.cerrarModalLogin(); document.getElementById('vista_picks').style.display = 'none'; document.getElementById('vista_historial').style.display = 'none'; document.getElementById('vista_escalera').style.display = 'none'; document.getElementById('bottomNav').style.display = 'none'; document.getElementById('footerApp').style.display = 'none'; document.getElementById('adminSection').style.display = 'block'; 
-                const btnTop = document.getElementById('btnTopLogin'); btnTop.innerHTML = '<i class="fas fa-user-shield"></i> ADMIN'; btnTop.className = "bg-gray-800 text-red-500 text-[10px] px-4 py-2 rounded-full font-black border border-red-500/50 flex items-center gap-2"; btnTop.onclick = null;
-                window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); document.getElementById('vipCode').value = ''; return;
-            }
+            const input = document.getElementById('vipCode').value.trim(); if(input === "") return;
+            
             const btn = document.getElementById('btnValidarCodigo'); const txtOriginal = btn.innerHTML; btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
+            
+            // LÓGICA DE CERROJO PARA ADMIN
+            if(input === MASTER_CODE) {
+                try {
+                    const adminRef = doc(db, "global", "admin_security");
+                    const adminSnap = await getDoc(adminRef);
+                    if(!adminSnap.exists() || !adminSnap.data().deviceID) {
+                        // Es el primer inicio del admin: Guarda la huella de este celular para siempre
+                        await setDoc(adminRef, { deviceID: HUELLA_ESTE_CELULAR });
+                        alert("✅ Cerrojo Biométrico activado. Este celular es ahora el Master autorizado.");
+                    } else if (adminSnap.data().deviceID !== HUELLA_ESTE_CELULAR) {
+                        // Alguien más intentó usar la clave desde otro teléfono
+                        alert("⛔ ACCESO DENEGADO ⛔\nDispositivo no autorizado por Seguridad.");
+                        btn.innerHTML = txtOriginal; btn.disabled = false;
+                        return;
+                    }
+                    
+                    // Si pasa el cerrojo, abre el panel
+                    window.cerrarModalLogin(); document.getElementById('vista_picks').style.display = 'none'; document.getElementById('vista_historial').style.display = 'none'; document.getElementById('vista_escalera').style.display = 'none'; document.getElementById('bottomNav').style.display = 'none'; document.getElementById('footerApp').style.display = 'none'; document.getElementById('adminSection').style.display = 'block'; 
+                    const btnTop = document.getElementById('btnTopLogin'); btnTop.innerHTML = '<i class="fas fa-sign-out-alt"></i> SALIR ADMIN'; btnTop.className = "bg-gray-800 text-red-500 text-[10px] px-4 py-2 rounded-full font-black border border-red-500/50 flex items-center gap-2 transition-all"; btnTop.onclick = window.cerrarAdmin;
+                    window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); document.getElementById('vipCode').value = ''; 
+                } catch(e) { alert("Error verificando seguridad Admin."); }
+                finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+                return;
+            }
+
+            // Lógica normal para usuarios VIP
             try {
-                const docRef = doc(db, "codigos_nube", input); const docSnap = await getDoc(docRef);
+                // Convertimos el input normal a Mayúsculas
+                const inputUsuario = input.toUpperCase();
+                const docRef = doc(db, "codigos_nube", inputUsuario); const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR, ladderStatus: 'none' }); window.concederAcceso(data.ilimitado, input, 'none'); } 
-                    else if (data.deviceID === HUELLA_ESTE_CELULAR) { window.concederAcceso(data.ilimitado, input, data.ladderStatus || 'none'); } 
+                    if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR, ladderStatus: 'none' }); window.concederAcceso(data.ilimitado, inputUsuario, 'none', true); } 
+                    else if (data.deviceID === HUELLA_ESTE_CELULAR) { window.concederAcceso(data.ilimitado, inputUsuario, data.ladderStatus || 'none', false); } 
                     else { alert("⚠️ ACCESO DENEGADO ⚠️\nCódigo vinculado a otro dispositivo."); }
                 } else { alert("Código no válido."); }
             } catch (e) { alert("Error de conexión Segura."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
         };
 
-        window.concederAcceso = function(esIlimitado, codeString, ladderStat) {
+        window.concederAcceso = function(esIlimitado, codeString, ladderStat, esPrimerInicio) {
             window.cerrarModalLogin(); modoVipActivo = true; modoIlimitadoActivo = esIlimitado; codigoActivoUsuario = codeString; estadoEscalera = ladderStat;
             document.getElementById('wrapperVIP').style.display = 'block'; document.getElementById('wrapperFree').style.display = 'none'; 
-            const btnTop = document.getElementById('btnTopLogin'); btnTop.onclick = null; 
-            if(modoIlimitadoActivo) { btnTop.innerHTML = `<i class="fas fa-infinity text-white"></i> PREMIUM`; btnTop.className = "bg-purple-600 text-white text-[10px] px-4 py-2 rounded-full font-black uppercase shadow-[0_0_15px_rgba(147,51,234,0.5)] flex items-center gap-2 border border-purple-400/50"; document.getElementById('txtTituloVip').innerText = "CREADOR PREMIUM"; document.getElementById('btnAutoPremium').style.display = 'flex'; } 
-            else { btnTop.innerHTML = `<i class="fas fa-crown text-black"></i> VIP ACTIVO`; btnTop.className = "bg-yellow-500 text-black text-[10px] px-4 py-2 rounded-full font-black uppercase shadow-[0_0_15px_rgba(212,175,55,0.5)] flex items-center gap-2 border border-yellow-400/50"; document.getElementById('txtTituloVip').innerText = "CREADOR VIP"; document.getElementById('btnAutoPremium').style.display = 'none'; }
+            
+            // MODIFICACIÓN: El botón ahora sirve para Cerrar Sesión
+            const btnTop = document.getElementById('btnTopLogin'); 
+            btnTop.onclick = window.cerrarSesionLocal;
+            
+            if(modoIlimitadoActivo) { btnTop.innerHTML = `<i class="fas fa-sign-out-alt"></i> SALIR PREM`; btnTop.className = "bg-purple-900 text-purple-300 text-[10px] px-4 py-2 rounded-full font-black uppercase border border-purple-500/50 flex items-center gap-2 shadow-inner hover:bg-purple-800 transition-all"; document.getElementById('txtTituloVip').innerText = "CREADOR PREMIUM"; document.getElementById('btnAutoPremium').style.display = 'flex'; } 
+            else { btnTop.innerHTML = `<i class="fas fa-sign-out-alt"></i> SALIR VIP`; btnTop.className = "bg-yellow-900 text-yellow-500 text-[10px] px-4 py-2 rounded-full font-black uppercase border border-yellow-600/50 flex items-center gap-2 shadow-inner hover:bg-yellow-800 transition-all"; document.getElementById('txtTituloVip').innerText = "CREADOR VIP"; document.getElementById('btnAutoPremium').style.display = 'none'; }
+            
+            window.iniciarMonitorInactividad(); // Inicia el reloj de 3 minutos
             window.renderizarPartidosVIP(); window.scrollTo(0,0); window.cambiarVista('picks');
-        }
 
-        window.verProbabilidadFree = function(eq) {
-            const m = document.getElementById('modalAnalisis'); const c = document.getElementById('contenidoModalAnalisis');
-            c.innerHTML = `<i class="fas fa-satellite-dish animate-pulse text-yellow-500 text-4xl mb-4 mt-2"></i><h3 class="text-white font-bold uppercase italic">Escaneando...</h3>`; m.classList.remove('hidden');
-            setTimeout(() => { c.innerHTML = `<button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button><i class="fas fa-lock text-yellow-500 text-5xl mb-4 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"></i><h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Acceso Protegido</h3><div class="bg-black/60 p-6 rounded-xl border border-red-500/40 mb-6 relative overflow-hidden"><div class="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex flex-col items-center justify-center z-10 p-4"><span class="bg-red-600 text-white text-[11px] font-black px-4 py-2 rounded uppercase shadow-lg flex items-center gap-2 mb-3"><i class="fas fa-key"></i> VIP REQUERIDO</span></div><p class="blur-[5px] opacity-50 text-white font-black mb-3">Gana ${eq}</p></div><a href="https://wa.me/573005191112?text=Hola%2C%20deseo%20solicitar%20un%20PIN%20de%20acceso%20VIP%20para%20OracleBet." target="_blank" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-xs uppercase shadow-lg flex justify-center gap-2"><i class="fab fa-whatsapp text-xl"></i> SOLICITAR ACCESO</a>`; }, 1500);
-        };
+            // NOTIFICACIÓN SI FUE APROBADO EN ESCALERA
+            if(ladderStat === 'approved' && !esPrimerInicio) {
+                // Pequeño retraso para que se vea elegante al cargar la pantalla
+                setTimeout(() => { document.getElementById('modalNotificacionEscalera').classList.remove('hidden'); }, 800);
+            }
+        }
 
         window.crearCodigo = async function(esIl) {
             const nuevo = document.getElementById('newCodeInput').value.toUpperCase().trim(); if(nuevo==="") return;
