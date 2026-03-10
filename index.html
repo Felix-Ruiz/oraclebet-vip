@@ -85,7 +85,7 @@
                     </button>
                     <button onclick="ejecutarFiltroFinal('soccer_italy_serie_a', 'Serie A')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#003cb2] to-[#0281ff]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/e/e1/Serie_A_logo_%282022%29.svg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Serie A" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/Serie_A_logo_%282022%29.svg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Serie A" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Serie A</span>
                     </button>
                     <button onclick="ejecutarFiltroFinal('soccer_germany_bundesliga', 'Bundesliga')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#d3010c] to-[#ff3b3b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
@@ -97,6 +97,21 @@
                         <div class="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors"></div>
                         <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Ligue1.svg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Ligue 1" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Ligue 1</span>
+                    </button>
+                    <button onclick="ejecutarFiltroFinal('soccer_uefa_champs_league', 'Champions League')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#001489] to-[#030b42]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                        <img src="https://upload.wikimedia.org/wikipedia/en/b/bf/UEFA_Champions_League_logo_2.svg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Champions" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Champions</span>
+                    </button>
+                    <button onclick="ejecutarFiltroFinal('soccer_uefa_europa_league', 'Europa League')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#f68e00] to-[#1e1e1e]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                        <img src="https://upload.wikimedia.org/wikipedia/en/0/03/Europa_League.svg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Europa League" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Europa L.</span>
+                    </button>
+                    <button onclick="ejecutarFiltroFinal('soccer_uefa_europa_conference_league', 'Conference League')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#00b067] to-[#1e1e1e]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                        <img src="https://upload.wikimedia.org/wikipedia/en/9/90/UEFA_Europa_Conference_League_logo.svg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Conference League" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Conference</span>
                     </button>
 
                 </div>
@@ -381,10 +396,8 @@
         window.abrirModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.remove('hidden'); };
         window.cerrarModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.add('hidden'); };
         
-        // ¡REPARACIÓN DE LA "X" EN EL MODO FREE!
         window.cerrarModal = function() { document.getElementById('modalAnalisis').classList.add('hidden'); };
 
-        // SISTEMA DE BANDERAS PROFESIONAL
         function obtenerBandera(pais) {
             const mapa = {
                 'Spain': '🇪🇸', 'Italy': '🇮🇹', 'Germany': '🇩🇪', 'France': '🇫🇷', 'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
@@ -437,7 +450,6 @@
                 
                 Object.keys(arbol[deporte]).sort().forEach(pais => {
                     const idPais = idDeporte + '_' + pais.replace(/[^a-zA-Z0-9]/g, '');
-                    // AGREGAMOS LA BANDERA AQUÍ
                     const bandera = obtenerBandera(pais);
                     
                     html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1">
