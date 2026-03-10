@@ -985,7 +985,7 @@
             
             const btn = document.getElementById('btnValidarCodigo'); const txtOriginal = btn.innerHTML; btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
             
-            if(input === MASTER_CODE) {
+            if(input.toUpperCase() === MASTER_CODE.toUpperCase()) {
                 try {
                     const adminRef = doc(db, "global", "admin_security");
                     const adminSnap = await getDoc(adminRef);
@@ -1010,8 +1010,6 @@
             try {
                 const inputUsuario = input.toUpperCase();
                 
-                // 1. Dibuja un "Hack" visual: Detenemos el botón sin conectar a la base de datos de inmediato.
-                // Firebase resuelve tan rápido que el usuario no ve el loader.
                 setTimeout(async () => {
                     const docRef = doc(db, "codigos_nube", inputUsuario); const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
@@ -1029,7 +1027,7 @@
                         window.mostrarAlerta("Código Inválido", "El código ingresado no existe o ha expirado.", "error"); 
                         btn.innerHTML = txtOriginal; btn.disabled = false;
                     }
-                }, 500); // 0.5 segundos de "simulación de carga" para la UX.
+                }, 500);
 
             } catch (e) { 
                 window.mostrarAlerta("Error de Red", "Verifica tu conexión y vuelve a intentarlo.", "warning"); 
