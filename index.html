@@ -52,7 +52,7 @@
             </button>
         </div>
         <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/5 px-2 py-1.5 rounded flex items-center gap-2">
-            <i class="fas fa-map-marker-alt text-yellow-500"></i> <span id="nombreLigaActiva" class="text-yellow-500">Partidos Destacados (Todos)</span>
+            <i class="fas fa-map-marker-alt text-yellow-500"></i> <span id="nombreLigaActiva" class="text-yellow-500">Cargando Competición...</span>
         </div>
     </div>
 
@@ -115,7 +115,7 @@
             <span id="contadorSeleccion" class="text-xs font-bold bg-yellow-500 text-black px-2 py-1 rounded">0/5 Seleccionados</span>
         </div>
 
-        <p class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center">Selecciona entre 2 y 5 partidos para el análisis algorítmico profundo.</p>
+        <p class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center">Navega por las ligas. Tus selecciones se guardarán.</p>
 
         <div id="containerPartidosVIP" class="space-y-3 mb-6 max-h-[50vh] overflow-y-auto pr-1">
             </div>
@@ -164,10 +164,14 @@
         const MASTER_CODE = "FELIX_ADMIN_777";
         let CODIGOS_VALIDOS = JSON.parse(localStorage.getItem('oraclebet_codigos')) || ["PREMIUM2026", "FELIX_ELITE"];
         let modoVipActivo = false;
+        
         let partidosGlobales = []; 
         let partidosFiltrados = []; 
         let competicionesGlobales = []; 
-        let ticketDinamicoVIP = []; // Array que guarda el ticket generado para poder refrescarlo
+        
+        // MEMORIA VIP PERSISTENTE
+        let seleccionesVIPGlobal = []; // Guarda los partidos completos aunque cambies de liga
+        let ticketDinamicoVIP = []; // Para refrescar tickets
         
         let nivelFiltroActual = 'deportes'; 
         let filtroDeporteSeleccionado = '';
@@ -176,7 +180,7 @@
 
         async function iniciarApp() {
             await obtenerLigasDisponibles();
-            cargarPartidosReales('upcoming', 'Partidos Destacados (Todos)');
+            ejecutarTopFutbol(); // Carga de las 5 mejores ligas por defecto
         }
 
         // --- SISTEMA DE FILTROS ---
@@ -259,8 +263,8 @@
             contenedor.innerHTML = '';
             if(nivelFiltroActual === 'deportes') {
                 contenedor.innerHTML += `
-                    <button onclick="ejecutarFiltroFinal('upcoming', 'Partidos Destacados (Todos)')" class="w-full text-left bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-lg mb-2 text-yellow-500 font-bold text-xs flex justify-between items-center fade-in-right">
-                        <span><i class="fas fa-fire mr-2"></i> Ver Destacados Globales</span>
+                    <button onclick="ejecutarTopFutbol()" class="w-full text-left bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-lg mb-2 text-yellow-500 font-bold text-xs flex justify-between items-center fade-in-right">
+                        <span><i class="fas fa-star mr-2"></i> Fútbol Elite (Top 5 Ligas)</span>
                         <i class="fas fa-play text-[10px]"></i>
                     </button>
                 `;
@@ -299,15 +303,68 @@
             else renderizarPartidosFree(partidosFiltrados);
         }
 
-        // --- CARGA DE PARTIDOS PROFUNDA (Incluye totals y spreads) ---
-        async function cargarPartidosReales(sportKey = 'upcoming', nombreLiga = 'Destacados') {
+        // --- MULTI-CARGA: MEJORES LIGAS DEL MUNDO ---
+        async function ejecutarTopFutbol() {
+            cerrarModalFiltros();
+            document.getElementById('nombreLigaActiva').innerText = 'Fútbol Elite (Top 5 Ligas)';
+            document.getElementById('buscadorEquipos').value = ''; 
+            
+            const containerFree = document.getElementById('containerPartidos');
+            const containerVip = document.getElementById('containerPartidosVIP');
+            containerFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Escaneando Premier, La Liga, Serie A...</div>`;
+            if(modoVipActivo) containerVip.innerHTML = containerFree.innerHTML;
+
+            // Las 5 mejores competiciones del mundo
+            const ligasTop = [
+                'soccer_epl', 
+                'soccer_spain_la_liga', 
+                'soccer_germany_bundesliga', 
+                'soccer_uefa_champs_league', 
+                'soccer_italy_serie_a'
+            ];
+            
+            try {
+                // Llamamos a las 5 ligas al mismo tiempo
+                const promesas = ligasTop.map(liga => 
+                    fetch(`https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEY}&regions=eu,us&markets=h2h,totals,spreads`)
+                    .then(res => res.json())
+                    .catch(() => []) // Si falla una, no rompe la app
+                );
+                
+                const resultados = await Promise.all(promesas);
+                let dataMezclada = resultados.flat().filter(m => m.bookmakers && m.bookmakers.length > 0);
+                
+                // Ordenar por fecha del partido
+                dataMezclada.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time));
+
+                partidosGlobales = dataMezclada;
+                partidosFiltrados = [...partidosGlobales];
+
+                if(partidosGlobales.length === 0) {
+                    const noDataMsg = `<div class="text-center bg-black/30 p-6 rounded-lg border border-white/5"><i class="fas fa-calendar-times text-gray-500 text-3xl mb-3"></i><p class="text-gray-400 text-xs font-bold uppercase tracking-widest">No hay partidos Elite programados en este momento.</p></div>`;
+                    containerFree.innerHTML = noDataMsg;
+                    if(modoVipActivo) containerVip.innerHTML = noDataMsg;
+                    return;
+                }
+
+                renderizarPartidosFree(partidosFiltrados);
+                if(modoVipActivo) renderizarPartidosVIP(partidosFiltrados);
+
+            } catch (e) {
+                const errorMsg = `<p class="text-center text-red-500 text-xs">Error de conexión con brokers.</p>`;
+                containerFree.innerHTML = errorMsg;
+                if(modoVipActivo) containerVip.innerHTML = errorMsg;
+            }
+        }
+
+        // --- CARGA INDIVIDUAL DE PARTIDOS ---
+        async function cargarPartidosReales(sportKey, nombreLiga) {
             const containerFree = document.getElementById('containerPartidos');
             const containerVip = document.getElementById('containerPartidosVIP');
             containerFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Consultando Brokers...</div>`;
             if(modoVipActivo) containerVip.innerHTML = containerFree.innerHTML;
 
             try {
-                // AHORA PEDIMOS H2H, TOTALS Y SPREADS PARA EXPRIMIR LA API
                 const res = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=eu,us&markets=h2h,totals,spreads`);
                 const data = await res.json();
                 partidosGlobales = data.filter(m => m.bookmakers && m.bookmakers.length > 0);
@@ -322,7 +379,7 @@
                 renderizarPartidosFree(partidosFiltrados);
                 if(modoVipActivo) renderizarPartidosVIP(partidosFiltrados);
             } catch (e) {
-                const errorMsg = `<p class="text-center text-red-500 text-xs">Error de conexión. Verifica API o límite de peticiones.</p>`;
+                const errorMsg = `<p class="text-center text-red-500 text-xs">Error de conexión. Verifica API.</p>`;
                 containerFree.innerHTML = errorMsg;
                 if(modoVipActivo) containerVip.innerHTML = errorMsg;
             }
@@ -333,9 +390,10 @@
             container.innerHTML = '';
             if(dataA_Renderizar.length === 0) return container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún equipo coincide.</p>`;
 
-            dataA_Renderizar.slice(0, 10).forEach(partido => {
+            // En free mostramos max 15
+            dataA_Renderizar.slice(0, 15).forEach(partido => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const dateDay = new Date(partido.commence_time).toLocaleDateString();
+                const dateDay = new Date(partido.commence_time).toLocaleDateString([], {month: 'short', day: 'numeric'});
                 const card = document.createElement('div');
                 card.className = 'card-glass p-5 animate-slide-up relative overflow-hidden';
                 card.innerHTML = `
@@ -364,11 +422,15 @@
             dataA_Renderizar.slice(0, 50).forEach((partido) => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const dateDay = new Date(partido.commence_time).toLocaleDateString([], {month: 'short', day: 'numeric'});
+                
+                // Comprobar si ya estaba seleccionado en la memoria global
+                const estaSeleccionado = seleccionesVIPGlobal.some(s => s.id === partido.id);
+
                 const card = document.createElement('div');
                 card.className = 'bg-black/40 border border-white/5 p-3 rounded-lg flex items-center justify-between hover:border-yellow-500/30 transition';
                 card.innerHTML = `
                     <div class="flex items-center gap-3 w-full">
-                        <input type="checkbox" id="check_${partido.id}" value="${partido.id}" onchange="actualizarSeleccionVIP()" class="checkbox-vip">
+                        <input type="checkbox" id="check_${partido.id}" value="${partido.id}" onchange="toggleSeleccionVIP('${partido.id}')" class="checkbox-vip" ${estaSeleccionado ? 'checked' : ''}>
                         <label for="check_${partido.id}" class="flex flex-col cursor-pointer w-full">
                             <span class="text-[9px] text-yellow-500 font-bold uppercase tracking-widest">${partido.sport_title} • ${dateDay} ${date}</span>
                             <span class="text-xs font-bold text-white mt-1">${partido.home_team} <span class="text-gray-500 font-normal text-[10px] mx-1">vs</span> ${partido.away_team}</span>
@@ -377,16 +439,34 @@
                 `;
                 container.appendChild(card);
             });
-            actualizarSeleccionVIP(); 
+            actualizarContadorVIP(); 
         }
 
-        function actualizarSeleccionVIP() {
-            const checkboxes = document.querySelectorAll('.checkbox-vip:checked');
-            const cantidad = checkboxes.length;
+        // --- MEMORIA PERSISTENTE DE CHECKBOXES ---
+        function toggleSeleccionVIP(partidoId) {
+            const cb = document.getElementById('check_' + partidoId);
+            if(cb.checked) {
+                if(seleccionesVIPGlobal.length >= 5) {
+                    cb.checked = false;
+                    alert("Has alcanzado el límite máximo de 5 partidos.");
+                    return;
+                }
+                const partidoObj = partidosGlobales.find(p => p.id === partidoId);
+                if(partidoObj) seleccionesVIPGlobal.push(partidoObj);
+            } else {
+                seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== partidoId);
+            }
+            actualizarContadorVIP();
+        }
+
+        function actualizarContadorVIP() {
             const btn = document.getElementById('btnGenerarTicket');
             const contador = document.getElementById('contadorSeleccion');
+            const cantidad = seleccionesVIPGlobal.length;
+            
             contador.innerText = `${cantidad}/5 Seleccionados`;
 
+            // Bloquear visualmente si llegamos a 5
             document.querySelectorAll('.checkbox-vip').forEach(cb => {
                 if(cantidad >= 5 && !cb.checked) cb.disabled = true;
                 else cb.disabled = false;
@@ -401,15 +481,13 @@
             }
         }
 
-        // --- NUEVO MOTOR DE ARBITRAJE INTERACTIVO (EXTRACCIÓN PROFUNDA) ---
+        // --- MOTOR DE ARBITRAJE INTERACTIVO ---
         function obtenerTodasOpcionesMercado(partido) {
             let opciones = [];
             partido.bookmakers.forEach(broker => {
                 broker.markets.forEach(mercado => {
                     mercado.outcomes.forEach(resultado => {
-                        // Filtro de rentabilidad: solo cuotas realistas y altas probabilidades
                         if(resultado.price >= 1.25 && resultado.price <= 3.50) {
-                            // Calcular probabilidad implicita (1/cuota)
                             let prob = Math.floor((1 / resultado.price) * 100);
                             opciones.push({
                                 broker: broker.title,
@@ -417,17 +495,15 @@
                                 nombre: resultado.name,
                                 point: resultado.point,
                                 cuota: resultado.price,
-                                probabilidad: prob + Math.floor(Math.random() * 5) // Ligero boost VIP
+                                probabilidad: prob + Math.floor(Math.random() * 5)
                             });
                         }
                     });
                 });
             });
 
-            // Ordenamos por probabilidad (de mayor a menor)
             opciones.sort((a,b) => b.probabilidad - a.probabilidad);
-
-            // Eliminar opciones extremadamente duplicadas para dar variedad visual en el reroll
+            
             let unicas = [];
             let combinacionesVistas = new Set();
             opciones.forEach(op => {
@@ -437,29 +513,27 @@
                     unicas.push(op);
                 }
             });
-
             return unicas;
         }
 
         function procesarTicketVIP() {
-            const checkboxes = document.querySelectorAll('.checkbox-vip:checked');
+            // AHORA LEE LA MEMORIA GLOBAL, NO EL DOM ACTUAL
+            if(seleccionesVIPGlobal.length < 2) return;
+
             const resDiv = document.getElementById('resultadoVIP');
-            
             resDiv.innerHTML = `<div class="p-10 text-center"><i class="fas fa-satellite-dish animate-pulse text-yellow-500 mb-4 text-3xl"></i><p class="text-[10px] uppercase tracking-widest text-yellow-500 font-bold">Escaneando Mercados Profundos...</p><p class="text-[9px] text-gray-500 mt-2">Cruzando datos (Spreads, Totales, Moneyline)</p></div>`;
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
             setTimeout(() => {
-                ticketDinamicoVIP = []; // Reiniciamos el ticket global
+                ticketDinamicoVIP = []; 
 
-                checkboxes.forEach(cb => {
-                    const partido = partidosGlobales.find(p => p.id === cb.value);
+                seleccionesVIPGlobal.forEach(partido => {
                     const opcionesDisponibles = obtenerTodasOpcionesMercado(partido);
-                    
                     if(opcionesDisponibles.length > 0) {
                         ticketDinamicoVIP.push({
                             partido: partido,
                             opciones: opcionesDisponibles,
-                            indexSeleccionado: 0 // Empezamos siempre por la de mayor probabilidad
+                            indexSeleccionado: 0 
                         });
                     }
                 });
@@ -483,7 +557,6 @@
                 cuotaTotal *= opcionElegida.cuota;
                 probPromedio += opcionElegida.probabilidad;
 
-                // Traducción de mercados para la interfaz
                 let tipoApuestaTxt = "Ganador del Encuentro (Moneyline)";
                 if(opcionElegida.mercadoKey === 'totals') tipoApuestaTxt = "Línea de Puntos/Goles (Totales)";
                 if(opcionElegida.mercadoKey === 'spreads') tipoApuestaTxt = "Handicap / Ventaja (Spreads)";
@@ -554,27 +627,23 @@
             `;
         }
 
-        // --- FUNCIONES DE RE-GENERACIÓN ---
         function cambiarPickIndividual(partidoId) {
             let item = ticketDinamicoVIP.find(t => t.partido.id === partidoId);
             if(item) {
-                // Pasamos al siguiente mercado/opción disponible. Si llega al final, vuelve al inicio.
                 item.indexSeleccionado = (item.indexSeleccionado + 1) % item.opciones.length;
-                dibujarTicketInteractivo(); // Redibujar todo el ticket para actualizar la cuota final
+                dibujarTicketInteractivo(); 
             }
         }
 
         function regenerarTicketCompleto() {
             ticketDinamicoVIP.forEach(item => {
-                // Elegimos una opción aleatoria dentro de las mejores 5 (o todas si son menos)
                 let maxOpciones = item.opciones.length > 5 ? 5 : item.opciones.length;
                 item.indexSeleccionado = Math.floor(Math.random() * maxOpciones);
             });
             dibujarTicketInteractivo();
         }
 
-
-        // --- EMBUDO DE VENTAS MODO FREE (MODAL) ---
+        // --- EMBUDO DE VENTAS MODO FREE ---
         function verProbabilidad(equipo) {
             const modal = document.getElementById('modalAnalisis');
             const contenido = document.getElementById('contenidoModalAnalisis');
@@ -598,9 +667,8 @@
                     <div class="bg-black/50 p-5 rounded-lg border border-red-500/40 mb-6 relative overflow-hidden shadow-[0_0_20px_rgba(220,38,38,0.15)]">
                         <div class="absolute inset-0 backdrop-blur-[4px] bg-black/50 flex flex-col items-center justify-center z-10 p-4">
                             <span class="bg-red-600 text-white text-[10px] font-black px-4 py-1.5 rounded uppercase tracking-widest shadow-lg flex items-center gap-2 mb-2"><i class="fas fa-key"></i> EXCLUSIVO VIP</span>
-                            <span class="text-[9px] text-center text-gray-300 font-bold uppercase">Requiere código de acceso para ver la jugada y cuota exacta.</span>
+                            <span class="text-[9px] text-center text-gray-300 font-bold uppercase">Requiere código de acceso para ver la jugada exacta.</span>
                         </div>
-                        
                         <div class="blur-[4px] opacity-60">
                             <p class="text-sm text-white font-black uppercase tracking-widest mb-2 border-b border-gray-600 pb-2">Pick: Gana ${equipo}</p>
                             <div class="flex justify-between">
@@ -638,6 +706,8 @@
                 document.getElementById('membershipSection').style.display = 'none';
                 document.getElementById('statusBadge').innerText = "ACCESO ELITE VIP";
                 document.getElementById('statusBadge').classList.replace('bg-red-500', 'bg-yellow-500');
+                
+                // Si abren VIP, renderizamos lo que haya en la memoria de la vista
                 renderizarPartidosVIP(partidosFiltrados); 
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } else { alert("Código no válido. Solicita uno por WhatsApp."); }
