@@ -115,14 +115,14 @@
             <span id="contadorSeleccion" class="text-xs font-bold bg-yellow-500 text-black px-2 py-1 rounded">0/5 Seleccionados</span>
         </div>
 
-        <p class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center">Selecciona entre 3 y 5 partidos para el análisis algorítmico.</p>
+        <p class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center">Selecciona entre 2 y 5 partidos para el análisis algorítmico profundo.</p>
 
         <div id="containerPartidosVIP" class="space-y-3 mb-6 max-h-[50vh] overflow-y-auto pr-1">
             </div>
 
         <button id="btnGenerarTicket" onclick="procesarTicketVIP()" class="w-full p-4 btn-gold rounded-xl font-black shadow-lg text-sm flex flex-col items-center opacity-50 cursor-not-allowed" disabled>
             <span>GENERAR TICKET INTELIGENTE</span>
-            <span class="text-[10px] opacity-70">Requiere 3 a 5 selecciones</span>
+            <span class="text-[10px] opacity-70">Requiere 2 a 5 selecciones</span>
         </button>
 
         <div id="resultadoVIP" class="mt-6 space-y-4"></div>
@@ -131,15 +131,12 @@
     <div id="modalAnalisis" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-6 z-50 backdrop-blur-md">
         <div class="card-glass p-8 w-full max-w-sm text-center border-yellow-500/30 relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 animate-pulse"></div>
-            
-            <div id="contenidoModalAnalisis">
-                </div>
+            <div id="contenidoModalAnalisis"></div>
         </div>
     </div>
 
     <div id="modalFiltrosInteractivo" class="fixed inset-0 bg-black/90 hidden flex-col justify-end z-50 backdrop-blur-sm">
         <div class="bg-gray-900 w-full h-[85vh] rounded-t-3xl border-t-2 border-yellow-500 p-5 flex flex-col modal-slide-up relative">
-            
             <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
                 <div class="flex items-center gap-3">
                     <button id="btnVolverFiltro" onclick="navegarAtrasFiltro()" class="text-yellow-500 hover:text-white text-lg hidden"><i class="fas fa-arrow-left"></i></button>
@@ -170,9 +167,9 @@
         let partidosGlobales = []; 
         let partidosFiltrados = []; 
         let competicionesGlobales = []; 
+        let ticketDinamicoVIP = []; // Array que guarda el ticket generado para poder refrescarlo
         
-        // VARIABLES DE ESTADO PARA EL FILTRO JERÁRQUICO
-        let nivelFiltroActual = 'deportes'; // 'deportes' -> 'paises' -> 'ligas'
+        let nivelFiltroActual = 'deportes'; 
         let filtroDeporteSeleccionado = '';
         let filtroPaisSeleccionado = '';
         let listaActualRenderizada = []; 
@@ -182,7 +179,7 @@
             cargarPartidosReales('upcoming', 'Partidos Destacados (Todos)');
         }
 
-        // --- SISTEMA PROFESIONAL DE FILTROS JERÁRQUICOS ---
+        // --- SISTEMA DE FILTROS ---
         async function obtenerLigasDisponibles() {
             try {
                 const res = await fetch(`https://api.the-odds-api.com/v4/sports/?apiKey=${API_KEY}`);
@@ -227,47 +224,32 @@
             else if (nivelFiltroActual === 'paises') irNivelDeportes();
         }
 
-        // NIVEL 1: DEPORTES
         function irNivelDeportes() {
             nivelFiltroActual = 'deportes';
             document.getElementById('btnVolverFiltro').classList.add('hidden');
             document.getElementById('tituloFiltroModal').innerHTML = '<i class="fas fa-trophy mr-1"></i> Tipos de Deporte';
-            
             const deportesSet = new Set(competicionesGlobales.map(l => l.group));
-            const deportesLista = Array.from(deportesSet).sort();
-            
-            listaActualRenderizada = deportesLista.map(d => ({ tipo: 'deporte', id: d, nombre: traducirDeporte(d), origin: d }));
+            listaActualRenderizada = Array.from(deportesSet).sort().map(d => ({ tipo: 'deporte', id: d, nombre: traducirDeporte(d), origin: d }));
             dibujarListaFiltros(listaActualRenderizada);
         }
 
-        // NIVEL 2: PAÍSES / CONTINENTES
         function irNivelPaises(grupoDeporteOriginal) {
             nivelFiltroActual = 'paises';
             filtroDeporteSeleccionado = grupoDeporteOriginal;
-            
             document.getElementById('btnVolverFiltro').classList.remove('hidden');
             document.getElementById('tituloFiltroModal').innerHTML = `<i class="fas fa-globe mr-1"></i> Región: ${traducirDeporte(grupoDeporteOriginal)}`;
-            
             const ligasDelDeporte = competicionesGlobales.filter(l => l.group === grupoDeporteOriginal);
             const paisesSet = new Set(ligasDelDeporte.map(l => extraerPaisDeLiga(l)));
-            const paisesLista = Array.from(paisesSet).sort();
-            
-            listaActualRenderizada = paisesLista.map(p => ({ tipo: 'pais', id: p, nombre: p }));
+            listaActualRenderizada = Array.from(paisesSet).sort().map(p => ({ tipo: 'pais', id: p, nombre: p }));
             dibujarListaFiltros(listaActualRenderizada);
         }
 
-        // NIVEL 3: LIGAS / COMPETICIONES
         function irNivelLigas(paisSeleccionadoStr) {
             nivelFiltroActual = 'ligas';
             filtroPaisSeleccionado = paisSeleccionadoStr;
-            
             document.getElementById('btnVolverFiltro').classList.remove('hidden');
             document.getElementById('tituloFiltroModal').innerHTML = `<i class="fas fa-medal mr-1"></i> Ligas: ${paisSeleccionadoStr}`;
-            
-            const ligasFinales = competicionesGlobales.filter(l => 
-                l.group === filtroDeporteSeleccionado && extraerPaisDeLiga(l) === paisSeleccionadoStr
-            ).sort((a,b) => a.title.localeCompare(b.title));
-            
+            const ligasFinales = competicionesGlobales.filter(l => l.group === filtroDeporteSeleccionado && extraerPaisDeLiga(l) === paisSeleccionadoStr).sort((a,b) => a.title.localeCompare(b.title));
             listaActualRenderizada = ligasFinales.map(l => ({ tipo: 'liga', id: l.key, nombre: l.title }));
             dibujarListaFiltros(listaActualRenderizada);
         }
@@ -275,7 +257,6 @@
         function dibujarListaFiltros(listaElementos) {
             const contenedor = document.getElementById('listaDinamicaFiltros');
             contenedor.innerHTML = '';
-
             if(nivelFiltroActual === 'deportes') {
                 contenedor.innerHTML += `
                     <button onclick="ejecutarFiltroFinal('upcoming', 'Partidos Destacados (Todos)')" class="w-full text-left bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-lg mb-2 text-yellow-500 font-bold text-xs flex justify-between items-center fade-in-right">
@@ -284,27 +265,16 @@
                     </button>
                 `;
             }
-
             if(listaElementos.length === 0) {
                 contenedor.innerHTML += `<p class="text-center text-gray-500 text-xs mt-4">No se encontraron resultados.</p>`;
                 return;
             }
-
             listaElementos.forEach(el => {
-                let accion = '';
-                let iconoDer = '<i class="fas fa-chevron-right text-[10px] text-gray-500"></i>';
-                
-                if(el.tipo === 'deporte') accion = `irNivelPaises('${el.origin}')`;
-                else if(el.tipo === 'pais') accion = `irNivelLigas('${el.id}')`;
-                else if(el.tipo === 'liga') {
-                    accion = `ejecutarFiltroFinal('${el.id}', '${el.nombre}')`;
-                    iconoDer = '<i class="fas fa-play text-[10px] text-yellow-500"></i>';
-                }
-
+                let accion = el.tipo === 'deporte' ? `irNivelPaises('${el.origin}')` : (el.tipo === 'pais' ? `irNivelLigas('${el.id}')` : `ejecutarFiltroFinal('${el.id}', '${el.nombre}')`);
+                let iconoDer = el.tipo === 'liga' ? '<i class="fas fa-play text-[10px] text-yellow-500"></i>' : '<i class="fas fa-chevron-right text-[10px] text-gray-500"></i>';
                 contenedor.innerHTML += `
                     <button onclick="${accion}" class="w-full text-left bg-black/40 border border-white/5 p-3 rounded-lg hover:bg-white/10 hover:border-yellow-500/30 transition text-white text-xs font-bold flex justify-between items-center fade-in-right mb-2">
-                        <span>${el.nombre}</span>
-                        ${iconoDer}
+                        <span>${el.nombre}</span>${iconoDer}
                     </button>
                 `;
             });
@@ -312,8 +282,7 @@
 
         function filtrarVistaActualModal() {
             const texto = document.getElementById('buscadorListasModal').value.toLowerCase();
-            const filtrados = listaActualRenderizada.filter(el => el.nombre.toLowerCase().includes(texto));
-            dibujarListaFiltros(filtrados);
+            dibujarListaFiltros(listaActualRenderizada.filter(el => el.nombre.toLowerCase().includes(texto)));
         }
 
         function ejecutarFiltroFinal(keyLiga, nombreMostrar) {
@@ -323,44 +292,35 @@
             cargarPartidosReales(keyLiga, nombreMostrar);
         }
 
-        // --- BUSCADOR PRINCIPAL POR EQUIPO ---
         function filtrarPorEquipo() {
             const texto = document.getElementById('buscadorEquipos').value.toLowerCase();
-            partidosFiltrados = partidosGlobales.filter(p => 
-                p.home_team.toLowerCase().includes(texto) || p.away_team.toLowerCase().includes(texto)
-            );
-            
+            partidosFiltrados = partidosGlobales.filter(p => p.home_team.toLowerCase().includes(texto) || p.away_team.toLowerCase().includes(texto));
             if(modoVipActivo) renderizarPartidosVIP(partidosFiltrados);
             else renderizarPartidosFree(partidosFiltrados);
         }
 
-        // --- CARGA Y RENDERIZADO DE PARTIDOS ---
+        // --- CARGA DE PARTIDOS PROFUNDA (Incluye totals y spreads) ---
         async function cargarPartidosReales(sportKey = 'upcoming', nombreLiga = 'Destacados') {
             const containerFree = document.getElementById('containerPartidos');
             const containerVip = document.getElementById('containerPartidosVIP');
-            
-            const loadingHtml = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Consultando Brokers...</div>`;
-            
-            containerFree.innerHTML = loadingHtml;
-            if(modoVipActivo) containerVip.innerHTML = loadingHtml;
+            containerFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Consultando Brokers...</div>`;
+            if(modoVipActivo) containerVip.innerHTML = containerFree.innerHTML;
 
             try {
-                const res = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=eu,us&markets=h2h,totals`);
+                // AHORA PEDIMOS H2H, TOTALS Y SPREADS PARA EXPRIMIR LA API
+                const res = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=eu,us&markets=h2h,totals,spreads`);
                 const data = await res.json();
-
                 partidosGlobales = data.filter(m => m.bookmakers && m.bookmakers.length > 0);
                 partidosFiltrados = [...partidosGlobales];
 
                 if(partidosGlobales.length === 0) {
-                    const noDataMsg = `<div class="text-center bg-black/30 p-6 rounded-lg border border-white/5"><i class="fas fa-calendar-times text-gray-500 text-3xl mb-3"></i><p class="text-gray-400 text-xs font-bold uppercase tracking-widest">No hay cuotas disponibles para ${nombreLiga} en este momento.</p></div>`;
+                    const noDataMsg = `<div class="text-center bg-black/30 p-6 rounded-lg border border-white/5"><i class="fas fa-calendar-times text-gray-500 text-3xl mb-3"></i><p class="text-gray-400 text-xs font-bold uppercase tracking-widest">No hay cuotas disponibles para ${nombreLiga}.</p></div>`;
                     containerFree.innerHTML = noDataMsg;
                     if(modoVipActivo) containerVip.innerHTML = noDataMsg;
                     return;
                 }
-
                 renderizarPartidosFree(partidosFiltrados);
                 if(modoVipActivo) renderizarPartidosVIP(partidosFiltrados);
-
             } catch (e) {
                 const errorMsg = `<p class="text-center text-red-500 text-xs">Error de conexión. Verifica API o límite de peticiones.</p>`;
                 containerFree.innerHTML = errorMsg;
@@ -371,19 +331,13 @@
         function renderizarPartidosFree(dataA_Renderizar) {
             const container = document.getElementById('containerPartidos');
             container.innerHTML = '';
-            
-            if(dataA_Renderizar.length === 0) {
-                container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún equipo coincide con la búsqueda.</p>`;
-                return;
-            }
+            if(dataA_Renderizar.length === 0) return container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún equipo coincide.</p>`;
 
             dataA_Renderizar.slice(0, 10).forEach(partido => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const dateDay = new Date(partido.commence_time).toLocaleDateString();
                 const card = document.createElement('div');
                 card.className = 'card-glass p-5 animate-slide-up relative overflow-hidden';
-                
-                // Pequeño guiño de marketing
                 card.innerHTML = `
                     <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[9px] font-black px-2 py-0.5 rounded-bl-lg">OPORTUNIDAD DETECTADA</div>
                     <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-gray-500 border-b border-white/5 pb-2 mt-2">
@@ -405,16 +359,11 @@
         function renderizarPartidosVIP(dataA_Renderizar) {
             const container = document.getElementById('containerPartidosVIP');
             container.innerHTML = '';
-            
-            if(dataA_Renderizar.length === 0) {
-                container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún equipo coincide con la búsqueda.</p>`;
-                return;
-            }
+            if(dataA_Renderizar.length === 0) return container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún equipo coincide.</p>`;
 
             dataA_Renderizar.slice(0, 50).forEach((partido) => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const dateDay = new Date(partido.commence_time).toLocaleDateString([], {month: 'short', day: 'numeric'});
-                
                 const card = document.createElement('div');
                 card.className = 'bg-black/40 border border-white/5 p-3 rounded-lg flex items-center justify-between hover:border-yellow-500/30 transition';
                 card.innerHTML = `
@@ -436,16 +385,14 @@
             const cantidad = checkboxes.length;
             const btn = document.getElementById('btnGenerarTicket');
             const contador = document.getElementById('contadorSeleccion');
-
             contador.innerText = `${cantidad}/5 Seleccionados`;
 
-            const allCheckboxes = document.querySelectorAll('.checkbox-vip');
-            allCheckboxes.forEach(cb => {
+            document.querySelectorAll('.checkbox-vip').forEach(cb => {
                 if(cantidad >= 5 && !cb.checked) cb.disabled = true;
                 else cb.disabled = false;
             });
 
-            if(cantidad >= 3 && cantidad <= 5) {
+            if(cantidad >= 2 && cantidad <= 5) {
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
             } else {
@@ -454,113 +401,184 @@
             }
         }
 
-        // --- ALGORITMO VIP: CONSENSO DE MÚLTIPLES BROKERS ---
+        // --- NUEVO MOTOR DE ARBITRAJE INTERACTIVO (EXTRACCIÓN PROFUNDA) ---
+        function obtenerTodasOpcionesMercado(partido) {
+            let opciones = [];
+            partido.bookmakers.forEach(broker => {
+                broker.markets.forEach(mercado => {
+                    mercado.outcomes.forEach(resultado => {
+                        // Filtro de rentabilidad: solo cuotas realistas y altas probabilidades
+                        if(resultado.price >= 1.25 && resultado.price <= 3.50) {
+                            // Calcular probabilidad implicita (1/cuota)
+                            let prob = Math.floor((1 / resultado.price) * 100);
+                            opciones.push({
+                                broker: broker.title,
+                                mercadoKey: mercado.key,
+                                nombre: resultado.name,
+                                point: resultado.point,
+                                cuota: resultado.price,
+                                probabilidad: prob + Math.floor(Math.random() * 5) // Ligero boost VIP
+                            });
+                        }
+                    });
+                });
+            });
+
+            // Ordenamos por probabilidad (de mayor a menor)
+            opciones.sort((a,b) => b.probabilidad - a.probabilidad);
+
+            // Eliminar opciones extremadamente duplicadas para dar variedad visual en el reroll
+            let unicas = [];
+            let combinacionesVistas = new Set();
+            opciones.forEach(op => {
+                let idUnico = `${op.mercadoKey}-${op.nombre}-${op.point || ''}`;
+                if(!combinacionesVistas.has(idUnico)) {
+                    combinacionesVistas.add(idUnico);
+                    unicas.push(op);
+                }
+            });
+
+            return unicas;
+        }
+
         function procesarTicketVIP() {
             const checkboxes = document.querySelectorAll('.checkbox-vip:checked');
             const resDiv = document.getElementById('resultadoVIP');
             
-            resDiv.innerHTML = `<div class="p-10 text-center"><i class="fas fa-network-wired animate-pulse text-yellow-500 mb-4 text-3xl"></i><p class="text-[10px] uppercase tracking-widest text-yellow-500 font-bold">Analizando Consenso Global...</p><p class="text-[9px] text-gray-500 mt-2">Cruzando datos con todos los brokers disponibles</p></div>`;
+            resDiv.innerHTML = `<div class="p-10 text-center"><i class="fas fa-satellite-dish animate-pulse text-yellow-500 mb-4 text-3xl"></i><p class="text-[10px] uppercase tracking-widest text-yellow-500 font-bold">Escaneando Mercados Profundos...</p><p class="text-[9px] text-gray-500 mt-2">Cruzando datos (Spreads, Totales, Moneyline)</p></div>`;
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
             setTimeout(() => {
-                let htmlPartidos = '';
-                let cuotaTotal = 1.0;
-                let probPromedio = 0;
+                ticketDinamicoVIP = []; // Reiniciamos el ticket global
 
                 checkboxes.forEach(cb => {
                     const partido = partidosGlobales.find(p => p.id === cb.value);
+                    const opcionesDisponibles = obtenerTodasOpcionesMercado(partido);
                     
-                    let targetMarketKey = partido.bookmakers[0].markets.some(m => m.key === 'totals') ? 'totals' : 'h2h';
-                    let baseMarket = partido.bookmakers[0].markets.find(m => m.key === targetMarketKey);
-                    
-                    let targetOutcome = baseMarket.outcomes[0];
-                    baseMarket.outcomes.forEach(o => {
-                        if (o.price >= 1.40 && o.price <= 2.80) targetOutcome = o;
-                    });
-                    
-                    let targetOutcomeName = targetOutcome.name;
-                    let targetOutcomePoint = targetOutcome.point; 
-                    
-                    let preciosEncontrados = [];
-                    partido.bookmakers.forEach(bookie => {
-                        let mkt = bookie.markets.find(m => m.key === targetMarketKey);
-                        if(mkt) {
-                            let out = mkt.outcomes.find(o => o.name === targetOutcomeName);
-                            if(out) preciosEncontrados.push(out.price);
-                        }
-                    });
-
-                    if(preciosEncontrados.length === 0) preciosEncontrados.push(targetOutcome.price);
-
-                    let cuotaMaximaEncontrada = Math.max(...preciosEncontrados);
-                    let cuotaPromedioMercado = preciosEncontrados.reduce((a,b) => a+b, 0) / preciosEncontrados.length;
-                    
-                    let probMatematica = Math.floor((1 / cuotaPromedioMercado) * 100);
-                    let probFinalPartido = probMatematica + Math.floor(Math.random() * 8) + 2; 
-                    if(probFinalPartido > 96) probFinalPartido = 96;
-                    
-                    cuotaTotal *= cuotaMaximaEncontrada;
-                    probPromedio += probFinalPartido;
-
-                    let tipoApuestaTxt = targetMarketKey === 'totals' ? "Línea de Puntos/Goles (Totales)" : "Ganador del Encuentro (Moneyline)";
-                    let pickTexto = targetOutcomeName;
-                    if(targetMarketKey === 'totals') pickTexto = `${targetOutcomeName} de ${targetOutcomePoint || 2.5}`;
-
-                    htmlPartidos += `
-                        <div class="bg-black/40 p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 bg-green-500 text-black text-[9px] font-black px-2 py-0.5 rounded-bl-lg">PROB: ${probFinalPartido}%</div>
-                            <div class="flex items-center mb-1">
-                                <span class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">${tipoApuestaTxt}</span>
-                                <span class="text-[8px] text-gray-600 font-bold ml-2 bg-white/5 px-1.5 py-0.5 rounded"><i class="fas fa-radar text-yellow-500/50 mr-1"></i> Consenso: ${preciosEncontrados.length} Brokers</span>
-                            </div>
-                            <div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-2">${partido.home_team} vs ${partido.away_team}</div>
-                            <div class="flex justify-between items-center bg-gray-900/80 p-2.5 rounded border border-gray-700">
-                                <span class="text-[11px] text-yellow-500 font-black uppercase"><i class="fas fa-crosshairs mr-1"></i> PICK: ${pickTexto}</span>
-                                <span class="text-white font-black text-sm">${cuotaMaximaEncontrada.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    `;
+                    if(opcionesDisponibles.length > 0) {
+                        ticketDinamicoVIP.push({
+                            partido: partido,
+                            opciones: opcionesDisponibles,
+                            indexSeleccionado: 0 // Empezamos siempre por la de mayor probabilidad
+                        });
+                    }
                 });
 
-                probPromedio = Math.floor(probPromedio / checkboxes.length);
+                dibujarTicketInteractivo();
+            }, 2000);
+        }
 
-                resDiv.innerHTML = `
-                    <div class="card-glass p-5 border-t-2 border-yellow-500 bg-yellow-500/5 animate-slide-up shadow-2xl">
-                        <div class="flex justify-between items-center mb-6 border-b border-yellow-500/20 pb-4">
-                            <div class="flex flex-col">
-                                <span class="text-[13px] font-black text-yellow-500 uppercase tracking-widest italic"><i class="fas fa-ticket-alt mr-1"></i> Ticket Combinado VIP</span>
-                                <span class="text-[9px] text-gray-400 mt-1">Análisis de Múltiples Mercados Completado</span>
-                            </div>
-                            <span class="text-[10px] text-green-400 font-bold bg-green-400/10 border border-green-500/20 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(74,222,128,0.1)]">
-                                Índice Global: ${probPromedio}%
-                            </span>
-                        </div>
+        function dibujarTicketInteractivo() {
+            const resDiv = document.getElementById('resultadoVIP');
+            if(ticketDinamicoVIP.length === 0) return;
+
+            let htmlPartidos = '';
+            let cuotaTotal = 1.0;
+            let probPromedio = 0;
+
+            ticketDinamicoVIP.forEach(item => {
+                const partido = item.partido;
+                const opcionElegida = item.opciones[item.indexSeleccionado];
+
+                cuotaTotal *= opcionElegida.cuota;
+                probPromedio += opcionElegida.probabilidad;
+
+                // Traducción de mercados para la interfaz
+                let tipoApuestaTxt = "Ganador del Encuentro (Moneyline)";
+                if(opcionElegida.mercadoKey === 'totals') tipoApuestaTxt = "Línea de Puntos/Goles (Totales)";
+                if(opcionElegida.mercadoKey === 'spreads') tipoApuestaTxt = "Handicap / Ventaja (Spreads)";
+
+                let pickTexto = opcionElegida.nombre;
+                if(opcionElegida.mercadoKey === 'totals') pickTexto = `${opcionElegida.nombre} de ${opcionElegida.point}`;
+                if(opcionElegida.mercadoKey === 'spreads') pickTexto = `${opcionElegida.nombre} (${opcionElegida.point > 0 ? '+' : ''}${opcionElegida.point})`;
+
+                htmlPartidos += `
+                    <div class="bg-black/40 p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden fade-in-right">
+                        <div class="absolute top-0 right-0 bg-green-500 text-black text-[9px] font-black px-2 py-0.5 rounded-bl-lg">PROB: ${opcionElegida.probabilidad > 96 ? 96 : opcionElegida.probabilidad}%</div>
                         
-                        <div class="mb-4">
-                            ${htmlPartidos}
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">${tipoApuestaTxt}</span>
                         </div>
+                        <div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-2 pr-8">${partido.home_team} vs ${partido.away_team}</div>
                         
-                        <div class="pt-5 flex justify-between items-end bg-black/50 p-4 rounded-xl border border-yellow-500/10">
+                        <div class="flex justify-between items-center bg-gray-900/80 p-2.5 rounded border border-gray-700">
                             <div class="flex flex-col">
-                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Stake Recomendado</span>
-                                <span class="text-xs text-green-400 font-black mt-1"><i class="fas fa-shield-alt mr-1"></i> Seguridad Nivel 2</span>
+                                <span class="text-[11px] text-yellow-500 font-black uppercase"><i class="fas fa-crosshairs mr-1"></i> PICK: ${pickTexto}</span>
+                                <span class="text-[8px] text-gray-500 mt-1 uppercase tracking-widest"><i class="fas fa-radar text-yellow-500/50 mr-1"></i> Mejor Broker: ${opcionElegida.broker}</span>
                             </div>
-                            <div class="text-right">
-                                <span class="text-[10px] text-yellow-500 font-bold tracking-widest block mb-[-2px]">MAX. CUOTA ENCONTRADA</span>
-                                <span class="text-4xl font-black text-white drop-shadow-md">${cuotaTotal.toFixed(2)}</span>
+                            <div class="flex items-center gap-3">
+                                <span class="text-white font-black text-sm">${opcionElegida.cuota.toFixed(2)}</span>
+                                <button onclick="cambiarPickIndividual('${partido.id}')" class="bg-yellow-500/10 text-yellow-500 p-2 rounded-lg border border-yellow-500/20 hover:bg-yellow-500/30 transition shadow-lg active:scale-90" title="Refrescar este Pick">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
                 `;
-            }, 2500);
+            });
+
+            probPromedio = Math.floor(probPromedio / ticketDinamicoVIP.length);
+            if(probPromedio > 96) probPromedio = 96;
+
+            resDiv.innerHTML = `
+                <div class="card-glass p-5 border-t-2 border-yellow-500 bg-yellow-500/5 animate-slide-up shadow-2xl">
+                    <div class="flex justify-between items-center mb-6 border-b border-yellow-500/20 pb-4">
+                        <div class="flex flex-col">
+                            <span class="text-[13px] font-black text-yellow-500 uppercase tracking-widest italic"><i class="fas fa-ticket-alt mr-1"></i> Ticket Interactivo VIP</span>
+                            <span class="text-[9px] text-gray-400 mt-1">Algoritmo de Probabilidad Máxima</span>
+                        </div>
+                        <span class="text-[10px] text-green-400 font-bold bg-green-400/10 border border-green-500/20 px-3 py-1.5 rounded-full shadow-[0_0_10px_rgba(74,222,128,0.1)] transition-all">
+                            Índice: ${probPromedio}%
+                        </span>
+                    </div>
+                    
+                    <div class="mb-4">
+                        ${htmlPartidos}
+                    </div>
+                    
+                    <div class="pt-5 flex justify-between items-end bg-black/50 p-4 rounded-xl border border-yellow-500/10 mb-4 transition-all">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Apuesta Sugerida</span>
+                            <span class="text-xs text-green-400 font-black mt-1"><i class="fas fa-shield-alt mr-1"></i> Análisis Premium</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-yellow-500 font-bold tracking-widest block mb-[-2px]">CUOTA TOTAL GENERADA</span>
+                            <span class="text-4xl font-black text-white drop-shadow-md">${cuotaTotal.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <button onclick="regenerarTicketCompleto()" class="w-full py-3 border border-yellow-500/30 text-yellow-500 bg-black/30 rounded-lg text-[10px] font-black hover:bg-yellow-500/10 transition uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95">
+                        <i class="fas fa-random"></i> Rastrear Otras Opciones de Mercado
+                    </button>
+                </div>
+            `;
         }
 
-        // --- EMBUDO DE VENTAS (MODAL FREE PROTEGIDO) ---
+        // --- FUNCIONES DE RE-GENERACIÓN ---
+        function cambiarPickIndividual(partidoId) {
+            let item = ticketDinamicoVIP.find(t => t.partido.id === partidoId);
+            if(item) {
+                // Pasamos al siguiente mercado/opción disponible. Si llega al final, vuelve al inicio.
+                item.indexSeleccionado = (item.indexSeleccionado + 1) % item.opciones.length;
+                dibujarTicketInteractivo(); // Redibujar todo el ticket para actualizar la cuota final
+            }
+        }
+
+        function regenerarTicketCompleto() {
+            ticketDinamicoVIP.forEach(item => {
+                // Elegimos una opción aleatoria dentro de las mejores 5 (o todas si son menos)
+                let maxOpciones = item.opciones.length > 5 ? 5 : item.opciones.length;
+                item.indexSeleccionado = Math.floor(Math.random() * maxOpciones);
+            });
+            dibujarTicketInteractivo();
+        }
+
+
+        // --- EMBUDO DE VENTAS MODO FREE (MODAL) ---
         function verProbabilidad(equipo) {
             const modal = document.getElementById('modalAnalisis');
             const contenido = document.getElementById('contenidoModalAnalisis');
             
-            // 1. Mostrar estado "Escaneando"
             contenido.innerHTML = `
                 <i class="fas fa-satellite-dish animate-pulse text-yellow-500 text-3xl mb-4 mt-2"></i>
                 <h3 class="text-lg font-bold mb-2 uppercase italic text-white">Escaneando Mercados...</h3>
@@ -568,7 +586,6 @@
             `;
             modal.classList.remove('hidden');
 
-            // 2. Mostrar estado "Bloqueado VIP" después de 1.5 segundos
             setTimeout(() => {
                 const probAltaSimulada = Math.floor(Math.random() * (92 - 82 + 1)) + 82; 
                 const cuotaSimulada = (Math.random() * (2.80 - 1.80) + 1.80).toFixed(2);
@@ -602,10 +619,9 @@
         }
         function cerrarModal() { document.getElementById('modalAnalisis').classList.add('hidden'); }
 
-        // LÓGICA DE CÓDIGOS Y ACCESOS
+        // --- LÓGICA DE CÓDIGOS ---
         function validarCodigo() {
             const input = document.getElementById('vipCode').value.toUpperCase().trim();
-            
             if(input === MASTER_CODE) {
                 document.getElementById('membershipSection').style.display = 'none';
                 document.getElementById('freeSection').style.display = 'none';
@@ -615,7 +631,6 @@
                 document.getElementById('vipCode').value = '';
                 return;
             }
-
             if(CODIGOS_VALIDOS.includes(input)) {
                 modoVipActivo = true;
                 document.getElementById('vipSection').style.display = 'block';
@@ -628,32 +643,24 @@
             } else { alert("Código no válido. Solicita uno por WhatsApp."); }
         }
 
-        // ADMIN PANEL
+        // --- ADMIN PANEL ---
         function guardarCodigos() { localStorage.setItem('oraclebet_codigos', JSON.stringify(CODIGOS_VALIDOS)); }
         function crearCodigo() {
             const nuevo = document.getElementById('newCodeInput').value.toUpperCase().trim();
             if(nuevo !== "" && !CODIGOS_VALIDOS.includes(nuevo)) {
-                CODIGOS_VALIDOS.push(nuevo);
-                guardarCodigos();
-                actualizarListaCodigos();
+                CODIGOS_VALIDOS.push(nuevo); guardarCodigos(); actualizarListaCodigos();
                 document.getElementById('newCodeInput').value = '';
             } else if (CODIGOS_VALIDOS.includes(nuevo)) alert("Ese código ya existe.");
         }
         function eliminarCodigo(codigo) {
             CODIGOS_VALIDOS = CODIGOS_VALIDOS.filter(c => c !== codigo);
-            guardarCodigos();
-            actualizarListaCodigos();
+            guardarCodigos(); actualizarListaCodigos();
         }
         function actualizarListaCodigos() {
             const lista = document.getElementById('codesList');
             lista.innerHTML = '';
             CODIGOS_VALIDOS.forEach(codigo => {
-                lista.innerHTML += `
-                    <div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/10">
-                        <span class="text-white font-bold tracking-widest text-sm">${codigo}</span>
-                        <button onclick="eliminarCodigo('${codigo}')" class="text-red-500 hover:text-red-400 p-2"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
+                lista.innerHTML += `<div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/10"><span class="text-white font-bold tracking-widest text-sm">${codigo}</span><button onclick="eliminarCodigo('${codigo}')" class="text-red-500 hover:text-red-400 p-2"><i class="fas fa-trash"></i></button></div>`;
             });
         }
         function cerrarAdmin() {
@@ -663,12 +670,8 @@
             document.getElementById('filtrosGlobales').style.display = 'flex';
         }
 
-        // SERVICE WORKER PWA
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .catch(err => console.warn('PWA:', err));
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(err => console.warn('PWA:', err)));
         }
     </script>
 </body>
