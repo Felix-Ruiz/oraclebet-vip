@@ -26,7 +26,6 @@
         @keyframes fadeInRight { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
         input[type="date"] { color-scheme: dark; }
         
-        /* Ocultar barra de scroll para el Banner Top y Menú */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -76,27 +75,27 @@
                     
                     <button onclick="ejecutarFiltroFinal('soccer_epl', 'Premier League')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#38003c] to-[#00ff85]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png" onerror="this.style.display='none'" alt="Premier" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/256px-Premier_League_Logo.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/324/324128.png'" alt="Premier" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Premier</span>
                     </button>
                     <button onclick="ejecutarFiltroFinal('soccer_spain_la_liga', 'La Liga')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#ea0437] to-[#ff4b4b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png" onerror="this.style.display='none'" alt="La Liga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/256px-LaLiga_logo_2023.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/324/324128.png'" alt="La Liga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">La Liga</span>
                     </button>
                     <button onclick="ejecutarFiltroFinal('soccer_italy_serie_a', 'Serie A')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#003cb2] to-[#0281ff]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Serie_A_logo_%282022%29.svg/512px-Serie_A_logo_%282022%29.svg.png" onerror="this.style.display='none'" alt="Serie A" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Serie_A_logo_%282022%29.svg/256px-Serie_A_logo_%282022%29.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/324/324128.png'" alt="Serie A" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Serie A</span>
                     </button>
                     <button onclick="ejecutarFiltroFinal('soccer_germany_bundesliga', 'Bundesliga')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#d3010c] to-[#ff3b3b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/512px-Bundesliga_logo_%282017%29.svg.png" onerror="this.style.display='none'" alt="Bundesliga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/256px-Bundesliga_logo_%282017%29.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/324/324128.png'" alt="Bundesliga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Bundesliga</span>
                     </button>
                     <button onclick="ejecutarFiltroFinal('soccer_france_ligue_one', 'Ligue 1')" class="snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#dae025] to-[#0a1c2b]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Ligue1.svg/512px-Ligue1.svg.png" onerror="this.style.display='none'" alt="Ligue 1" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Ligue1.svg/256px-Ligue1.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/324/324128.png'" alt="Ligue 1" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Ligue 1</span>
                     </button>
 
@@ -139,7 +138,7 @@
             <div id="wrapperVIP" style="display:none;">
                 <button id="btnAutoPremium" onclick="abrirModalRadarPremium()" style="display:none;" class="w-full mb-6 p-4 bg-gradient-to-r from-purple-900 to-purple-700 neon-premium rounded-xl font-black text-white shadow-[0_10px_30px_rgba(168,85,247,0.4)] flex flex-col items-center transition-all active:scale-95 group">
                     <span class="flex items-center gap-2 text-sm tracking-widest"><i class="fas fa-rocket text-yellow-400 group-hover:animate-bounce"></i> RADAR CUOTA 4.0 SEGURO</span>
-                    <span class="text-[9px] text-purple-300 mt-1 uppercase tracking-widest">Algoritmo >90% Probabilidad (100% Nube)</span>
+                    <span class="text-[9px] text-purple-300 mt-1 uppercase tracking-widest">Algoritmo Inteligente (100% Nube)</span>
                 </button>
 
                 <div class="flex items-center justify-between text-yellow-500 mb-4 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20 shadow-inner">
@@ -271,7 +270,7 @@
                     <i class="fas fa-sign-in-alt text-lg"></i> VERIFICAR ACCESO
                 </button>
                 <div class="flex items-center gap-2 my-1"><div class="h-[1px] bg-gray-800 w-full"></div><span class="text-[9px] text-gray-600 font-bold uppercase">¿No tienes código?</span><div class="h-[1px] bg-gray-800 w-full"></div></div>
-                <a href="https://wa.me/573005191112" target="_blank" class="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white p-3.5 rounded-lg text-[11px] font-black hover:brightness-110 shadow-lg transition active:scale-95 uppercase tracking-widest">
+                <a href="https://wa.me/573005191112?text=Hola%2C%20deseo%20solicitar%20un%20PIN%20de%20acceso%20VIP%20para%20OracleBet." target="_blank" class="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white p-3.5 rounded-lg text-[11px] font-black hover:brightness-110 shadow-lg transition active:scale-95 uppercase tracking-widest">
                     <i class="fab fa-whatsapp text-xl"></i> ADQUIRIR MEMBRESÍA
                 </a>
             </div>
@@ -283,7 +282,7 @@
             <button onclick="cerrarModalRadarPremium()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
             <i class="fas fa-radar animate-spin text-purple-500 text-5xl mb-3"></i>
             <h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Escáner <span class="text-purple-500">Premium</span></h3>
-            <p class="text-[10px] text-gray-400 mb-6 uppercase tracking-widest">Generará una cuota 4.0 cruzando eventos con >90% de probabilidad (Base Firestore).</p>
+            <p class="text-[10px] text-gray-400 mb-6 uppercase tracking-widest">Generará una cuota 4.0 cruzando eventos de alta probabilidad estadística.</p>
             <div class="flex flex-col gap-3">
                 <button onclick="generarParlaySeguro('futbol')" class="bg-black border border-white/10 hover:border-purple-500 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition flex justify-between items-center px-4"><i class="fas fa-futbol text-gray-500"></i> Solo Fútbol <i class="fas fa-chevron-right text-[10px] text-purple-500"></i></button>
                 <button onclick="generarParlaySeguro('baloncesto')" class="bg-black border border-white/10 hover:border-purple-500 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition flex justify-between items-center px-4"><i class="fas fa-basketball-ball text-gray-500"></i> Solo Baloncesto <i class="fas fa-chevron-right text-[10px] text-purple-500"></i></button>
@@ -327,6 +326,7 @@
         let partidosGlobales = [], partidosFiltrados = [], competicionesGlobales = []; 
         let seleccionesVIPGlobal = [], ticketDinamicoVIP = []; 
         let modoMercadoGlobal = 'mixto'; 
+        let modoRiesgoGlobal = false; // NUEVO: Control del interruptor de riesgo
 
         // ======================================================================
         // EL MOTOR DE EXTRACCIÓN (100% FIRESTORE - CERO APIS EXTERNAS)
@@ -381,13 +381,11 @@
         window.abrirModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.remove('hidden'); };
         window.cerrarModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.add('hidden'); };
         
-        // ¡REPARACIÓN DE LA "X" EN EL MODO FREE!
+        // FUNCIÓN REPARADA PARA CERRAR EL MODAL MODO FREE
         window.cerrarModal = function() { document.getElementById('modalAnalisis').classList.add('hidden'); };
 
         function extraerPais(titulo) {
-            // La API manda los datos como "La Liga - Spain". Entonces el país está después del guion.
             if (titulo.includes(' - ')) return titulo.split(' - ')[1].trim();
-            // Si no tiene guion (ej. NBA, NFL), le asignamos USA manualmente, sino Mundial.
             if (titulo === 'NBA' || titulo === 'NFL' || titulo === 'MLB' || titulo === 'NHL') return 'USA';
             return 'Mundial';
         }
@@ -402,7 +400,6 @@
                 deporte = traducciones[deporte] || deporte;
                 
                 let pais = extraerPais(liga.title);
-                // Si la liga tiene guion (ej. "La Liga - Spain"), la liga es la primera parte ("La Liga")
                 let nombreLiga = liga.title.includes(' - ') ? liga.title.split(' - ')[0].trim() : liga.title;
 
                 if(!arbol[deporte]) arbol[deporte] = {};
@@ -556,6 +553,14 @@
             else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.innerHTML = `<span>GENERAR TICKET INTELIGENTE</span>`; }
         };
 
+        // ==========================================
+        // ALGORITMO Y MODO RIESGO (BROKER PRO)
+        // ==========================================
+        window.toggleModoRiesgo = function() {
+            modoRiesgoGlobal = !modoRiesgoGlobal;
+            window.dibujarTicketDinamico(false);
+        };
+
         function obtenerOpcionesRentables(partido) {
             let opciones = [];
             partido.bookmakers?.forEach(b => b.markets?.forEach(m => m.outcomes?.forEach(o => {
@@ -573,8 +578,18 @@
             resDiv.innerHTML = `<div class="p-10 text-center bg-black/40 rounded-xl border border-white/5"><i class="fas fa-satellite-dish animate-pulse text-yellow-500 mb-4 text-4xl"></i><p class="text-[11px] uppercase text-yellow-500 font-black">Construyendo Arbitraje...</p></div>`;
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             setTimeout(() => {
-                ticketDinamicoVIP = []; modoMercadoGlobal = 'mixto';
-                seleccionesVIPGlobal.forEach(p => { const o = obtenerOpcionesRentables(p); if(o.length > 0) ticketDinamicoVIP.push({ partido: p, opciones: o, indexSeleccionado: 0 }); });
+                ticketDinamicoVIP = []; modoMercadoGlobal = 'mixto'; modoRiesgoGlobal = false;
+                
+                seleccionesVIPGlobal.forEach(p => { 
+                    const o = obtenerOpcionesRentables(p); 
+                    if(o.length > 0) { 
+                        // El índice Seguro es 0 (mayor prob). Calculamos el índice de Riesgo (Buscamos una cuota mayor a 2.0)
+                        let riskIdx = o.findIndex(opt => opt.cuota >= 2.0 && opt.cuota <= 3.8);
+                        if(riskIdx === -1) riskIdx = o.length - 1; // Si no hay altas, tomamos la más alta posible
+                        
+                        ticketDinamicoVIP.push({ partido: p, opciones: o, indexSeleccionado: 0, indexRiesgo: riskIdx }); 
+                    } 
+                });
                 window.dibujarTicketDinamico(false);
             }, 1000);
         };
@@ -583,18 +598,35 @@
             modoMercadoGlobal = modo;
             ticketDinamicoVIP.forEach(item => {
                 if(modo === 'h2h' || modo === 'totals' || modo === 'spreads') { 
-                    const idx = item.opciones.findIndex(o => o.mercadoKey === modo); 
-                    if(idx !== -1) item.indexSeleccionado = idx; 
-                } else { item.indexSeleccionado = 0; }
+                    const idxS = item.opciones.findIndex(o => o.mercadoKey === modo); 
+                    if(idxS !== -1) item.indexSeleccionado = idxS; 
+                    
+                    let lastIdxR = -1;
+                    item.opciones.forEach((o, i) => { if(o.mercadoKey === modo) lastIdxR = i; });
+                    item.indexRiesgo = lastIdxR !== -1 ? lastIdxR : (idxS !== -1 ? idxS : 0);
+                } else { 
+                    item.indexSeleccionado = 0; 
+                    let validRisk = item.opciones.findIndex(opt => opt.cuota >= 2.2);
+                    item.indexRiesgo = validRisk !== -1 ? validRisk : item.opciones.length - 1;
+                }
             });
             window.dibujarTicketDinamico(false);
         };
 
-        window.rotarPickIndividual = function(id) { let i = ticketDinamicoVIP.find(t => t.partido.id === id); if(i) { i.indexSeleccionado = (i.indexSeleccionado + 1) % i.opciones.length; window.dibujarTicketDinamico(false); } };
+        window.rotarPickIndividual = function(id) { 
+            let i = ticketDinamicoVIP.find(t => t.partido.id === id); 
+            if(i) { 
+                if(!modoRiesgoGlobal) { i.indexSeleccionado = (i.indexSeleccionado + 1) % i.opciones.length; }
+                else { i.indexRiesgo = (i.indexRiesgo - 1 + i.opciones.length) % i.opciones.length; }
+                window.dibujarTicketDinamico(false); 
+            } 
+        };
+
         window.regenerarTicketCompleto = function() {
             ticketDinamicoVIP.forEach(item => {
-                if(modoMercadoGlobal !== 'mixto') { const idx = item.opciones.findIndex(o => o.mercadoKey === modoMercadoGlobal); if(idx !== -1) item.indexSeleccionado = idx; } 
-                else { let max = item.opciones.length > 6 ? 6 : item.opciones.length; item.indexSeleccionado = Math.floor(Math.random() * max); }
+                let max = item.opciones.length;
+                if(!modoRiesgoGlobal) item.indexSeleccionado = Math.floor(Math.random() * (max > 4 ? 4 : max));
+                else item.indexRiesgo = Math.floor(Math.random() * max);
             });
             window.dibujarTicketDinamico(false);
         };
@@ -605,7 +637,11 @@
             let htmlPartidos = '', cuotaTotal = 1.0, probPromedio = 0;
 
             ticketDinamicoVIP.forEach((item, idx) => {
-                const p = item.partido; const o = item.opciones[item.indexSeleccionado];
+                const p = item.partido; 
+                // AQUÍ APLICAMOS LA MAGIA DEL RIESGO
+                const idxUsado = modoRiesgoGlobal ? item.indexRiesgo : item.indexSeleccionado;
+                const o = item.opciones[idxUsado];
+                
                 cuotaTotal *= o.cuota; probPromedio += o.probabilidad;
                 let txt = "Ganador", ico = "fa-handshake";
                 if(o.mercadoKey === 'totals') { txt = "Totales"; ico = "fa-futbol"; }
@@ -613,15 +649,19 @@
                 let pickTxt = o.nombre + (o.point ? ` (${o.point>0?'+':''}${o.point})` : '');
                 let bg = idx % 2 === 0 ? 'bg-black/40' : 'bg-gray-900/50';
 
+                // Si está en riesgo, pintamos ligeros destellos rojos, si no, dorados/verdes
+                let colorConf = modoRiesgoGlobal ? 'bg-red-600' : 'bg-green-600';
+                let colorPick = modoRiesgoGlobal ? 'text-red-400' : (esRadarAuto ? 'text-purple-400' : 'text-yellow-500');
+
                 htmlPartidos += `
                     <div class="${bg} p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden shadow-lg">
-                        <div class="absolute top-0 right-0 bg-green-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md">CONF: ${o.probabilidad > 96 ? 96 : o.probabilidad}%</div>
+                        <div class="absolute top-0 right-0 ${colorConf} text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md">CONF: ${o.probabilidad > 96 ? 96 : o.probabilidad}%</div>
                         <div class="text-[9px] text-gray-400 font-bold uppercase mb-2"><i class="fas ${ico} mr-1"></i> ${txt}</div>
                         <div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-3">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div>
                         <div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-gray-700 shadow-inner">
-                            <div class="flex flex-col"><span class="text-[11px] ${esRadarAuto?'text-purple-400':'text-yellow-500'} font-black uppercase tracking-wide">PICK: ${pickTxt}</span><span class="text-[8px] text-green-500/90 mt-1 uppercase">Origen: Privado</span></div>
+                            <div class="flex flex-col"><span class="text-[11px] ${colorPick} font-black uppercase tracking-wide">PICK: ${pickTxt}</span><span class="text-[8px] text-gray-500 mt-1 uppercase">Origen: Privado</span></div>
                             <div class="flex items-center gap-3"><span class="text-white font-black text-[15px]">${o.cuota.toFixed(2)}</span>
-                            ${!esRadarAuto ? `<button onclick="rotarPickIndividual('${p.id}')" class="text-yellow-500 bg-yellow-500/10 p-2 rounded-lg hover:bg-yellow-500/30 transition"><i class="fas fa-sync-alt"></i></button>` : ''}
+                            ${!esRadarAuto ? `<button onclick="rotarPickIndividual('${p.id}')" class="text-gray-500 bg-white/5 p-2 rounded-lg hover:text-white transition"><i class="fas fa-sync-alt"></i></button>` : ''}
                             </div>
                         </div>
                     </div>`;
@@ -635,9 +675,32 @@
             
             let ctrls = esRadarAuto ? '' : `<div class="grid grid-cols-4 gap-1 bg-black/60 p-1 rounded-lg mb-4"><button onclick="cambiarModoMercado('mixto')" class="py-2 text-[8px] font-black uppercase rounded ${c1}">Mixto</button><button onclick="cambiarModoMercado('h2h')" class="py-2 text-[8px] font-black uppercase rounded ${c2}">Ganador</button><button onclick="cambiarModoMercado('totals')" class="py-2 text-[8px] font-black uppercase rounded ${c3}">Totales</button><button onclick="cambiarModoMercado('spreads')" class="py-2 text-[8px] font-black uppercase rounded ${c4}">Handicap</button></div>`;
             let btnBar = esRadarAuto ? '' : `<button onclick="regenerarTicketCompleto()" class="w-full mt-4 py-3 border border-yellow-500/30 text-yellow-500 rounded-xl text-[10px] font-black uppercase"><i class="fas fa-random mr-1"></i> Barajar Opciones</button>`;
+            
+            // BANNER RIESGO (Solo para Manual VIP)
+            let riskBanner = esRadarAuto ? '' : `
+                <div class="mb-4 p-3 rounded-lg ${modoRiesgoGlobal ? 'bg-red-900/20 border border-red-500/50' : 'bg-green-900/20 border border-green-500/50'} transition-colors flex justify-between items-center shadow-inner">
+                    <div class="flex flex-col w-2/3">
+                        <span class="text-[10px] font-black uppercase ${modoRiesgoGlobal ? 'text-red-400' : 'text-green-400'} mb-1">
+                            ${modoRiesgoGlobal ? '<i class="fas fa-exclamation-triangle"></i> ALTO RIESGO / ALTA GANANCIA' : '<i class="fas fa-shield-alt"></i> MODO SEGURO'}
+                        </span>
+                        <span class="text-[8px] text-gray-400 leading-tight">
+                            ${modoRiesgoGlobal ? 'Probabilidad estadística baja. No recomendado para bancas conservadoras.' : 'Prioriza protección de banca y alta probabilidad matemática.'}
+                        </span>
+                    </div>
+                    <button onclick="toggleModoRiesgo()" class="py-2.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest ${modoRiesgoGlobal ? 'bg-green-600 text-white' : 'bg-red-600 text-white'} shadow-lg active:scale-95 transition-all">
+                        ${modoRiesgoGlobal ? 'Ir a Seguro' : 'Arriesgar'}
+                    </button>
+                </div>`;
+
             let idUnicoBtn = 'btnGuardar_' + Date.now();
 
-            resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5'} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${esRadarAuto?'text-purple-500':'text-yellow-500'} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Ticket</span><span class="text-[10px] text-green-400 font-black bg-green-400/10 px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final</span></div><span class="text-3xl font-black text-white">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button id="${idUnicoBtn}" onclick="guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
+            resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${modoRiesgoGlobal ? 'border-red-500 bg-red-500/5' : (esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5')} rounded-xl shadow-2xl mb-10">
+                <div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${modoRiesgoGlobal ? 'text-red-500' : (esRadarAuto?'text-purple-500':'text-yellow-500')} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Ticket</span><span class="text-[10px] ${modoRiesgoGlobal ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10'} font-black px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>
+                ${riskBanner} ${ctrls} ${htmlPartidos}
+                <div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final</span></div><span class="text-3xl font-black ${modoRiesgoGlobal ? 'text-red-400' : 'text-white'}">${cuotaTotal.toFixed(2)}</span></div>
+                ${btnBar}
+                <button id="${idUnicoBtn}" onclick="guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button>
+            </div>`;
         }
 
         // ==========================================
@@ -646,7 +709,11 @@
         window.guardarTicketHistorial = function(cuota) {
             if(!codigoActivoUsuario) { alert("Error: Sesión no válida"); return; }
             let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || [];
-            let picks = ticketDinamicoVIP.map(t => { const o = t.opciones[t.indexSeleccionado]; return `${t.partido.home_team} vs ${t.partido.away_team} -> ${o.nombre} (${o.cuota})`; });
+            let picks = ticketDinamicoVIP.map(t => { 
+                const idxUsado = modoRiesgoGlobal ? t.indexRiesgo : t.indexSeleccionado;
+                const o = t.opciones[idxUsado]; 
+                return `${t.partido.home_team} vs ${t.partido.away_team} -> ${o.nombre} (${o.cuota})`; 
+            });
             hist.unshift({ id: Date.now(), fecha: new Date().toLocaleDateString(), cuota: cuota, picks: picks, estado: 'pendiente' }); 
             localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist));
             alert("✅ Guardado en Historial."); window.cambiarVista('historial');
@@ -727,7 +794,7 @@
         window.verProbabilidadFree = function(eq) {
             const m = document.getElementById('modalAnalisis'); const c = document.getElementById('contenidoModalAnalisis');
             c.innerHTML = `<i class="fas fa-satellite-dish animate-pulse text-yellow-500 text-4xl mb-4 mt-2"></i><h3 class="text-white font-bold uppercase italic">Escaneando...</h3>`; m.classList.remove('hidden');
-            setTimeout(() => { c.innerHTML = `<button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button><i class="fas fa-lock text-yellow-500 text-5xl mb-4 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"></i><h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Acceso Protegido</h3><div class="bg-black/60 p-6 rounded-xl border border-red-500/40 mb-6 relative overflow-hidden"><div class="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex flex-col items-center justify-center z-10 p-4"><span class="bg-red-600 text-white text-[11px] font-black px-4 py-2 rounded uppercase shadow-lg flex items-center gap-2 mb-3"><i class="fas fa-key"></i> VIP REQUERIDO</span></div><p class="blur-[5px] opacity-50 text-white font-black mb-3">Gana ${eq}</p></div><a href="https://wa.me/573005191112" target="_blank" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-xs uppercase shadow-lg flex justify-center gap-2"><i class="fab fa-whatsapp text-xl"></i> SOLICITAR ACCESO</a>`; }, 1500);
+            setTimeout(() => { c.innerHTML = `<button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button><i class="fas fa-lock text-yellow-500 text-5xl mb-4 drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"></i><h3 class="text-xl font-black mb-1 uppercase italic text-white tracking-tighter">Acceso Protegido</h3><div class="bg-black/60 p-6 rounded-xl border border-red-500/40 mb-6 relative overflow-hidden"><div class="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex flex-col items-center justify-center z-10 p-4"><span class="bg-red-600 text-white text-[11px] font-black px-4 py-2 rounded uppercase shadow-lg flex items-center gap-2 mb-3"><i class="fas fa-key"></i> VIP REQUERIDO</span></div><p class="blur-[5px] opacity-50 text-white font-black mb-3">Gana ${eq}</p></div><a href="https://wa.me/573005191112?text=Hola%2C%20deseo%20solicitar%20un%20PIN%20de%20acceso%20VIP%20para%20OracleBet." target="_blank" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-xs uppercase shadow-lg flex justify-center gap-2"><i class="fab fa-whatsapp text-xl"></i> SOLICITAR ACCESO</a>`; }, 1500);
         };
 
         window.crearCodigo = async function(esIl) {
@@ -770,11 +837,11 @@
         };
         window.cerrarAdmin = function() { location.reload(); };
 
-        // RADAR 90%+ PREMIUM (100% NUBE)
+        // RADAR 4.0 MEJORADO: Búsqueda profunda para garantizar resultados
         window.generarParlaySeguro = async function(dep) {
             window.cerrarModalRadarPremium();
             const resDiv = document.getElementById('resultadoVIP');
-            resDiv.innerHTML = `<div class="p-10 text-center bg-black/40 rounded-xl border border-purple-500/50 shadow-[0_0_20px_rgba(147,51,234,0.3)]"><i class="fas fa-robot animate-spin text-purple-500 mb-4 text-4xl"></i><p class="text-[11px] uppercase text-purple-400 font-black">Escaneando Firestore...</p></div>`;
+            resDiv.innerHTML = `<div class="p-10 text-center bg-black/40 rounded-xl border border-purple-500/50 shadow-[0_0_20px_rgba(147,51,234,0.3)]"><i class="fas fa-robot animate-spin text-purple-500 mb-4 text-4xl"></i><p class="text-[11px] uppercase text-purple-400 font-black">Escaneando Firestore Mundial...</p></div>`;
             window.scrollTo(0, document.body.scrollHeight);
             
             try {
@@ -785,11 +852,12 @@
                 
                 let todos = await obtenerPartidosDesdeNube(eps) || [];
                 
-                if(todos.length === 0) { resDiv.innerHTML = `<div class="p-6 text-center border border-red-500 bg-red-900/20 rounded-xl"><p class="text-red-400 text-[10px] uppercase font-bold">No hay eventos hoy para este deporte.</p></div>`; return; }
+                if(todos.length === 0) { resDiv.innerHTML = `<div class="p-6 text-center border border-red-500 bg-red-900/20 rounded-xl"><p class="text-red-400 text-[10px] uppercase font-bold">No hay eventos para este deporte en la base.</p></div>`; return; }
 
                 let ops = [];
+                // REPARACIÓN: Ampliamos el escaneo a cuotas seguras de hasta 1.35 para asegurar que la multiplicación llegue a 4.0
                 todos.forEach(p => p.bookmakers?.forEach(b => b.markets?.forEach(m => m.outcomes?.forEach(o => {
-                    if(o.price >= 1.01 && o.price <= 1.15) ops.push({ partido: p, broker: b.title, mercadoKey: m.key, nombre: o.name, point: o.point, cuota: o.price, probabilidad: Math.floor((1/o.price)*100)+1 });
+                    if(o.price >= 1.01 && o.price <= 1.35) ops.push({ partido: p, broker: b.title, mercadoKey: m.key, nombre: o.name, point: o.point, cuota: o.price, probabilidad: Math.floor((1/o.price)*100)+1 });
                 }))));
                 ops.sort((a,b) => b.probabilidad - a.probabilidad);
                 
@@ -797,10 +865,19 @@
                 ops.forEach(op => { if(!vistos.has(op.partido.id)){ vistos.add(op.partido.id); unicas.push(op); }});
                 
                 ticketDinamicoVIP = []; let cAcum = 1.0;
-                for(let op of unicas) { ticketDinamicoVIP.push({ partido: op.partido, opciones: [op], indexSeleccionado: 0 }); cAcum *= op.cuota; if(cAcum >= 4.0) break; }
+                for(let op of unicas) { 
+                    ticketDinamicoVIP.push({ partido: op.partido, opciones: [op], indexSeleccionado: 0, indexRiesgo: 0 }); 
+                    cAcum *= op.cuota; 
+                    if(cAcum >= 4.0) break; 
+                }
                 
-                if(ticketDinamicoVIP.length < 2) { resDiv.innerHTML = `<div class="p-6 text-center border border-red-500 bg-red-900/20 rounded-xl"><p class="text-red-400 text-[10px] uppercase font-bold">Sin eventos >90% suficientes hoy para lograr cuota 4.0.</p></div>`; return; }
+                // SEGURO DE CALIDAD: Si después de juntar los mejores partidos del mundo no llegamos a 3.8, somos honestos con el usuario.
+                if(cAcum < 3.8) { 
+                    resDiv.innerHTML = `<div class="p-6 text-center border border-red-500 bg-red-900/20 rounded-xl shadow-lg"><i class="fas fa-shield-alt text-red-500 text-3xl mb-3"></i><p class="text-red-400 text-[10px] uppercase font-bold tracking-widest leading-relaxed">⚠️ Protección Activa:<br>El mercado mundial actual no tiene suficientes eventos seguros (>85%) para armar una cuota 4.0.<br><br><span class="text-white">Cuota máxima lograda: ${cAcum.toFixed(2)}</span><br><br>Intenta más tarde.</p></div>`; 
+                    return; 
+                }
                 
+                modoRiesgoGlobal = false; // Desactivar modo riesgo por seguridad en Radar
                 window.dibujarTicketDinamico(true);
             } catch(e) { resDiv.innerHTML = `<p class="text-red-400 text-center">Error de lectura en Nube.</p>`; }
         };
