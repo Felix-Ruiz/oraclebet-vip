@@ -71,6 +71,24 @@
         </div>
     </section>
 
+    <section id="adminSection" style="display: none;" class="mt-8 animate-fade-in">
+        <div class="card-glass p-6 border-2 border-red-500/50 bg-red-500/5 text-center">
+            <h3 class="text-xl font-black mb-4 text-white"><i class="fas fa-user-shield text-red-500"></i> Panel de Control</h3>
+            <p class="text-[10px] text-gray-400 mb-4">Genera o elimina códigos de acceso para tus clientes.</p>
+            
+            <div class="flex gap-2 mb-6">
+                <input type="text" id="newCodeInput" placeholder="EJ: CLIENTE_NUEVO" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-center font-bold uppercase">
+                <button onclick="crearCodigo()" class="bg-red-600 text-white px-5 rounded-lg font-bold shadow-lg hover:bg-red-500 transition"><i class="fas fa-plus"></i></button>
+            </div>
+
+            <div class="text-left mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-gray-700 pb-1">Códigos Activos</div>
+            <div id="codesList" class="space-y-2 max-h-48 overflow-y-auto mb-4">
+                </div>
+
+            <button onclick="cerrarAdmin()" class="w-full mt-2 py-3 bg-gray-800 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition">Cerrar Panel</button>
+        </div>
+    </section>
+
     <section id="vipSection" class="vip-section mt-8 animate-fade-in">
         <div class="flex items-center gap-2 text-yellow-500 mb-6 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20">
             <i class="fas fa-crown"></i>
@@ -104,7 +122,10 @@
         // CONFIGURACIÓN API
         const API_KEY = 'f9f7716fcf820abf2976ba5ca0fcd322';
         const SPORT = 'soccer_spain_la_liga'; 
-        const CODIGOS_VALIDOS = ["PREMIUM2026", "FELIX_ELITE"];
+        
+        // CONFIGURACIÓN DE CÓDIGOS DINÁMICOS Y ADMIN
+        const MASTER_CODE = "FELIX_ADMIN_777";
+        let CODIGOS_VALIDOS = JSON.parse(localStorage.getItem('oraclebet_codigos')) || ["PREMIUM2026", "FELIX_ELITE"];
 
         async function cargarPartidosReales() {
             const container = document.getElementById('containerPartidos');
@@ -144,6 +165,18 @@
 
         function validarCodigo() {
             const input = document.getElementById('vipCode').value.toUpperCase();
+            
+            // Verificación del Panel Maestro
+            if(input === MASTER_CODE) {
+                document.getElementById('membershipSection').style.display = 'none';
+                document.getElementById('freeSection').style.display = 'none';
+                document.getElementById('adminSection').style.display = 'block';
+                actualizarListaCodigos();
+                document.getElementById('vipCode').value = '';
+                return;
+            }
+
+            // Verificación VIP Normal
             if(CODIGOS_VALIDOS.includes(input)) {
                 document.getElementById('vipSection').style.display = 'block';
                 document.getElementById('freeSection').style.display = 'none';
@@ -154,6 +187,49 @@
             } else { alert("Código no válido. Solicita uno por WhatsApp."); }
         }
 
+        // FUNCIONES DEL PANEL DE ADMINISTRADOR
+        function guardarCodigos() {
+            localStorage.setItem('oraclebet_codigos', JSON.stringify(CODIGOS_VALIDOS));
+        }
+
+        function crearCodigo() {
+            const nuevo = document.getElementById('newCodeInput').value.toUpperCase().trim();
+            if(nuevo !== "" && !CODIGOS_VALIDOS.includes(nuevo)) {
+                CODIGOS_VALIDOS.push(nuevo);
+                guardarCodigos();
+                actualizarListaCodigos();
+                document.getElementById('newCodeInput').value = '';
+            } else if (CODIGOS_VALIDOS.includes(nuevo)) {
+                alert("Ese código ya existe.");
+            }
+        }
+
+        function eliminarCodigo(codigo) {
+            CODIGOS_VALIDOS = CODIGOS_VALIDOS.filter(c => c !== codigo);
+            guardarCodigos();
+            actualizarListaCodigos();
+        }
+
+        function actualizarListaCodigos() {
+            const lista = document.getElementById('codesList');
+            lista.innerHTML = '';
+            CODIGOS_VALIDOS.forEach(codigo => {
+                lista.innerHTML += `
+                    <div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/10">
+                        <span class="text-white font-bold tracking-widest text-sm">${codigo}</span>
+                        <button onclick="eliminarCodigo('${codigo}')" class="text-red-500 hover:text-red-400 p-2"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+            });
+        }
+
+        function cerrarAdmin() {
+            document.getElementById('adminSection').style.display = 'none';
+            document.getElementById('membershipSection').style.display = 'block';
+            document.getElementById('freeSection').style.display = 'block';
+        }
+
+        // FUNCIONES DE INTERFAZ NORMALES
         function verProbabilidad(equipo) {
             const prob = Math.floor(Math.random() * (85 - 60 + 1)) + 60;
             document.getElementById('textoAnalisis').innerText = `Gana ${equipo} (${prob}%)`;
@@ -162,7 +238,6 @@
 
         function cerrarModal() { document.getElementById('modalAnalisis').classList.add('hidden'); }
 
-        // NUEVA LÓGICA VIP REAL (Algoritmo de cuotas matemáticas)
         async function generarTicketVIP(n) {
             const resDiv = document.getElementById('resultadoVIP');
             resDiv.innerHTML = `<div class="p-10 text-center"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-2xl"></i><p class="text-[10px] uppercase tracking-widest opacity-50 mt-2">Calculando Algoritmo y Cuotas...</p></div>`;
@@ -171,7 +246,6 @@
                 const res = await fetch(`https://api.the-odds-api.com/v4/sports/${SPORT}/odds/?apiKey=${API_KEY}&regions=eu&markets=h2h`);
                 const data = await res.json();
                 
-                // Filtramos partidos que sí tengan datos de casas de apuestas
                 const validMatches = data.filter(m => m.bookmakers && m.bookmakers.length > 0);
                 
                 if(validMatches.length < n) {
@@ -179,7 +253,6 @@
                     return;
                 }
 
-                // Barajamos aleatoriamente para que los picks sean distintos cada vez
                 const shuffled = validMatches.sort(() => 0.5 - Math.random());
                 const selectedMatches = shuffled.slice(0, n);
                 
@@ -187,9 +260,8 @@
                 let cuotaTotal = 1.0;
                 
                 selectedMatches.forEach(partido => {
-                    const market = partido.bookmakers[0].markets[0]; // Tomamos el mercado H2H del primer broker
+                    const market = partido.bookmakers[0].markets[0]; 
                     
-                    // Lógica para asegurar buenas cuotas: buscamos un pick que pague más de 1.65
                     let bestOutcome = market.outcomes[0];
                     market.outcomes.forEach(o => {
                         if (o.price >= 1.65 && o.price <= 2.80) {
@@ -197,7 +269,7 @@
                         }
                     });
                     
-                    cuotaTotal *= bestOutcome.price; // Multiplicamos la cuota
+                    cuotaTotal *= bestOutcome.price; 
                     
                     htmlPartidos += `
                         <div class="flex justify-between items-center bg-black/20 p-3 rounded-lg mb-2 border border-white/5">
