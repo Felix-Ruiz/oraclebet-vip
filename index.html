@@ -164,7 +164,8 @@
         }
 
         function validarCodigo() {
-            const input = document.getElementById('vipCode').value.toUpperCase();
+            // Se agregó .trim() para limpiar espacios ocultos al final o al inicio
+            const input = document.getElementById('vipCode').value.toUpperCase().trim();
             
             // Verificación del Panel Maestro
             if(input === MASTER_CODE) {
