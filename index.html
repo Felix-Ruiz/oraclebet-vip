@@ -34,7 +34,7 @@
         .view-active { display: block; animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* NUEVO: EFECTO DE LIGA SELECCIONADA EN EL CARRUSEL */
+        /* EFECTO DE LIGA SELECCIONADA EN EL CARRUSEL */
         .carrusel-btn { transition: all 0.3s ease; }
         .carrusel-activo { 
             border: 2px solid var(--primary-gold) !important; 
@@ -84,42 +84,42 @@
                     
                     <button id="btn_carrusel_soccer_epl" onclick="ejecutarFiltroFinal('soccer_epl', 'Premier League')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#38003c] to-[#00ff85]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Premier" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="./img/premier.png" onerror="this.src='https://media.api-sports.io/football/leagues/39.png'" alt="Premier" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Premier</span>
                     </button>
                     <button id="btn_carrusel_soccer_spain_la_liga" onclick="ejecutarFiltroFinal('soccer_spain_la_liga', 'La Liga')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#ea0437] to-[#ff4b4b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="La Liga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="./img/laliga.png" onerror="this.src='https://media.api-sports.io/football/leagues/140.png'" alt="La Liga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">La Liga</span>
                     </button>
                     <button id="btn_carrusel_soccer_italy_serie_a" onclick="ejecutarFiltroFinal('soccer_italy_serie_a', 'Serie A')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#003cb2] to-[#0281ff]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Serie_A_logo_%282022%29.svg/512px-Serie_A_logo_%282022%29.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Serie A" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="./img/seriea.png" onerror="this.src='https://media.api-sports.io/football/leagues/135.png'" alt="Serie A" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Serie A</span>
                     </button>
                     <button id="btn_carrusel_soccer_germany_bundesliga" onclick="ejecutarFiltroFinal('soccer_germany_bundesliga', 'Bundesliga')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#d3010c] to-[#ff3b3b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/512px-Bundesliga_logo_%282017%29.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Bundesliga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="./img/bundesliga.png" onerror="this.src='https://media.api-sports.io/football/leagues/78.png'" alt="Bundesliga" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Bundesliga</span>
                     </button>
                     <button id="btn_carrusel_soccer_france_ligue_one" onclick="ejecutarFiltroFinal('soccer_france_ligue_one', 'Ligue 1')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#dae025] to-[#0a1c2b]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Ligue1.svg/512px-Ligue1.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Ligue 1" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="./img/ligue1.png" onerror="this.src='https://media.api-sports.io/football/leagues/61.png'" alt="Ligue 1" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10">Ligue 1</span>
                     </button>
                     <button id="btn_carrusel_soccer_uefa_champs_league" onclick="ejecutarFiltroFinal('soccer_uefa_champs_league', 'Champions League')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#001489] to-[#030b42]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Champions" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="./img/champions.png" onerror="this.src='https://media.api-sports.io/football/leagues/2.png'" alt="Champions" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Champions</span>
                     </button>
                     <button id="btn_carrusel_soccer_uefa_europa_league" onclick="ejecutarFiltroFinal('soccer_uefa_europa_league', 'Europa League')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#f68e00] to-[#1e1e1e]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/0/03/Europa_League.svg/512px-Europa_League.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Europa League" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="./img/europa.png" onerror="this.src='https://media.api-sports.io/football/leagues/3.png'" alt="Europa League" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Europa L.</span>
                     </button>
                     <button id="btn_carrusel_soccer_uefa_europa_conference_league" onclick="ejecutarFiltroFinal('soccer_uefa_europa_conference_league', 'Conference League')" class="carrusel-btn snap-start shrink-0 w-[110px] h-[90px] bg-gradient-to-br from-[#00b067] to-[#1e1e1e]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center p-2 shadow-lg hover:border-yellow-500 transition-colors relative overflow-hidden group">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/9/90/UEFA_Europa_Conference_League_logo.svg/512px-UEFA_Europa_Conference_League_logo.svg.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/8155/8155169.png'" alt="Conference League" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
+                        <img src="./img/conference.png" onerror="this.src='https://media.api-sports.io/football/leagues/848.png'" alt="Conference League" class="h-10 mb-2 object-contain relative z-10 bg-white/90 p-1 rounded drop-shadow-md">
                         <span class="text-[9px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Conference</span>
                     </button>
 
@@ -406,12 +406,15 @@
         window.cerrarModalRadarPremium = function() { document.getElementById('modalRadarPremium').classList.add('hidden'); };
         window.cerrarModal = function() { document.getElementById('modalAnalisis').classList.add('hidden'); };
 
-        // NUEVO: SISTEMA DE ILUMINACIÓN DE CARRUSEL
         window.resaltarBotonCarrusel = function(keyLiga) {
             document.querySelectorAll('.carrusel-btn').forEach(btn => btn.classList.remove('carrusel-activo'));
             if(keyLiga) {
                 let btnActivo = document.getElementById('btn_carrusel_' + keyLiga);
-                if(btnActivo) btnActivo.classList.add('carrusel-activo');
+                if(btnActivo) {
+                    btnActivo.classList.add('carrusel-activo');
+                    // Hace scroll automático para centrar el botón elegido
+                    btnActivo.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
             }
         };
 
@@ -519,7 +522,7 @@
         // ==========================================
         window.ejecutarTopFutbol = async function() {
             window.cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = 'Partidos Destacados Hoy';
-            window.resaltarBotonCarrusel(null); // Quita selección si es global
+            window.resaltarBotonCarrusel(null);
             
             const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
             cFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando Nube...</div>`;
@@ -533,7 +536,7 @@
 
         window.ejecutarFiltroFinal = async function(keyLiga, nombreMostrar) {
             window.cerrarMenuLateral(); document.getElementById('nombreLigaActiva').innerText = nombreMostrar;
-            window.resaltarBotonCarrusel(keyLiga); // Ilumina el botón si corresponde
+            window.resaltarBotonCarrusel(keyLiga);
             
             const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
             cFree.innerHTML = `<div class="text-center p-10 opacity-50"><i class="fas fa-spinner animate-spin text-yellow-500 text-2xl"></i></div>`;
@@ -545,7 +548,7 @@
         };
 
         // ==========================================
-        // UI TICKETS (CON FECHA DE DÍA Y HORA PARA FUTURO)
+        // UI TICKETS
         // ==========================================
         window.renderizarPartidosFree = function() {
             const container = document.getElementById('containerPartidos'); container.innerHTML = '';
