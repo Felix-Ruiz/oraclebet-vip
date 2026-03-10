@@ -24,14 +24,35 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .checkbox-vip { accent-color: var(--primary-gold); width: 20px; height: 20px; cursor: pointer; }
         
-        /* Animaciones */
-        .modal-slide-up { animation: slideUp 0.3s ease-out forwards; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        /* Animaciones para listas y tickets */
         .fade-in-right { animation: fadeInRight 0.2s ease-out forwards; }
         @keyframes fadeInRight { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+        
+        /* Estilos input date oscuros para Webkit/Móvil */
+        ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
     </style>
 </head>
 <body class="p-4 pb-24" onload="iniciarApp()">
+
+    <div id="overlayMenu" onclick="cerrarMenuLateral()" class="fixed inset-0 bg-black/80 z-40 hidden transition-opacity duration-300 backdrop-blur-sm"></div>
+
+    <div id="menuLateral" class="fixed inset-y-0 left-0 w-4/5 max-w-sm bg-gray-900 border-r border-yellow-500/50 z-50 transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+        <div class="p-5 border-b border-gray-800 flex justify-between items-center bg-black/50">
+            <h2 class="text-yellow-500 font-black uppercase tracking-widest text-sm"><i class="fas fa-globe-americas mr-2"></i> Explorador Global</h2>
+            <button onclick="cerrarMenuLateral()" class="text-gray-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div class="p-3 border-b border-gray-800">
+            <button onclick="ejecutarTopFutbol()" class="w-full text-left bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/30 p-3 rounded-lg text-yellow-500 font-bold text-xs flex justify-between items-center shadow-lg">
+                <span><i class="fas fa-star mr-2"></i> Fútbol Elite (Top 5 Ligas)</span>
+                <i class="fas fa-bolt text-[10px]"></i>
+            </button>
+        </div>
+
+        <div id="contenidoMenuLateral" class="flex-grow overflow-y-auto p-2 space-y-1 pb-10">
+            <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando Países...</div>
+        </div>
+    </div>
 
     <header class="flex justify-between items-center mb-6 pt-4">
         <div>
@@ -45,25 +66,30 @@
         <div class="flex gap-2">
             <div class="relative flex-grow">
                 <i class="fas fa-search absolute left-3 top-2.5 text-gray-500"></i>
-                <input type="text" id="buscadorEquipos" onkeyup="filtrarPorEquipo()" placeholder="Buscar equipo..." class="w-full bg-gray-900 border border-gray-700 rounded-lg py-2 pl-10 pr-3 text-white text-xs font-bold outline-none focus:border-yellow-500">
+                <input type="text" id="buscadorEquipos" onkeyup="aplicarFiltrosLocales()" placeholder="Buscar equipo..." class="w-full bg-gray-900 border border-gray-700 rounded-lg py-2 pl-10 pr-3 text-white text-xs font-bold outline-none focus:border-yellow-500">
             </div>
-            <button onclick="abrirModalFiltros()" class="bg-gray-800 border border-yellow-500/50 rounded-lg px-4 text-yellow-500 hover:bg-gray-700 transition flex items-center gap-2 text-xs font-bold shadow-[0_0_10px_rgba(212,175,55,0.2)]">
-                <i class="fas fa-sliders-h"></i> FILTROS
-            </button>
+            <div class="relative w-1/3">
+                <input type="date" id="filtroFecha" onchange="aplicarFiltrosLocales()" class="w-full bg-gray-900 border border-gray-700 rounded-lg py-2 px-2 text-white text-[10px] font-bold outline-none focus:border-yellow-500">
+            </div>
         </div>
-        <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/5 px-2 py-1.5 rounded flex items-center gap-2">
+        
+        <button onclick="abrirMenuLateral()" class="w-full bg-gray-800 border border-yellow-500/50 rounded-lg py-3 text-yellow-500 hover:bg-gray-700 transition flex justify-center items-center gap-2 text-xs font-bold shadow-[0_0_15px_rgba(212,175,55,0.15)]">
+            <i class="fas fa-bars"></i> EXPLORAR PAÍSES Y COMPETICIONES
+        </button>
+
+        <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/5 px-3 py-2 rounded flex items-center gap-2 border border-white/5">
             <i class="fas fa-map-marker-alt text-yellow-500"></i> <span id="nombreLigaActiva" class="text-yellow-500">Cargando Competición...</span>
         </div>
     </div>
 
     <section id="freeSection" class="space-y-4">
-        <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2">Pronósticos del Día</h2>
+        <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2">Pronósticos Disponibles</h2>
         <div id="containerPartidos" class="space-y-4">
             <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest">Sincronizando con brokers...</div>
         </div>
     </section>
 
-    <section id="membershipSection" class="mt-10 space-y-4">
+    <section id="membershipSection" class="mt-10 space-y-4 border-t border-white/10 pt-8">
         <div class="card-glass p-6 gold-border text-center bg-gradient-to-b from-yellow-500/10 to-transparent">
             <h3 class="text-xl font-black mb-1 uppercase italic text-yellow-500">Acceso Elite VIP</h3>
             <p class="text-[10px] text-gray-400 mb-5">Desbloquea cuotas 5.0x, mercados avanzados y creador de tickets.</p>
@@ -115,7 +141,7 @@
             <span id="contadorSeleccion" class="text-xs font-bold bg-yellow-500 text-black px-2 py-1 rounded">0/5 Seleccionados</span>
         </div>
 
-        <p class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center">Navega por las ligas. Tus selecciones se guardarán.</p>
+        <p class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center">Tus selecciones se mantienen aunque cambies de liga.</p>
 
         <div id="containerPartidosVIP" class="space-y-3 mb-6 max-h-[50vh] overflow-y-auto pr-1">
             </div>
@@ -135,30 +161,37 @@
         </div>
     </div>
 
-    <div id="modalFiltrosInteractivo" class="fixed inset-0 bg-black/90 hidden flex-col justify-end z-50 backdrop-blur-sm">
-        <div class="bg-gray-900 w-full h-[85vh] rounded-t-3xl border-t-2 border-yellow-500 p-5 flex flex-col modal-slide-up relative">
-            <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
-                <div class="flex items-center gap-3">
-                    <button id="btnVolverFiltro" onclick="navegarAtrasFiltro()" class="text-yellow-500 hover:text-white text-lg hidden"><i class="fas fa-arrow-left"></i></button>
-                    <h3 id="tituloFiltroModal" class="text-lg font-black text-yellow-500 uppercase tracking-widest"><i class="fas fa-globe-americas"></i> Selecciona Deporte</h3>
-                </div>
-                <button onclick="cerrarModalFiltros()" class="text-gray-400 hover:text-white text-2xl"><i class="fas fa-times"></i></button>
-            </div>
-            
-            <div class="relative mb-4">
-                <i class="fas fa-search absolute left-3 top-3 text-gray-500"></i>
-                <input type="text" id="buscadorListasModal" onkeyup="filtrarVistaActualModal()" placeholder="Filtrar en esta lista..." class="w-full bg-black/50 border border-gray-700 rounded-lg py-2.5 pl-10 pr-3 text-white text-xs font-bold outline-none focus:border-yellow-500">
-            </div>
-
-            <div id="listaDinamicaFiltros" class="overflow-y-auto flex-grow space-y-2 pb-10">
-                <div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Cargando Base de Datos...</div>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // CONFIGURACIÓN API
-        const API_KEY = 'f9f7716fcf820abf2976ba5ca0fcd322';
+        // ==========================================
+        // SISTEMA ROTATIVO DE API KEYS (ANTI-LÍMITES)
+        // ==========================================
+        let currentApiIndex = 0;
+        
+        const API_KEYS = [
+            'f9f7716fcf820abf2976ba5ca0fcd322', 
+            '6bce6b0eb3202dfd23f1246a67257fd5', 
+            '3de65f75eaa239d32fab9092aa0a0d17'
+        ];
+
+        async function fetchConRotacion(endpointTemplate) {
+            let intentos = 0;
+            while(intentos < API_KEYS.length) {
+                const url = endpointTemplate.replace('API_KEY_PLACEHOLDER', API_KEYS[currentApiIndex]);
+                const res = await fetch(url);
+                
+                if(res.status === 429 || res.status === 401) {
+                    console.warn(`[Motor OracleBet] Límite en la llave ${currentApiIndex + 1}. Rotando...`);
+                    currentApiIndex++;
+                    if(currentApiIndex >= API_KEYS.length) currentApiIndex = 0; 
+                    intentos++;
+                } else if (!res.ok) {
+                    throw new Error("Error genérico de API");
+                } else {
+                    return await res.json();
+                }
+            }
+            throw new Error("Todas las API Keys han agotado su límite gratuito.");
+        }
         
         // VARIABLES GLOBALES
         const MASTER_CODE = "FELIX_ADMIN_777";
@@ -169,26 +202,22 @@
         let partidosFiltrados = []; 
         let competicionesGlobales = []; 
         
-        // MEMORIA VIP PERSISTENTE
-        let seleccionesVIPGlobal = []; // Guarda los partidos completos aunque cambies de liga
-        let ticketDinamicoVIP = []; // Para refrescar tickets
-        
-        let nivelFiltroActual = 'deportes'; 
-        let filtroDeporteSeleccionado = '';
-        let filtroPaisSeleccionado = '';
-        let listaActualRenderizada = []; 
+        let seleccionesVIPGlobal = []; 
+        let ticketDinamicoVIP = []; 
 
         async function iniciarApp() {
+            // Setea el input date con la fecha de hoy por defecto para UI (Opcional, lo dejamos en blanco para ver todo)
+            document.getElementById('filtroFecha').value = "";
             await obtenerLigasDisponibles();
-            ejecutarTopFutbol(); // Carga de las 5 mejores ligas por defecto
+            ejecutarTopFutbol(); 
         }
 
-        // --- SISTEMA DE FILTROS ---
+        // --- SISTEMA DE MENÚ LATERAL DIDÁCTICO ---
         async function obtenerLigasDisponibles() {
             try {
-                const res = await fetch(`https://api.the-odds-api.com/v4/sports/?apiKey=${API_KEY}`);
-                const data = await res.json();
+                const data = await fetchConRotacion(`https://api.the-odds-api.com/v4/sports/?apiKey=API_KEY_PLACEHOLDER`);
                 competicionesGlobales = data.filter(l => l.active);
+                construirMenuLateralDidactico();
             } catch (error) { console.error("Error cargando ligas", error); }
         }
 
@@ -198,150 +227,144 @@
             if (liga.group.includes('American Football')) return 'USA / Norteamérica';
             if (liga.group.includes('Baseball') && liga.title.includes('MLB')) return 'USA / Norteamérica';
             if (liga.group.includes('Ice Hockey') && liga.title.includes('NHL')) return 'USA / Canadá';
-            return 'Internacional / Competición Global';
+            return 'Internacional (Varios)';
         }
 
-        function traducirDeporte(group) {
-            const dic = {
-                'Soccer': 'Fútbol', 'Basketball': 'Baloncesto', 'Tennis': 'Tenis', 
-                'Baseball': 'Béisbol', 'American Football': 'Fútbol Americano', 
-                'Ice Hockey': 'Hockey sobre Hielo', 'Mixed Martial Arts': 'Artes Marciales (MMA)'
-            };
-            return dic[group] || group;
-        }
+        // Construye el Acordeón (Países -> Ligas)
+        function construirMenuLateralDidactico() {
+            const contenedor = document.getElementById('contenidoMenuLateral');
+            let agrupadoPais = {};
 
-        function abrirModalFiltros() {
-            document.getElementById('modalFiltrosInteractivo').classList.remove('hidden');
-            document.getElementById('modalFiltrosInteractivo').classList.add('flex');
-            document.getElementById('buscadorListasModal').value = '';
-            irNivelDeportes();
-        }
-
-        function cerrarModalFiltros() {
-            document.getElementById('modalFiltrosInteractivo').classList.add('hidden');
-            document.getElementById('modalFiltrosInteractivo').classList.remove('flex');
-        }
-
-        function navegarAtrasFiltro() {
-            document.getElementById('buscadorListasModal').value = '';
-            if (nivelFiltroActual === 'ligas') irNivelPaises(filtroDeporteSeleccionado);
-            else if (nivelFiltroActual === 'paises') irNivelDeportes();
-        }
-
-        function irNivelDeportes() {
-            nivelFiltroActual = 'deportes';
-            document.getElementById('btnVolverFiltro').classList.add('hidden');
-            document.getElementById('tituloFiltroModal').innerHTML = '<i class="fas fa-trophy mr-1"></i> Tipos de Deporte';
-            const deportesSet = new Set(competicionesGlobales.map(l => l.group));
-            listaActualRenderizada = Array.from(deportesSet).sort().map(d => ({ tipo: 'deporte', id: d, nombre: traducirDeporte(d), origin: d }));
-            dibujarListaFiltros(listaActualRenderizada);
-        }
-
-        function irNivelPaises(grupoDeporteOriginal) {
-            nivelFiltroActual = 'paises';
-            filtroDeporteSeleccionado = grupoDeporteOriginal;
-            document.getElementById('btnVolverFiltro').classList.remove('hidden');
-            document.getElementById('tituloFiltroModal').innerHTML = `<i class="fas fa-globe mr-1"></i> Región: ${traducirDeporte(grupoDeporteOriginal)}`;
-            const ligasDelDeporte = competicionesGlobales.filter(l => l.group === grupoDeporteOriginal);
-            const paisesSet = new Set(ligasDelDeporte.map(l => extraerPaisDeLiga(l)));
-            listaActualRenderizada = Array.from(paisesSet).sort().map(p => ({ tipo: 'pais', id: p, nombre: p }));
-            dibujarListaFiltros(listaActualRenderizada);
-        }
-
-        function irNivelLigas(paisSeleccionadoStr) {
-            nivelFiltroActual = 'ligas';
-            filtroPaisSeleccionado = paisSeleccionadoStr;
-            document.getElementById('btnVolverFiltro').classList.remove('hidden');
-            document.getElementById('tituloFiltroModal').innerHTML = `<i class="fas fa-medal mr-1"></i> Ligas: ${paisSeleccionadoStr}`;
-            const ligasFinales = competicionesGlobales.filter(l => l.group === filtroDeporteSeleccionado && extraerPaisDeLiga(l) === paisSeleccionadoStr).sort((a,b) => a.title.localeCompare(b.title));
-            listaActualRenderizada = ligasFinales.map(l => ({ tipo: 'liga', id: l.key, nombre: l.title }));
-            dibujarListaFiltros(listaActualRenderizada);
-        }
-
-        function dibujarListaFiltros(listaElementos) {
-            const contenedor = document.getElementById('listaDinamicaFiltros');
-            contenedor.innerHTML = '';
-            if(nivelFiltroActual === 'deportes') {
-                contenedor.innerHTML += `
-                    <button onclick="ejecutarTopFutbol()" class="w-full text-left bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-lg mb-2 text-yellow-500 font-bold text-xs flex justify-between items-center fade-in-right">
-                        <span><i class="fas fa-star mr-2"></i> Fútbol Elite (Top 5 Ligas)</span>
-                        <i class="fas fa-play text-[10px]"></i>
-                    </button>
-                `;
-            }
-            if(listaElementos.length === 0) {
-                contenedor.innerHTML += `<p class="text-center text-gray-500 text-xs mt-4">No se encontraron resultados.</p>`;
-                return;
-            }
-            listaElementos.forEach(el => {
-                let accion = el.tipo === 'deporte' ? `irNivelPaises('${el.origin}')` : (el.tipo === 'pais' ? `irNivelLigas('${el.id}')` : `ejecutarFiltroFinal('${el.id}', '${el.nombre}')`);
-                let iconoDer = el.tipo === 'liga' ? '<i class="fas fa-play text-[10px] text-yellow-500"></i>' : '<i class="fas fa-chevron-right text-[10px] text-gray-500"></i>';
-                contenedor.innerHTML += `
-                    <button onclick="${accion}" class="w-full text-left bg-black/40 border border-white/5 p-3 rounded-lg hover:bg-white/10 hover:border-yellow-500/30 transition text-white text-xs font-bold flex justify-between items-center fade-in-right mb-2">
-                        <span>${el.nombre}</span>${iconoDer}
-                    </button>
-                `;
+            // Agrupar todas las competiciones por País/Región
+            competicionesGlobales.forEach(liga => {
+                let pais = extraerPaisDeLiga(liga);
+                if(!agrupadoPais[pais]) agrupadoPais[pais] = [];
+                agrupadoPais[pais].push(liga);
             });
+
+            // Ordenar alfabéticamente los países
+            let paisesOrdenados = Object.keys(agrupadoPais).sort();
+            let html = '';
+
+            paisesOrdenados.forEach(pais => {
+                const idLimpio = pais.replace(/[^a-zA-Z0-9]/g, '');
+                html += `
+                    <div class="border border-white/5 rounded-lg overflow-hidden bg-black/30">
+                        <button onclick="toggleAcordeon('${idLimpio}')" class="w-full text-left p-3 flex justify-between items-center text-white font-bold text-xs uppercase hover:bg-white/10 transition">
+                            <span><i class="fas fa-map-marker-alt text-yellow-500/70 mr-2"></i> ${pais}</span>
+                            <i id="icon_${idLimpio}" class="fas fa-chevron-down text-gray-500 transition-transform"></i>
+                        </button>
+                        <div id="acc_${idLimpio}" class="hidden flex-col bg-black/60 px-2 py-1 border-t border-white/5">
+                `;
+                
+                // Ordenar ligas dentro de ese país
+                agrupadoPais[pais].sort((a,b) => a.title.localeCompare(b.title)).forEach(liga => {
+                    html += `
+                        <button onclick="ejecutarFiltroFinal('${liga.key}', '${liga.title}')" class="text-left text-[10px] text-gray-300 hover:text-yellow-500 p-2.5 rounded hover:bg-white/5 transition border-b border-white/5 last:border-0 flex justify-between items-center">
+                            <span>${liga.title}</span>
+                            <i class="fas fa-arrow-right text-[8px] text-yellow-500 opacity-0 hover:opacity-100 transition-opacity"></i>
+                        </button>
+                    `;
+                });
+                
+                html += `</div></div>`;
+            });
+            contenedor.innerHTML = html;
         }
 
-        function filtrarVistaActualModal() {
-            const texto = document.getElementById('buscadorListasModal').value.toLowerCase();
-            dibujarListaFiltros(listaActualRenderizada.filter(el => el.nombre.toLowerCase().includes(texto)));
+        function toggleAcordeon(id) {
+            const acc = document.getElementById('acc_' + id);
+            const icon = document.getElementById('icon_' + id);
+            if(acc.classList.contains('hidden')) {
+                acc.classList.remove('hidden');
+                acc.classList.add('flex');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                acc.classList.add('hidden');
+                acc.classList.remove('flex');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function abrirMenuLateral() {
+            document.getElementById('overlayMenu').classList.remove('hidden');
+            const menu = document.getElementById('menuLateral');
+            menu.classList.remove('-translate-x-full');
+        }
+
+        function cerrarMenuLateral() {
+            document.getElementById('overlayMenu').classList.add('hidden');
+            const menu = document.getElementById('menuLateral');
+            menu.classList.add('-translate-x-full');
         }
 
         function ejecutarFiltroFinal(keyLiga, nombreMostrar) {
-            cerrarModalFiltros();
+            cerrarMenuLateral();
             document.getElementById('nombreLigaActiva').innerText = nombreMostrar;
             document.getElementById('buscadorEquipos').value = ''; 
+            document.getElementById('filtroFecha').value = ''; // Limpiar fecha al cambiar liga
             cargarPartidosReales(keyLiga, nombreMostrar);
         }
 
-        function filtrarPorEquipo() {
+        // --- FILTROS LOCALES (BUSCADOR DE TEXTO + FILTRO DE FECHA) ---
+        function aplicarFiltrosLocales() {
             const texto = document.getElementById('buscadorEquipos').value.toLowerCase();
-            partidosFiltrados = partidosGlobales.filter(p => p.home_team.toLowerCase().includes(texto) || p.away_team.toLowerCase().includes(texto));
+            const fechaFiltro = document.getElementById('filtroFecha').value; // Formato: YYYY-MM-DD
+
+            partidosFiltrados = partidosGlobales.filter(p => {
+                // Filtro de Texto (Equipos)
+                const cumpleTexto = p.home_team.toLowerCase().includes(texto) || p.away_team.toLowerCase().includes(texto);
+                
+                // Filtro de Fecha Exacta
+                let cumpleFecha = true;
+                if(fechaFiltro) {
+                    const dateObj = new Date(p.commence_time);
+                    // Formatear la fecha del partido a YYYY-MM-DD ajustado a zona horaria local
+                    const formattedPartidoDate = dateObj.getFullYear() + '-' + 
+                                                 String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + 
+                                                 String(dateObj.getDate()).padStart(2, '0');
+                    cumpleFecha = (formattedPartidoDate === fechaFiltro);
+                }
+
+                return cumpleTexto && cumpleFecha;
+            });
+            
             if(modoVipActivo) renderizarPartidosVIP(partidosFiltrados);
             else renderizarPartidosFree(partidosFiltrados);
         }
 
         // --- MULTI-CARGA: MEJORES LIGAS DEL MUNDO ---
         async function ejecutarTopFutbol() {
-            cerrarModalFiltros();
+            cerrarMenuLateral();
             document.getElementById('nombreLigaActiva').innerText = 'Fútbol Elite (Top 5 Ligas)';
             document.getElementById('buscadorEquipos').value = ''; 
+            document.getElementById('filtroFecha').value = ''; 
             
             const containerFree = document.getElementById('containerPartidos');
             const containerVip = document.getElementById('containerPartidosVIP');
             containerFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Escaneando Premier, La Liga, Serie A...</div>`;
             if(modoVipActivo) containerVip.innerHTML = containerFree.innerHTML;
 
-            // Las 5 mejores competiciones del mundo
             const ligasTop = [
-                'soccer_epl', 
-                'soccer_spain_la_liga', 
-                'soccer_germany_bundesliga', 
-                'soccer_uefa_champs_league', 
-                'soccer_italy_serie_a'
+                'soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 
+                'soccer_uefa_champs_league', 'soccer_italy_serie_a'
             ];
             
             try {
-                // Llamamos a las 5 ligas al mismo tiempo
                 const promesas = ligasTop.map(liga => 
-                    fetch(`https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEY}&regions=eu,us&markets=h2h,totals,spreads`)
-                    .then(res => res.json())
-                    .catch(() => []) // Si falla una, no rompe la app
+                    fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals,spreads`)
+                    .catch(() => []) 
                 );
                 
                 const resultados = await Promise.all(promesas);
                 let dataMezclada = resultados.flat().filter(m => m.bookmakers && m.bookmakers.length > 0);
-                
-                // Ordenar por fecha del partido
                 dataMezclada.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time));
 
                 partidosGlobales = dataMezclada;
                 partidosFiltrados = [...partidosGlobales];
 
                 if(partidosGlobales.length === 0) {
-                    const noDataMsg = `<div class="text-center bg-black/30 p-6 rounded-lg border border-white/5"><i class="fas fa-calendar-times text-gray-500 text-3xl mb-3"></i><p class="text-gray-400 text-xs font-bold uppercase tracking-widest">No hay partidos Elite programados en este momento.</p></div>`;
+                    const noDataMsg = `<div class="text-center bg-black/30 p-6 rounded-lg border border-white/5"><i class="fas fa-calendar-times text-gray-500 text-3xl mb-3"></i><p class="text-gray-400 text-xs font-bold uppercase tracking-widest">No hay partidos Elite programados.</p></div>`;
                     containerFree.innerHTML = noDataMsg;
                     if(modoVipActivo) containerVip.innerHTML = noDataMsg;
                     return;
@@ -351,7 +374,7 @@
                 if(modoVipActivo) renderizarPartidosVIP(partidosFiltrados);
 
             } catch (e) {
-                const errorMsg = `<p class="text-center text-red-500 text-xs">Error de conexión con brokers.</p>`;
+                const errorMsg = `<p class="text-center text-red-500 text-xs">Error de conexión o cuotas agotadas.</p>`;
                 containerFree.innerHTML = errorMsg;
                 if(modoVipActivo) containerVip.innerHTML = errorMsg;
             }
@@ -361,12 +384,12 @@
         async function cargarPartidosReales(sportKey, nombreLiga) {
             const containerFree = document.getElementById('containerPartidos');
             const containerVip = document.getElementById('containerPartidosVIP');
-            containerFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Consultando Brokers...</div>`;
+            containerFree.innerHTML = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Consultando Datos...</div>`;
             if(modoVipActivo) containerVip.innerHTML = containerFree.innerHTML;
 
             try {
-                const res = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${API_KEY}&regions=eu,us&markets=h2h,totals,spreads`);
-                const data = await res.json();
+                const data = await fetchConRotacion(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=API_KEY_PLACEHOLDER&regions=eu,us&markets=h2h,totals,spreads`);
+                
                 partidosGlobales = data.filter(m => m.bookmakers && m.bookmakers.length > 0);
                 partidosFiltrados = [...partidosGlobales];
 
@@ -379,7 +402,7 @@
                 renderizarPartidosFree(partidosFiltrados);
                 if(modoVipActivo) renderizarPartidosVIP(partidosFiltrados);
             } catch (e) {
-                const errorMsg = `<p class="text-center text-red-500 text-xs">Error de conexión. Verifica API.</p>`;
+                const errorMsg = `<p class="text-center text-red-500 text-xs">Error de conexión o llaves agotadas.</p>`;
                 containerFree.innerHTML = errorMsg;
                 if(modoVipActivo) containerVip.innerHTML = errorMsg;
             }
@@ -388,9 +411,8 @@
         function renderizarPartidosFree(dataA_Renderizar) {
             const container = document.getElementById('containerPartidos');
             container.innerHTML = '';
-            if(dataA_Renderizar.length === 0) return container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún equipo coincide.</p>`;
+            if(dataA_Renderizar.length === 0) return container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún partido coincide con los filtros aplicados.</p>`;
 
-            // En free mostramos max 15
             dataA_Renderizar.slice(0, 15).forEach(partido => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const dateDay = new Date(partido.commence_time).toLocaleDateString([], {month: 'short', day: 'numeric'});
@@ -417,13 +439,12 @@
         function renderizarPartidosVIP(dataA_Renderizar) {
             const container = document.getElementById('containerPartidosVIP');
             container.innerHTML = '';
-            if(dataA_Renderizar.length === 0) return container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún equipo coincide.</p>`;
+            if(dataA_Renderizar.length === 0) return container.innerHTML = `<p class="text-center text-gray-500 text-xs">Ningún partido coincide con los filtros aplicados.</p>`;
 
             dataA_Renderizar.slice(0, 50).forEach((partido) => {
                 const date = new Date(partido.commence_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const dateDay = new Date(partido.commence_time).toLocaleDateString([], {month: 'short', day: 'numeric'});
                 
-                // Comprobar si ya estaba seleccionado en la memoria global
                 const estaSeleccionado = seleccionesVIPGlobal.some(s => s.id === partido.id);
 
                 const card = document.createElement('div');
@@ -442,7 +463,6 @@
             actualizarContadorVIP(); 
         }
 
-        // --- MEMORIA PERSISTENTE DE CHECKBOXES ---
         function toggleSeleccionVIP(partidoId) {
             const cb = document.getElementById('check_' + partidoId);
             if(cb.checked) {
@@ -466,7 +486,6 @@
             
             contador.innerText = `${cantidad}/5 Seleccionados`;
 
-            // Bloquear visualmente si llegamos a 5
             document.querySelectorAll('.checkbox-vip').forEach(cb => {
                 if(cantidad >= 5 && !cb.checked) cb.disabled = true;
                 else cb.disabled = false;
@@ -490,7 +509,7 @@
                         if(resultado.price >= 1.25 && resultado.price <= 3.50) {
                             let prob = Math.floor((1 / resultado.price) * 100);
                             opciones.push({
-                                broker: broker.title,
+                                broker: broker.title, 
                                 mercadoKey: mercado.key,
                                 nombre: resultado.name,
                                 point: resultado.point,
@@ -517,11 +536,10 @@
         }
 
         function procesarTicketVIP() {
-            // AHORA LEE LA MEMORIA GLOBAL, NO EL DOM ACTUAL
             if(seleccionesVIPGlobal.length < 2) return;
 
             const resDiv = document.getElementById('resultadoVIP');
-            resDiv.innerHTML = `<div class="p-10 text-center"><i class="fas fa-satellite-dish animate-pulse text-yellow-500 mb-4 text-3xl"></i><p class="text-[10px] uppercase tracking-widest text-yellow-500 font-bold">Escaneando Mercados Profundos...</p><p class="text-[9px] text-gray-500 mt-2">Cruzando datos (Spreads, Totales, Moneyline)</p></div>`;
+            resDiv.innerHTML = `<div class="p-10 text-center"><i class="fas fa-satellite-dish animate-pulse text-yellow-500 mb-4 text-3xl"></i><p class="text-[10px] uppercase tracking-widest text-yellow-500 font-bold">Escaneando Mercados Profundos...</p><p class="text-[9px] text-gray-500 mt-2">Protegiendo Fuente de Datos (Algoritmo Encriptado)</p></div>`;
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
             setTimeout(() => {
@@ -565,6 +583,7 @@
                 if(opcionElegida.mercadoKey === 'totals') pickTexto = `${opcionElegida.nombre} de ${opcionElegida.point}`;
                 if(opcionElegida.mercadoKey === 'spreads') pickTexto = `${opcionElegida.nombre} (${opcionElegida.point > 0 ? '+' : ''}${opcionElegida.point})`;
 
+                // SE REMOVIÓ LA VARIABLE ${opcionElegida.broker} Y SE REEMPLAZÓ POR "ALGORITMO PRIVADO"
                 htmlPartidos += `
                     <div class="bg-black/40 p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden fade-in-right">
                         <div class="absolute top-0 right-0 bg-green-500 text-black text-[9px] font-black px-2 py-0.5 rounded-bl-lg">PROB: ${opcionElegida.probabilidad > 96 ? 96 : opcionElegida.probabilidad}%</div>
@@ -574,10 +593,10 @@
                         </div>
                         <div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-2 pr-8">${partido.home_team} vs ${partido.away_team}</div>
                         
-                        <div class="flex justify-between items-center bg-gray-900/80 p-2.5 rounded border border-gray-700">
+                        <div class="flex justify-between items-center bg-gray-900/80 p-2.5 rounded border border-gray-700 shadow-inner">
                             <div class="flex flex-col">
                                 <span class="text-[11px] text-yellow-500 font-black uppercase"><i class="fas fa-crosshairs mr-1"></i> PICK: ${pickTexto}</span>
-                                <span class="text-[8px] text-gray-500 mt-1 uppercase tracking-widest"><i class="fas fa-radar text-yellow-500/50 mr-1"></i> Mejor Broker: ${opcionElegida.broker}</span>
+                                <span class="text-[8px] text-green-500/80 mt-1 uppercase tracking-widest font-bold"><i class="fas fa-shield-alt mr-1"></i> Origen: Algoritmo Privado</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <span class="text-white font-black text-sm">${opcionElegida.cuota.toFixed(2)}</span>
@@ -707,7 +726,6 @@
                 document.getElementById('statusBadge').innerText = "ACCESO ELITE VIP";
                 document.getElementById('statusBadge').classList.replace('bg-red-500', 'bg-yellow-500');
                 
-                // Si abren VIP, renderizamos lo que haya en la memoria de la vista
                 renderizarPartidosVIP(partidosFiltrados); 
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } else { alert("Código no válido. Solicita uno por WhatsApp."); }
