@@ -22,7 +22,7 @@ const messaging = getMessaging(app);
 
 // 🛡️ REGISTRO EXPLÍCITO DEL SERVICE WORKER (OBLIGATORIO PARA iPHONE)
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    navigator.serviceWorker.register('./firebase-messaging-sw.js') // <-- AQUÍ AGREGAMOS EL PUNTO
     .then((registration) => { console.log('✅ Service Worker registrado con éxito.', registration); })
     .catch((err) => { console.error('❌ Error al registrar el Service Worker:', err); });
 }
@@ -49,9 +49,9 @@ window.registrarTokenPush = async function(codigoUsuario) {
         if (permission === 'granted') {
             if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Despertando SW...'; }
             
-            // 🍎 FIX PARA iPHONE: Registramos y esperamos agresivamente a que el SW esté activo
-            const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            await navigator.serviceWorker.ready; 
+            // 🍎 FIX PARA iPHONE: Usamos la ruta relativa con el punto
+            const swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+            await navigator.serviceWorker.ready;
             
             if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Encriptando llave...'; }
             
