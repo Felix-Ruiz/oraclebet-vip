@@ -1,0 +1,135 @@
+:root { 
+    --primary-gold: #D4AF37; 
+    --dark-bg: #0f172a; 
+}
+
+body { 
+    background-color: var(--dark-bg); 
+    color: white; 
+    font-family: 'Segoe UI', sans-serif; 
+    overflow-x: hidden; 
+}
+
+.card-glass { 
+    background: rgba(255, 255, 255, 0.05); 
+    backdrop-filter: blur(10px); 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    border-radius: 15px; 
+}
+
+.gold-border { 
+    border: 1px solid var(--primary-gold); 
+}
+
+.btn-gold { 
+    background: linear-gradient(135deg, #D4AF37 0%, #f1d27b 100%); 
+    color: #000; 
+}
+
+.pulse-green { 
+    animation: pulse 2s infinite; 
+}
+
+@keyframes pulse { 
+    0% { opacity: 1; transform: scale(1); } 
+    50% { opacity: 0.8; transform: scale(1.02); } 
+    100% { opacity: 1; transform: scale(1); } 
+}
+
+.checkbox-vip { 
+    accent-color: var(--primary-gold); 
+    width: 20px; 
+    height: 20px; 
+    cursor: pointer; 
+}
+
+.fade-in-right { 
+    animation: fadeInRight 0.2s ease-out forwards; 
+}
+
+@keyframes fadeInRight { 
+    from { opacity: 0; transform: translateX(10px); } 
+    to { opacity: 1; transform: translateX(0); } 
+}
+
+input[type="date"] { 
+    color-scheme: dark; 
+}
+
+.hide-scrollbar::-webkit-scrollbar { 
+    display: none; 
+}
+
+.hide-scrollbar { 
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+
+.neon-premium { 
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.5), inset 0 0 10px rgba(168, 85, 247, 0.3); 
+    border: 1px solid #a855f7; 
+}
+
+.view-section { 
+    display: none; 
+}
+
+.view-active { 
+    display: block; 
+    animation: fadeIn 0.3s ease-out; 
+}
+
+@keyframes fadeIn { 
+    from { opacity: 0; } 
+    to { opacity: 1; } 
+}
+
+.carrusel-btn { 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+
+.carrusel-activo { 
+    border: 2px solid var(--primary-gold) !important; 
+    transform: translateY(-6px); 
+    box-shadow: 0 12px 25px rgba(212,175,55,0.4) !important; 
+}
+
+.carrusel-activo .bg-black\/40 { 
+    background-color: rgba(0,0,0,0.1); 
+}
+
+/* ANIMACIONES DE LUJO PARA EL HEADER */
+.oracle-brand {
+    background: linear-gradient(135deg, #f1d27b 0%, #ffffff 40%, #D4AF37 50%, #f1d27b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent; /* <-- Reemplazamos text-fill-color por color estándar */
+    background-size: 200% auto;
+    animation: textShimmer 4s linear infinite;
+    filter: drop-shadow(0 0 2px rgba(212, 175, 55, 0.5));
+}
+
+@keyframes textShimmer { 
+    to { background-position: 200% center; } 
+}
+
+.header-brand-container {
+    animation: floatBrand 6s ease-in-out infinite;
+}
+
+@keyframes floatBrand {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-3px) rotate(0.5deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.rotate-logo {
+    animation: pulseShield 3s ease-in-out infinite;
+}
+
+@keyframes pulseShield {
+    0% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.2) drop-shadow(0 0 10px rgba(212, 175, 55, 0.4)); }
+    100% { transform: scale(1); filter: brightness(1); }
+}

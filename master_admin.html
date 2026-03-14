@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OracleBet - Centro Maestro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #0f172a; color: white; }
+        .glass-panel { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .tab-active { background-color: #2563eb; color: white; }
+        .tab-inactive { background-color: #1e293b; color: #9ca3af; }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <header class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+        <div class="flex items-center gap-4">
+            <i class="fas fa-server text-4xl text-blue-500 animate-pulse"></i>
+            <div>
+                <h1 class="text-2xl font-black uppercase tracking-widest text-white">Panel Operativo</h1>
+                <p class="text-xs text-blue-400 uppercase tracking-widest font-bold">Control Master Central</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex gap-2 mb-8 bg-gray-900 p-2 rounded-xl">
+        <button onclick="cambiarTab('tab-urls')" id="btn-tab-urls" class="flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest tab-active transition-colors"><i class="fas fa-link mr-2"></i> Inyección URLs</button>
+        <button onclick="cambiarTab('tab-fondo')" id="btn-tab-fondo" class="flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest tab-inactive transition-colors"><i class="fas fa-gem mr-2"></i> Auditoría Fondo VIP</button>
+    </div>
+
+    <div id="alertaFlotante" class="fixed top-5 right-5 z-50 transform transition-transform translate-x-full bg-green-600 text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-3">
+        <i class="fas fa-check-circle"></i> <span id="alertaTexto">Actualizado</span>
+    </div>
+
+    <div id="seccion-urls">
+        <div class="flex justify-between items-center mb-4">
+            <div class="relative w-2/3">
+                <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
+                <input type="text" id="buscadorAdmin" onkeyup="window.filtrarPorNombre()" placeholder="Buscar equipo o país..." class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-12 pr-4 text-white text-sm font-bold outline-none focus:border-blue-500 transition-colors shadow-inner">
+            </div>
+            <span id="contadorTotal" class="bg-gray-800 text-blue-400 border border-blue-500/30 px-3 py-2 rounded-lg font-black text-xs shadow-lg">0 Partidos Activos</span>
+        </div>
+        <div id="contenedorLigas" class="space-y-4 pb-20">
+            <div class="text-center py-20 text-gray-500"><i class="fas fa-spinner fa-spin text-4xl mb-4 text-blue-500"></i><p class="uppercase font-bold tracking-widest text-sm">Cargando Cartelera...</p></div>
+        </div>
+    </div>
+
+    <div id="seccion-fondo" class="hidden pb-20">
+        <div class="bg-green-900/20 border border-green-500/30 p-6 rounded-xl mb-6 shadow-inner">
+            <h2 class="text-green-400 font-black uppercase tracking-widest mb-2"><i class="fas fa-chart-pie mr-2"></i> Gestión Financiera Central</h2>
+            <p class="text-xs text-gray-400 leading-relaxed">Audita los tickets generados por los usuarios VIP. Al marcar un ticket como GANADO o PERDIDO, el sistema recalculará automáticamente su capital basado en el Stake y la Cuota del cliente.</p>
+        </div>
+        <div id="contenedorAuditoria" class="space-y-6">
+            <div class="text-center py-10 text-gray-500"><i class="fas fa-spinner fa-spin text-4xl mb-4 text-green-500"></i><p class="uppercase font-bold tracking-widest text-sm">Cargando Usuarios...</p></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAUB1hC-JSQcrJ68ayl9rEUhP4Qz9xz7Uk",
+            authDomain: "oraclebet-db.firebaseapp.com",
+            projectId: "oraclebet-db",
+            storageBucket: "oraclebet-db.firebasestorage.app",
+            messagingSenderId: "407519995167",
+            appId: "1:407519995167:web:4428c165b527ebb9c6fc2a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // ------------------ TABS LÓGICA ------------------
+        window.cambiarTab = function(tabId) {
+            const btnUrls = document.getElementById('btn-tab-urls');
+            const btnFondo = document.getElementById('btn-tab-fondo');
+            const secUrls = document.getElementById('seccion-urls');
+            const secFondo = document.getElementById('seccion-fondo');
+
+            if(tabId === 'tab-urls') {
+                btnUrls.className = "flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest tab-active transition-colors shadow-lg";
+                btnFondo.className = "flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest tab-inactive transition-colors";
+                secUrls.classList.remove('hidden');
+                secFondo.classList.add('hidden');
+            } else {
+                btnFondo.className = "flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest bg-green-600 text-white transition-colors shadow-lg";
+                btnUrls.className = "flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest tab-inactive transition-colors";
+                secFondo.classList.remove('hidden');
+                secUrls.classList.add('hidden');
+                cargarAuditoria(); // Carga la magia financiera
+            }
+        };
+
+        // ------------------ SECCIÓN 1: INYECCIÓN DE URLS ------------------
+        function obtenerInfoLiga(key, apiTitle) {
+            let pais = "Mundial"; let nombreLiga = apiTitle; let bandera = "🌍";
+            let k = key ? key.toLowerCase() : "";
+            if(k.includes('soccer_epl')) pais = "Inglaterra";
+            else if(k.includes('spain')) pais = "España";
+            else if(k.includes('italy')) pais = "Italia";
+            else if(k.includes('germany')) pais = "Alemania";
+            else if(k.includes('france')) pais = "Francia";
+            else if(k.includes('colombia')) pais = "Colombia";
+            else if(k.includes('argentina')) pais = "Argentina";
+            else if(k.includes('brazil')) pais = "Brasil";
+            else if(k.includes('conmebol')) pais = "Sudamérica";
+            else if(k.includes('uefa')) pais = "Europa";
+            
+            const banderas = { 'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'España':'🇪🇸', 'Italia':'🇮🇹', 'Alemania':'🇩🇪', 'Francia':'🇫🇷', 'Colombia':'🇨🇴', 'Argentina':'🇦🇷', 'Brasil':'🇧🇷', 'Sudamérica':'🌎', 'Europa':'🇪🇺' };
+            bandera = banderas[pais] || '🌍';
+            if(apiTitle === 'EPL') nombreLiga = "Premier League";
+            else if(apiTitle.includes(' - ')) nombreLiga = apiTitle.split(' - ')[0].trim();
+            return { pais, nombreLiga, bandera };
+        }
+
+        async function cargarPartidos() {
+            let inicioDelDia = new Date();
+            inicioDelDia.setHours(0,0,0,0);
+            const tiempoActualISO = inicioDelDia.toISOString();
+            try {
+                const q = query(collection(db, "eventos_sincronizados"), where("commence_time", ">=", tiempoActualISO));
+                const snapshot = await getDocs(q);
+                let partidos = [];
+                snapshot.forEach(doc => {
+                    let data = doc.data(); data.id = doc.id;
+                    if(data.sport_key && data.sport_key.includes('soccer')) {
+                        let info = obtenerInfoLiga(data.sport_key, data.sport_title);
+                        data.pais_limpio = info.pais; data.liga_limpia = info.nombreLiga; data.bandera = info.bandera;
+                        partidos.push(data);
+                    }
+                });
+                partidos.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time));
+                document.getElementById('contadorTotal').innerText = `${partidos.length} Partidos Activos`;
+                agruparYRenderizar(partidos);
+            } catch (e) { document.getElementById('contenedorLigas').innerHTML = `<p class="text-red-500 text-center font-bold">Error de conexión.</p>`; }
+        }
+
+        function agruparYRenderizar(partidos) {
+            const contenedor = document.getElementById('contenedorLigas'); contenedor.innerHTML = '';
+            const ligasObj = {};
+            partidos.forEach(p => {
+                const claveFinal = `${p.bandera} ${p.pais_limpio} - ${p.liga_limpia}`;
+                if (!ligasObj[claveFinal]) ligasObj[claveFinal] = [];
+                ligasObj[claveFinal].push(p);
+            });
+
+            let html = ''; let c = 0;
+            for (const [ligaKey, eventos] of Object.entries(ligasObj)) {
+                c++; const idLiga = `liga_${c}`; let htmlEventos = '';
+                eventos.forEach(p => {
+                    const d = new Date(p.commence_time); 
+                    const fechaTexto = d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short'}) + ' • ' + d.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+                    const url = (p.urls_manuales && p.urls_manuales.rushbet) ? p.urls_manuales.rushbet : '';
+                    htmlEventos += `
+                        <div class="partido-item bg-gray-800/50 p-4 rounded-lg border border-gray-700 mb-3 flex flex-col md:flex-row gap-4 items-center shadow-sm" data-search="${p.home_team.toLowerCase()} ${p.away_team.toLowerCase()} ${ligaKey.toLowerCase()}">
+                            <div class="w-full md:w-1/3 flex flex-col"><span class="text-xs text-gray-400 font-bold mb-1"><i class="far fa-clock"></i> ${fechaTexto}</span><span class="text-sm font-black">${p.home_team}</span><span class="text-[10px] text-gray-500 italic my-0.5">vs</span><span class="text-sm font-black">${p.away_team}</span><div class="mt-2 text-[10px] font-bold ${url?'text-green-400':'text-gray-500'} uppercase" id="status_${p.id}"><i class="fas ${url?'fa-check-circle':'fa-circle-notch'} mr-1"></i> ${url?'URL Inyectada':'Falta Enlace'}</div></div>
+                            <div class="w-full md:w-2/3 flex flex-col gap-2"><input type="text" id="url_rushbet_${p.id}" value="${url}" class="w-full bg-gray-900 text-white text-xs rounded-md px-3 py-3 border border-gray-600 focus:border-blue-500 outline-none" placeholder="Pega el enlace de Rushbet aquí..."><button onclick="guardarUrl('${p.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] py-2.5 rounded-md shadow-lg transition">Guardar Enlace</button></div>
+                        </div>`;
+                });
+                html += `
+                    <div class="glass-panel rounded-xl overflow-hidden shadow-lg mb-4 liga-container">
+                        <button onclick="toggleAcc('${idLiga}')" class="w-full bg-gray-800 p-4 flex justify-between items-center hover:bg-gray-700 transition border-b border-gray-700"><h2 class="text-sm font-black uppercase">${ligaKey} <span class="bg-gray-600 text-[10px] px-2 py-0.5 rounded ml-1">${eventos.length}</span></h2><i id="icon_${idLiga}" class="fas fa-chevron-down text-blue-400"></i></button>
+                        <div id="acc_${idLiga}" class="p-4 hidden flex-col bg-black/20">${htmlEventos}</div>
+                    </div>`;
+            }
+            contenedor.innerHTML = html;
+        }
+
+        window.toggleAcc = function(id) {
+            const c = document.getElementById(`acc_${id}`); const i = document.getElementById(`icon_${id}`);
+            if(c.classList.contains('hidden')){ c.classList.remove('hidden'); c.classList.add('flex'); i.style.transform = 'rotate(180deg)'; } 
+            else { c.classList.add('hidden'); c.classList.remove('flex'); i.style.transform = 'rotate(0deg)'; }
+        };
+
+        window.filtrarPorNombre = function() {
+            const i = document.getElementById('buscadorAdmin').value.toLowerCase();
+            document.querySelectorAll('.liga-container').forEach(l => {
+                let m = false;
+                l.querySelectorAll('.partido-item').forEach(p => { if(p.getAttribute('data-search').includes(i)){ p.style.display='flex'; m=true; } else p.style.display='none'; });
+                if(m) { l.style.display='block'; if(i.length>0) { l.querySelector('[id^="acc_"]').classList.remove('hidden'); l.querySelector('[id^="acc_"]').classList.add('flex'); l.querySelector('[id^="icon_"]').style.transform='rotate(180deg)'; }} 
+                else l.style.display='none';
+            });
+        };
+
+        window.guardarUrl = async function(id) {
+            const url = document.getElementById(`url_rushbet_${id}`).value.trim();
+            if(!url) return showToast("⚠️ Pega una URL.", "bg-yellow-500");
+            const btn = event.currentTarget; btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+            try {
+                await updateDoc(doc(db, "eventos_sincronizados", id), { urls_manuales: { rushbet: url, updated: new Date().toISOString() } });
+                document.getElementById(`status_${id}`).className = "mt-2 text-[10px] font-bold text-green-400 uppercase";
+                document.getElementById(`status_${id}`).innerHTML = `<i class="fas fa-check-circle mr-1"></i> URL Inyectada`;
+                showToast("✅ Guardado exitoso", "bg-green-600");
+            } catch(e) { showToast("❌ Error al guardar", "bg-red-600"); } finally { btn.disabled = false; btn.innerText = "Guardar Enlace"; }
+        };
+
+        function showToast(msg, color) {
+            const a = document.getElementById('alertaFlotante'); document.getElementById('alertaTexto').innerText = msg;
+            a.className = `fixed top-5 right-5 z-50 transform transition-transform translate-x-full px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-3 ${color} text-white`;
+            setTimeout(() => a.classList.remove('translate-x-full'), 100); setTimeout(() => a.classList.add('translate-x-full'), 3000);
+        }
+
+        // ------------------ SECCIÓN 2: AUDITORÍA DE FONDO (CON LISTA DE PICKS) ------------------
+        function formatoCOP(valor) { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor); }
+
+        async function cargarAuditoria() {
+            const cont = document.getElementById('contenedorAuditoria');
+            cont.innerHTML = '<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-green-500"></i></div>';
+            
+            try {
+                // Hacemos el Promise.all para cargar todo a la velocidad del rayo (Usuarios y Tickets a la vez)
+                const [usersSnap, ticketsSnap] = await Promise.all([
+                    getDocs(collection(db, "codigos_nube")),
+                    getDocs(collection(db, "tickets_apadrinamiento")) // Sacamos el query complejo por seguridad
+                ]);
+
+                // 1. Filtrar solo los usuarios que tienen Apadrinamiento activo
+                let activeUsers = {};
+                usersSnap.forEach(doc => {
+                    let d = doc.data();
+                    if(d.apadrinamiento && d.apadrinamiento.activo) {
+                        activeUsers[d.code] = d.apadrinamiento;
+                    }
+                });
+
+                if(Object.keys(activeUsers).length === 0) {
+                    cont.innerHTML = `<p class="text-center text-gray-500 uppercase font-bold">No hay clientes en el Fondo de Inversión.</p>`; return;
+                }
+
+                // 2. Extraer tickets y ordenarlos localmente
+                let allTickets = [];
+                ticketsSnap.forEach(doc => allTickets.push(doc.data()));
+                allTickets.sort((a,b) => b.timestamp - a.timestamp); // Los más nuevos primero
+
+                let html = '';
+                for (const [userId, apadrinamientoData] of Object.entries(activeUsers)) {
+                    
+                    let userTickets = allTickets.filter(t => t.codigo_usuario === userId);
+                    let pendientes = userTickets.filter(x => x.estado === 'pendiente').length;
+                    
+                    let bankInit = apadrinamientoData.bankroll_inicial;
+                    let bankAct = apadrinamientoData.bankroll_actual;
+                    let roi = ((bankAct - bankInit) / bankInit) * 100;
+                    
+                    let roiColor = roi > 0 ? 'text-green-400' : (roi < 0 ? 'text-red-400' : 'text-gray-400');
+                    let sign = roi > 0 ? '+' : '';
+
+                    let htmlTickets = '';
+                    userTickets.forEach(t => {
+                        let colorEstado = t.estado === 'pendiente' ? 'text-gray-400' : (t.estado === 'won' ? 'text-green-400' : 'text-red-400');
+                        let cuotaFinal = t.cuota_usuario || t.cuota_sistema;
+                        let gano = (t.monto_apostar * cuotaFinal) - t.monto_apostar;
+                        
+                        let txtGanancia = t.estado === 'won' ? `<span class="text-green-400 font-black">+${formatoCOP(gano)}</span>` : (t.estado === 'lost' ? `<span class="text-red-400 font-black">-${formatoCOP(t.monto_apostar)}</span>` : '<span class="text-gray-500">En juego</span>');
+
+                        let btnsAccion = t.estado === 'pendiente' ? `
+                            <button onclick="calificarTicket('${userId}', '${t.id}', 'won', ${t.monto_apostar}, ${cuotaFinal})" class="px-3 py-1.5 bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white rounded border border-green-600 transition font-black text-[9px] uppercase shadow-lg"><i class="fas fa-check"></i> Acertado</button>
+                            <button onclick="calificarTicket('${userId}', '${t.id}', 'lost', ${t.monto_apostar}, ${cuotaFinal})" class="px-3 py-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded border border-red-600 transition font-black text-[9px] uppercase shadow-lg"><i class="fas fa-times"></i> Fallado</button>
+                        ` : `<span class="text-[9px] font-black uppercase px-2 py-1 rounded bg-black/50 border border-white/10 text-gray-500">Auditado</span>`;
+
+                        // 🛡️ AHORA SÍ DIBUJAMOS LOS PICKS DETALLADOS EN EL ADMIN
+                        let picksDesglosados = t.picks.map(p => `
+                            <div class="border-l-2 border-blue-500 pl-2 mb-2">
+                                <p class="text-[10px] text-white font-bold">${p.partido}</p>
+                                <p class="text-[10px] text-yellow-500 font-black tracking-widest">${p.pick}</p>
+                            </div>
+                        `).join('');
+
+                        htmlTickets += `
+                            <div class="bg-black/40 p-4 rounded-xl border border-white/5 mb-3 hover:border-white/20 transition">
+                                <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
+                                    <span class="text-[10px] text-gray-500 font-bold"><i class="far fa-calendar-alt"></i> ${t.fecha}</span>
+                                    <div class="text-xs ${colorEstado} uppercase font-bold tracking-widest">${t.estado} ${txtGanancia}</div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    ${picksDesglosados}
+                                </div>
+
+                                <div class="flex justify-between items-end bg-gray-900 p-3 rounded-lg border border-black shadow-inner">
+                                    <div class="flex flex-col gap-1 w-1/2 border-r border-gray-700 pr-3">
+                                        <span class="text-[9px] text-gray-400 uppercase font-bold">Invirtió (${t.stake_porcentaje}%)</span>
+                                        <span class="text-sm font-black text-white">${formatoCOP(t.monto_apostar)}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-1 w-1/2 pl-3">
+                                        <span class="text-[9px] text-gray-400 uppercase font-bold flex justify-between items-center">Cuota Cliente</span>
+                                        <span class="text-sm font-black text-yellow-500">${cuotaFinal.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex justify-end gap-2 border-t border-gray-700 pt-3">${btnsAccion}</div>
+                            </div>
+                        `;
+                    });
+
+                    // Tarjeta Financiera por Cliente
+                    html += `
+                        <div class="glass-panel rounded-xl overflow-hidden shadow-lg border border-green-500/20">
+                            <div class="bg-gradient-to-r from-gray-800 to-gray-900 p-5 border-b border-green-500/30">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h2 class="text-lg font-black text-white uppercase"><i class="fas fa-user-tie text-green-400 mr-2"></i> ${userId}</h2>
+                                    <span class="bg-blue-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase shadow-md">${pendientes} Pendientes</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div class="bg-black/50 p-2 rounded text-center">
+                                        <p class="text-[8px] text-gray-500 uppercase font-bold">Banca Inicial</p>
+                                        <p class="text-[11px] font-black text-white">${formatoCOP(bankInit)}</p>
+                                    </div>
+                                    <div class="bg-black/50 p-2 rounded text-center">
+                                        <p class="text-[8px] text-gray-500 uppercase font-bold">Banca Actual</p>
+                                        <p class="text-[11px] font-black text-white drop-shadow-md">${formatoCOP(bankAct)}</p>
+                                    </div>
+                                    <div class="bg-black/50 p-2 rounded text-center">
+                                        <p class="text-[8px] text-gray-500 uppercase font-bold">Rendimiento</p>
+                                        <p class="text-[11px] font-black ${roiColor}">${sign}${roi.toFixed(2)}%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-black/20">
+                                ${userTickets.length > 0 ? htmlTickets : '<p class="text-xs text-gray-500 text-center">Aún no genera tickets.</p>'}
+                            </div>
+                        </div>
+                    `;
+                }
+                cont.innerHTML = html;
+
+            } catch(e) { cont.innerHTML = `<p class="text-red-500 text-center font-bold">Error cargando auditoría.</p>`; }
+        }
+
+        window.calificarTicket = async function(userId, ticketId, resultado, montoApostado, cuota) {
+            const confirmacion = confirm(`¿Estás seguro de marcar el ticket como ${resultado.toUpperCase()}? Esto sumará/restará dinero real al cliente.`);
+            if(!confirmacion) return;
+
+            try {
+                await updateDoc(doc(db, "tickets_apadrinamiento", ticketId), { estado: resultado });
+                const userRef = doc(db, "codigos_nube", userId);
+                const userSnap = await getDoc(userRef);
+                
+                if(userSnap.exists()) {
+                    let userData = userSnap.data();
+                    let saldoActual = userData.apadrinamiento.bankroll_actual;
+                    
+                    if(resultado === 'won') {
+                        let gananciaNeta = (montoApostado * cuota) - montoApostado;
+                        saldoActual += gananciaNeta;
+                    } else if (resultado === 'lost') {
+                        saldoActual -= montoApostado;
+                    }
+
+                    await updateDoc(userRef, { "apadrinamiento.bankroll_actual": saldoActual });
+                    showToast(`✅ Ticket procesado matemáticamente.`, "bg-green-600");
+                    cargarAuditoria(); 
+                }
+            } catch(e) { showToast("❌ Error al procesar matemática.", "bg-red-600"); }
+        };
+
+        document.addEventListener('DOMContentLoaded', cargarPartidos);
+    </script>
+</body>
+</html>

@@ -6,122 +6,152 @@ const axios = require("axios");
 admin.initializeApp();
 const db = admin.firestore();
 
-// 🔋 TUS 6 LLAVES NUEVAS (Batería Inagotable)
+// 🔋 LLAVES THE-ODDS-API (Tu radar mundial inagotable)
 const API_KEYS = [
-    '1428ffa5315c791e176a2c6e5a0ebac4',
-    '7f88d62ce90724b4c234025630a67d20',
-    '2535be0ca41418f6d64d4f1696bedd8e',
-    '273e5650255281ae3aa3b6fb96c6893b',
-    '4ce60f5a7141356202e8d4d5363a1e2a',
-    '3f42bd75893fdcfc066c0bf75383206d'
+    '842bc19e83e8b5a4abb21ea750934b1d', '0d6560398d3f560738ea2ec1f8d29efb',
+    '59a5f051a44e3ac088ea780f0470e7d7', '514fbd0141e7c1c3ae49695076633302',
+    'a86d1f460375411f2794306f1e12bb71', '958fcaf31152a8989c2f5a188a4f0980'
 ];
 let indexLlaveActual = 0;
 
+async function peticionConRotacion(urlBase) {
+    let intentos = 0;
+    while (intentos < API_KEYS.length) {
+        const urlFinal = `${urlBase}&apiKey=${API_KEYS[indexLlaveActual]}`;
+        try {
+            await new Promise(r => setTimeout(r, 1000)); 
+            const response = await axios.get(urlFinal, { headers: { 'Accept-Encoding': 'identity' } });
+            return response.data;
+        } catch (error) {
+            if (error.response && (error.response.status === 429 || error.response.status === 401)) {
+                indexLlaveActual = (indexLlaveActual + 1) % API_KEYS.length;
+                intentos++;
+            } else if (error.response && error.response.status === 422) { return null; } else { return null; }
+        }
+    }
+    return null;
+}
+
+// 🧠 EL MOTOR "ORACLE QUANT" (Ingeniería Inversa a Pinnacle)
+function inyectarOracleQuant(partido) {
+    if (!partido.bookmakers) return partido;
+    const pinnacle = partido.bookmakers.find(b => b.key === 'pinnacle');
+    if (!pinnacle) return partido;
+
+    // 1. Recolectar promedios globales del mercado
+    let mercadoPromedios = {};
+    partido.bookmakers.forEach(bookie => {
+        if (bookie.key === 'pinnacle') return;
+        bookie.markets.forEach(m => {
+            if (m.key === 'h2h' || m.key === 'totals' || m.key === 'spreads') {
+                m.outcomes.forEach(o => {
+                    let clave = `${m.key}_${o.name}_${o.point || ''}`;
+                    if (!mercadoPromedios[clave]) mercadoPromedios[clave] = [];
+                    mercadoPromedios[clave].push(o.price);
+                });
+            }
+        });
+    });
+
+    // 2. Inyectar la matemática
+    partido.bookmakers.forEach(bookie => {
+        if (bookie.key === 'pinnacle') return;
+        bookie.markets.forEach(mercadoLocal => {
+            const mercadoSharp = pinnacle.markets.find(m => m.key === mercadoLocal.key);
+            if (!mercadoSharp) return;
+
+            let margenSharp = 0;
+            mercadoSharp.outcomes.forEach(o => { if (o.price > 0) margenSharp += (1 / o.price); });
+
+            mercadoLocal.outcomes.forEach(opcionLocal => {
+                const opcionSharp = mercadoSharp.outcomes.find(o => o.name === opcionLocal.name && o.point === opcionLocal.point);
+                if (opcionSharp && opcionSharp.price > 0 && margenSharp > 0) {
+                    // Cálculo Probabilidad Real
+                    const probRealDecimal = (1 / opcionSharp.price) / margenSharp;
+                    const evDecimal = (probRealDecimal * opcionLocal.price) - 1;
+
+                    opcionLocal.probabilidad_real = Math.round(probRealDecimal * 100);
+                    opcionLocal.ev_porcentaje = parseFloat((evDecimal * 100).toFixed(2));
+                    opcionLocal.es_valor = evDecimal > 0;
+
+                    // 💎 REGLA DIAMANTE (SHARP MONEY)
+                    let clave = `${mercadoLocal.key}_${opcionLocal.name}_${opcionLocal.point || ''}`;
+                    let preciosMundiales = mercadoPromedios[clave] || [];
+
+                    if (preciosMundiales.length > 0) {
+                        let promedioGlobal = preciosMundiales.reduce((a, b) => a + b, 0) / preciosMundiales.length;
+                        
+                        // Si Pinnacle paga un 2% menos que el promedio mundial, es porque el Dinero Fuerte está ahí.
+                        let esSharpMoney = opcionSharp.price < (promedioGlobal * 0.98);
+
+                        // Si tiene más del 40% de chance, y el EV no es trágico, Y hay dinero fuerte = INSIGNIA AZUL.
+                        if (opcionLocal.probabilidad_real >= 40 && evDecimal > -0.04 && esSharpMoney) {
+                            opcionLocal.verificado_ia = true;
+                        }
+                    }
+                }
+            });
+        });
+    });
+    return partido;
+}
+
 async function ejecutarEscaneoGlobal() {
-    console.log("🌍 INICIANDO ESCÁNER MUNDIAL ABSOLUTO...");
+    console.log("🌍 INICIANDO ORACLE QUANT AI (INDEPENDIENTE Y BLINDADO)...");
     let totalGuardados = 0;
     let ligasActivasEncontradas = [];
+    let diamantesCazados = 0;
 
-    // 1. Descargar el catálogo completo de deportes
-    let deportes = [];
-    try {
-        const urlDeportes = `https://api.the-odds-api.com/v4/sports/?apiKey=${API_KEYS[indexLlaveActual]}`;
-        const resDeportes = await axios.get(urlDeportes);
-        deportes = resDeportes.data.filter(s => s.active && !s.has_outrights);
-    } catch(e) {
-        console.error("Fallo al obtener la lista mundial de deportes.");
-        return { exito: false, error: "Fallo lista inicial" };
-    }
+    let deportes = await peticionConRotacion(`https://api.the-odds-api.com/v4/sports/?`);
+    if (!deportes) return { exito: false, error: "Fallo lista inicial" };
+    deportes = deportes.filter(s => s.active && !s.has_outrights);
 
-    console.log(`📡 Se encontraron ${deportes.length} competiciones activas.`);
-
-    // 2. Escanear el planeta entero
     for (const deporte of deportes) {
         const liga = deporte.key;
-        let exitoLiga = false;
-        let intentos = 0;
+        const partidosBase = await peticionConRotacion(`https://api.the-odds-api.com/v4/sports/${liga}/odds/?regions=eu,uk,us&markets=h2h,totals,spreads`);
 
-        while (!exitoLiga && intentos < API_KEYS.length) {
-            const url = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[indexLlaveActual]}&regions=eu,us&markets=h2h,totals,spreads`;
-            
-            try {
-                // Anti-Spam de 1 segundo (Esto es lo que hace que tarde más de 1 minuto)
-                await new Promise(r => setTimeout(r, 1000)); 
+        if (Array.isArray(partidosBase) && partidosBase.length > 0) {
+            const batch = db.batch();
+
+            for (let p of partidosBase) {
+                if (liga.includes('soccer')) {
+                    const urlProps = `https://api.the-odds-api.com/v4/sports/${liga}/events/${p.id}/odds?regions=eu,uk&markets=player_shots,alternate_totals_corners,alternate_totals_cards`;
+                    const datosProps = await peticionConRotacion(urlProps);
+                    if (datosProps && datosProps.bookmakers) {
+                        datosProps.bookmakers.forEach(propBm => {
+                            let baseBm = p.bookmakers.find(b => b.key === propBm.key);
+                            if (baseBm) baseBm.markets.push(...propBm.markets);
+                            else p.bookmakers.push(propBm);
+                        });
+                    }
+
+                    // ⚡ MAGIA PURA: Inyectamos el algoritmo propio
+                    p = inyectarOracleQuant(p);
+
+                    // Contamos los diamantes para tu reporte
+                    p.bookmakers?.forEach(b => b.markets?.forEach(m => m.outcomes?.forEach(o => {
+                        if (o.verificado_ia) diamantesCazados++;
+                    })));
+                }
+
+                const docRef = db.collection('eventos_sincronizados').doc(p.id);
+                p.ultima_actualizacion = Date.now();
+                p.sport_key = liga; 
+                p.sport_title = deporte.title;
+                p.sport_group = deporte.group;
                 
-                const response = await axios.get(url, { headers: { 'Accept-Encoding': 'identity' } });
-                const partidos = response.data;
-
-                if (Array.isArray(partidos) && partidos.length > 0) {
-                    const batch = db.batch();
-                    partidos.forEach(p => {
-                        const docRef = db.collection('eventos_sincronizados').doc(p.id);
-                        p.ultima_actualizacion = Date.now();
-                        p.sport_key = liga; 
-                        p.sport_title = deporte.title;
-                        p.sport_group = deporte.group;
-                        batch.set(docRef, p);
-                        totalGuardados++;
-                    });
-                    await batch.commit();
-                    
-                    ligasActivasEncontradas.push({ key: liga, title: deporte.title, group: deporte.group });
-                    console.log(`✅ [${liga}] Guardada: ${partidos.length} eventos.`);
-                }
-                exitoLiga = true;
-
-            } catch (error) {
-                if (error.response && (error.response.status === 429 || error.response.status === 401)) {
-                    indexLlaveActual = (indexLlaveActual + 1) % API_KEYS.length;
-                    intentos++;
-                } else if (error.response && error.response.status === 422) {
-                    try {
-                        await new Promise(r => setTimeout(r, 1000)); 
-                        const urlRescate = `https://api.the-odds-api.com/v4/sports/${liga}/odds/?apiKey=${API_KEYS[indexLlaveActual]}&regions=eu&markets=h2h`;
-                        const resRescate = await axios.get(urlRescate, { headers: { 'Accept-Encoding': 'identity' } });
-                        const partidosRescate = resRescate.data;
-                        if (Array.isArray(partidosRescate) && partidosRescate.length > 0) {
-                            const batch = db.batch();
-                            partidosRescate.forEach(p => {
-                                const docRef = db.collection('eventos_sincronizados').doc(p.id);
-                                p.ultima_actualizacion = Date.now();
-                                p.sport_key = liga; 
-                                p.sport_title = deporte.title;
-                                p.sport_group = deporte.group;
-                                batch.set(docRef, p);
-                                totalGuardados++;
-                            });
-                            await batch.commit();
-                            ligasActivasEncontradas.push({ key: liga, title: deporte.title, group: deporte.group });
-                        }
-                        exitoLiga = true;
-                    } catch(e2) { exitoLiga = true; }
-                } else {
-                    exitoLiga = true; 
-                }
+                batch.set(docRef, p);
+                totalGuardados++;
             }
+            await batch.commit();
+            ligasActivasEncontradas.push({ key: liga, title: deporte.title, group: deporte.group });
         }
     }
     
-    // 3. Crear el Menú Dinámico
-    if(ligasActivasEncontradas.length > 0) {
-        await db.collection('global').doc('menu_ligas').set({ ligas: ligasActivasEncontradas, actualizado: Date.now() });
-    }
+    if(ligasActivasEncontradas.length > 0) { await db.collection('global').doc('menu_ligas').set({ ligas: ligasActivasEncontradas, actualizado: Date.now() }); }
     
-    console.log(`🏆 Terminado: ${totalGuardados} partidos listos.`);
-    return { exito: true, cantidad: totalGuardados, ligas: ligasActivasEncontradas.length };
+    return { exito: true, cantidad: totalGuardados, picks_diamante_encontrados: diamantesCazados };
 }
 
-// ⚠️ AQUÍ ESTÁ LA MAGIA: LE DAMOS 300 SEGUNDOS (5 MINUTOS) DE TIEMPO LÍMITE
-exports.robotSincronizador = onSchedule({
-    schedule: "every 12 hours",
-    timeoutSeconds: 300 
-}, async (event) => { 
-    await ejecutarEscaneoGlobal(); 
-});
-
-exports.disparadorManual = onRequest({
-    timeoutSeconds: 300 
-}, async (req, res) => { 
-    const resultado = await ejecutarEscaneoGlobal(); 
-    res.json(resultado); 
-});
+exports.robotSincronizador = onSchedule({ schedule: "every 4 hours", timeoutSeconds: 1800, memory: "512MiB" }, async (event) => { await ejecutarEscaneoGlobal(); });
+exports.disparadorManual = onRequest({ timeoutSeconds: 1800, memory: "512MiB" }, async (req, res) => { const resultado = await ejecutarEscaneoGlobal(); res.json(resultado); });
