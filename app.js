@@ -42,7 +42,6 @@ if ('serviceWorker' in navigator) {
     .then((registration) => { console.log('✅ SW registrado.'); })
     .catch((err) => { console.error('❌ Error SW:', err); });
 
-    // Escuchar la orden del Service Worker cuando se toca la alerta PUSH
     navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'NAVIGATE') {
             window.procesarEnlaceInterno(event.data.url);
@@ -90,6 +89,36 @@ onMessage(messaging, (payload) => {
     window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success", actionUrl); 
 });
 
+// 🚀 NUEVO: INTERCEPTOR INTELIGENTE AL ABRIR LA APP
+window.verificarNotificacionesPendientes = async function() {
+    try {
+        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(1));
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+            const data = snap.docs[0].data();
+            const ultimaVista = localStorage.getItem('oracle_last_push_seen');
+            
+            // Si el mensaje es nuevo (su timestamp es mayor al que guardamos en memoria)
+            if (!ultimaVista || data.timestamp > parseInt(ultimaVista)) {
+                // Guardamos el sello de tiempo para no volver a mostrarlo
+                localStorage.setItem('oracle_last_push_seen', data.timestamp.toString());
+                
+                // Extraemos URL si la hay, para que el botón de Aceptar se vuelva navegable
+                let urlDestino = null;
+                if (data.url && data.url !== "/" && data.url.includes("view=")) {
+                    urlDestino = data.url;
+                }
+                
+                // Lanzamos la alerta a la cara del usuario
+                window.mostrarAlerta(data.titulo, data.cuerpo, "info", urlDestino);
+            }
+        }
+    } catch (error) {
+        console.log("Error verificando bandeja de entrada oculta:", error);
+    }
+};
+
 // 🛡️ BANDEJA DE NOTIFICACIONES IN-APP
 window.abrirBandejaNotificaciones = async function() {
     let modal = document.getElementById('modalBandejaNotificaciones');
@@ -123,15 +152,14 @@ window.abrirBandejaNotificaciones = async function() {
             const data = doc.data(); const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400';
             
-            // INYECTAMOS EL ONCLICK PARA QUE LA TARJETA SEA NAVEGABLE
-            let clickAction = data.url ? `onclick="window.procesarEnlaceInterno('${data.url}')" class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden cursor-pointer hover:border-blue-500/50 transition-colors active:scale-95"` : `class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden"`;
+            let clickAction = data.url && data.url !== "/" ? `onclick="window.procesarEnlaceInterno('${data.url}')" class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden cursor-pointer hover:border-blue-500/50 transition-colors active:scale-95"` : `class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden"`;
 
             lista.innerHTML += `
             <div ${clickAction}>
                 <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>
-                    ${data.url ? '<i class="fas fa-external-link-alt text-gray-500 text-[10px]"></i>' : ''}
+                    ${data.url && data.url !== "/" ? '<i class="fas fa-external-link-alt text-gray-500 text-[10px]"></i>' : ''}
                 </div>
                 <p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p>
                 <div class="flex justify-between items-center border-t border-white/5 pt-2">
@@ -163,7 +191,6 @@ window.mostrarAlerta = function(titulo, mensaje, tipo = 'info', actionUrl = null
     if(!modal) { alert(`${titulo}: ${mensaje}`); return; }
     title.innerText = titulo; msg.innerHTML = mensaje; 
     
-    // Inyectamos la acción en el botón del modal si hay URL
     btn.onclick = function() {
         window.cerrarAlertaGlobal();
         if(actionUrl) { window.procesarEnlaceInterno(actionUrl); }
@@ -174,7 +201,7 @@ window.mostrarAlerta = function(titulo, mensaje, tipo = 'info', actionUrl = null
     else if (tipo === 'warning') { icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 drop-shadow-[0_0_15px_rgba(212,175,55,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-yellow-500 text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]"; content.className = "bg-gray-900 border border-yellow-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(212,175,55,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
     else { icon.innerHTML = '<i class="fas fa-info-circle text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"; content.className = "bg-gray-900 border border-blue-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; }
     
-    if(actionUrl) { btn.innerHTML = 'VER REPORTE'; } else { btn.innerHTML = 'ACEPTAR'; }
+    if(actionUrl) { btn.innerHTML = '<i class="fas fa-rocket mr-1"></i> IR A LA SEÑAL'; } else { btn.innerHTML = 'ACEPTAR'; }
     modal.classList.remove('hidden'); modal.style.display = 'flex';
 };
 
@@ -251,13 +278,16 @@ window.iniciarApp = async function() {
     try { const session = localStorage.getItem('oracle_session'); if(session) { const data = JSON.parse(session); window.concederAcceso(data.ilimitado, data.code, data.ladderStat, true); } } catch(e) {} 
     window.ejecutarTopFutbol(); 
 
-    // LÓGICA DE DEEP LINKING Y NAVEGACIÓN
+    // LÓGICA DE DEEP LINKING
     setTimeout(() => {
         if (window.location.search) {
             window.procesarEnlaceInterno(window.location.href);
-            // Limpia la barra de direcciones para evitar bucles
             window.history.replaceState({}, document.title, "/");
         }
+        
+        // 🚀 DISPARADOR DEL INTERCEPTOR (Chequeo de Push en BD)
+        window.verificarNotificacionesPendientes();
+        
     }, 1500); 
 };
 
