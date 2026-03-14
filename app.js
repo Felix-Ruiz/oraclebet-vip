@@ -78,16 +78,57 @@ let filtroIAActivo = false;
 let correoAdminTemp = ""; 
 
 // ==========================================
-// 3. DICCIONARIOS Y TRADUCTORES
+// 3. DICCIONARIOS Y TRADUCTORES (CON 40+ PAÍSES)
 // ==========================================
 const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': { 'titulo': 'Goles Totales' }, 'spreads': { 'titulo': 'Hándicap (Spread)' }, 'alternate_totals_corners': { 'titulo': 'Líneas de Córners' }, 'team_total_corners': { 'titulo': 'Córners por Equipo' }, 'corners_handicap': { 'titulo': 'Hándicap de Córners' }, 'alternate_totals_cards': { 'titulo': 'Líneas de Tarjetas' }, 'player_shots': { 'titulo': 'Disparos del Jugador' }, 'player_shots_on_target': { 'titulo': 'Disparos a Puerta' }, 'player_cards': { 'titulo': 'Tarjeta a Jugador' } };
 
 function obtenerInfoLiga(key, apiTitle) {
     let pais = "Mundial"; let nombreLiga = apiTitle ? String(apiTitle) : "Competición Genérica"; let bandera = "🌍"; let k = key ? String(key).toLowerCase() : "";
-    if(k.includes('soccer_epl') || k.includes('soccer_england')) pais = "Inglaterra"; else if(k.includes('spain')) pais = "España"; else if(k.includes('italy')) pais = "Italia"; else if(k.includes('germany')) pais = "Alemania"; else if(k.includes('france')) pais = "Francia"; else if(k.includes('colombia')) pais = "Colombia"; else if(k.includes('mexico')) pais = "México"; else if(k.includes('argentina')) pais = "Argentina"; else if(k.includes('brazil')) pais = "Brasil"; else if(k.includes('conmebol')) pais = "Sudamérica"; else if(k.includes('uefa')) pais = "Europa"; else if(k.includes('usa') || k === 'soccer_usa_mls') pais = "USA";
-    const banderas = { 'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'España':'🇪🇸', 'Italia':'🇮🇹', 'Alemania':'🇩🇪', 'Francia':'🇫🇷', 'Colombia':'🇨🇴', 'México':'🇲🇽', 'Argentina':'🇦🇷', 'Brasil':'🇧🇷', 'Sudamérica':'🌎', 'Europa':'🇪🇺', 'USA':'🇺🇸' }; bandera = banderas[pais] || '🌍';
+    
+    if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra";
+    else if(k.includes('spain')) pais = "España";
+    else if(k.includes('italy')) pais = "Italia";
+    else if(k.includes('germany')) pais = "Alemania";
+    else if(k.includes('france')) pais = "Francia";
+    else if(k.includes('colombia')) pais = "Colombia";
+    else if(k.includes('mexico')) pais = "México";
+    else if(k.includes('argentina')) pais = "Argentina";
+    else if(k.includes('brazil')) pais = "Brasil";
+    else if(k.includes('portugal')) pais = "Portugal";
+    else if(k.includes('netherlands')) pais = "Países Bajos";
+    else if(k.includes('turkey')) pais = "Turquía";
+    else if(k.includes('belgium')) pais = "Bélgica";
+    else if(k.includes('australia')) pais = "Australia";
+    else if(k.includes('chile')) pais = "Chile";
+    else if(k.includes('peru')) pais = "Perú";
+    else if(k.includes('ecuador')) pais = "Ecuador";
+    else if(k.includes('uruguay')) pais = "Uruguay";
+    else if(k.includes('bolivia')) pais = "Bolivia";
+    else if(k.includes('paraguay')) pais = "Paraguay";
+    else if(k.includes('venezuela')) pais = "Venezuela";
+    else if(k.includes('japan')) pais = "Japón";
+    else if(k.includes('korea')) pais = "Corea del Sur";
+    else if(k.includes('china')) pais = "China";
+    else if(k.includes('saudi_arabia') || k.includes('saudi')) pais = "Arabia Saudita";
+    else if(k.includes('scotland')) pais = "Escocia";
+    else if(k.includes('sweden')) pais = "Suecia";
+    else if(k.includes('switzerland')) pais = "Suiza";
+    else if(k.includes('denmark')) pais = "Dinamarca";
+    else if(k.includes('norway')) pais = "Noruega";
+    else if(k.includes('poland')) pais = "Polonia";
+    else if(k.includes('austria')) pais = "Austria";
+    else if(k.includes('russia')) pais = "Rusia";
+    else if(k.includes('greece')) pais = "Grecia";
+    else if(k.includes('conmebol')) pais = "Sudamérica";
+    else if(k.includes('uefa') || k.includes('euro')) pais = "Europa";
+    else if(k.includes('usa') || k.includes('mls')) pais = "USA";
+    else if(k.includes('fifa') || k.includes('world_cup')) pais = "Mundial";
+
+    const banderas = { 'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'España':'🇪🇸', 'Italia':'🇮🇹', 'Alemania':'🇩🇪', 'Francia':'🇫🇷', 'Colombia':'🇨🇴', 'México':'🇲🇽', 'Argentina':'🇦🇷', 'Brasil':'🇧🇷', 'Sudamérica':'🌎', 'Europa':'🇪🇺', 'USA':'🇺🇸', 'Portugal':'🇵🇹', 'Países Bajos':'🇳🇱', 'Turquía':'🇹🇷', 'Bélgica':'🇧🇪', 'Australia':'🇦🇺', 'Chile':'🇨🇱', 'Perú':'🇵🇪', 'Ecuador':'🇪🇨', 'Uruguay':'🇺🇾', 'Bolivia':'🇧🇴', 'Paraguay':'🇵🇾', 'Venezuela':'🇻🇪', 'Japón':'🇯🇵', 'Corea del Sur':'🇰🇷', 'China':'🇨🇳', 'Arabia Saudita':'🇸🇦', 'Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Suecia':'🇸🇪', 'Suiza':'🇨🇭', 'Dinamarca':'🇩🇰', 'Noruega':'🇳🇴', 'Polonia':'🇵🇱', 'Austria':'🇦🇹', 'Rusia':'🇷🇺', 'Grecia':'🇬🇷', 'Mundial':'🌍' };
+    bandera = banderas[pais] || '🌍';
+
     if(nombreLiga === 'EPL') nombreLiga = "Premier League"; else if(nombreLiga.includes(' - ')) nombreLiga = nombreLiga.split(' - ')[0].trim();
-    if(k === 'soccer_conmebol_copa_libertadores') nombreLiga = "Copa Libertadores"; if(k === 'soccer_conmebol_copa_sudamericana') nombreLiga = "Copa Sudamericana"; if(k === 'soccer_uefa_europa_league') nombreLiga = "Europa League"; if(k === 'soccer_uefa_europa_conference_league') nombreLiga = "Conference League";
+    if(k === 'soccer_conmebol_copa_libertadores') nombreLiga = "Copa Libertadores"; if(k === 'soccer_conmebol_copa_sudamericana') nombreLiga = "Copa Sudamericana"; if(k === 'soccer_uefa_europa_league') nombreLiga = "Europa League"; if(k === 'soccer_uefa_europa_conference_league') nombreLiga = "Conference League"; if(k === 'soccer_uefa_champs_league') nombreLiga = "Champions League";
     return { pais, nombreLiga, bandera };
 }
 
@@ -211,7 +252,6 @@ window.renderizarLayoutAdmin = function() {
     if(!aSec) return;
     aSec.style.display = 'block';
     
-    // 🛡️ MODIFICACIÓN: GRID DE 5 COLUMNAS PARA INCLUIR PESTAÑA "FONDOS"
     aSec.innerHTML = `
         <div class="p-4 bg-gray-900 min-h-screen pb-20">
             <div class="flex flex-col items-center justify-center gap-2 mb-6 text-center border-b border-white/5 pb-4">
@@ -329,7 +369,7 @@ window.renderizarLayoutAdmin = function() {
 
     window.cargarMonitorTickets();
     window.cargarUsuariosAdmin();
-    window.cargarFondosAdmin(); // 🛡️ Cargamos los fondos al iniciar el admin
+    window.cargarFondosAdmin(); 
     window.renderizarListaAdmin();
     window.renderizarSolicitudesAdmin();
     
@@ -337,6 +377,9 @@ window.renderizarLayoutAdmin = function() {
     document.getElementById('inputFechaEscalera').value = `${hoy.getFullYear()}-${mes}-${dia}`;
 };
 
+// ==========================================
+// 6. VISTAS Y NAVEGACIÓN
+// ==========================================
 window.cambiarTabAdmin = function(tabName) {
     document.querySelectorAll('.admin-view-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
@@ -405,28 +448,59 @@ function resetearInactividad() { tiempoInactividad = 0; }
 window.addEventListener('mousemove', resetearInactividad); window.addEventListener('scroll', resetearInactividad); window.addEventListener('touchstart', resetearInactividad); window.addEventListener('keydown', resetearInactividad);
 window.iniciarMonitorInactividad = function() { clearInterval(timerInactividad); tiempoInactividad = 0; timerInactividad = setInterval(() => { if(modoVipActivo) { tiempoInactividad++; if(tiempoInactividad >= TIEMPO_MAXIMO_SEGUNDOS) { window.ejecutarCierreSesion(); window.mostrarAlerta("Sesión Expirada", "Cerrada por inactividad.", "warning"); } } }, 1000); };
 
-// ==========================================
-// 6. VISTAS Y NAVEGACIÓN
-// ==========================================
 window.cambiarVista = function(vista) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('view-active')); const vistaActiva = document.getElementById('vista_' + vista); if(vistaActiva) vistaActiva.classList.add('view-active');
     ['picks', 'historial', 'escalera', 'apadrinamiento'].forEach(b => { const btn = document.getElementById('nav_' + b); if(btn) { if(b === vista) { btn.classList.remove('text-gray-500'); btn.classList.add('text-yellow-500'); } else { btn.classList.add('text-gray-500'); btn.classList.remove('text-yellow-500'); } } });
     if(vista === 'historial' && window.renderizarHistorial) window.renderizarHistorial(); if(vista === 'escalera' && window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI(); if(vista === 'apadrinamiento' && window.chequearApadrinamientoUI) window.chequearApadrinamientoUI();
 };
+
 window.resaltarBotonCarrusel = function(keyLiga) { document.querySelectorAll('.carrusel-btn').forEach(btn => { btn.classList.remove('border-yellow-500', 'shadow-[0_0_15px_rgba(212,175,55,0.6)]', 'scale-105'); btn.classList.add('border-white/10'); }); if(keyLiga) { let btnActivo = document.getElementById('btn_carrusel_' + keyLiga); if(btnActivo) { btnActivo.classList.remove('border-white/10'); btnActivo.classList.add('border-yellow-500', 'shadow-[0_0_15px_rgba(212,175,55,0.6)]', 'scale-105'); btnActivo.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } } };
-window.abrirMenuLateral = function() { const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); if(o) o.classList.remove('hidden'); if(m) m.classList.remove('-translate-x-full'); };
-window.cerrarMenuLateral = function() { const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); if(o) o.classList.add('hidden'); if(m) m.classList.add('-translate-x-full'); };
+
+window.abrirMenuLateral = function() { 
+    const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); 
+    if(o) { o.classList.remove('hidden'); o.style.display = 'block'; } 
+    if(m) m.classList.remove('-translate-x-full'); 
+};
+window.cerrarMenuLateral = function() { 
+    const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); 
+    if(o) { o.classList.add('hidden'); o.style.display = 'none'; } 
+    if(m) m.classList.add('-translate-x-full'); 
+};
+
 window.toggleAcordeon = function(id) { const acc = document.getElementById('acc_' + id); const icon = document.getElementById('icon_' + id); if(!acc || !icon) return; acc.classList.toggle('hidden'); acc.classList.toggle('flex'); icon.style.transform = acc.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; };
 window.toggleLigaList = function(idLiga) { const content = document.getElementById('lista_partidos_' + idLiga); const icon = document.getElementById('icon_lista_' + idLiga); if(!content || !icon) return; if(content.classList.contains('hidden')) { content.classList.remove('hidden'); content.classList.add('flex'); icon.style.transform = 'rotate(180deg)'; } else { content.classList.add('hidden'); content.classList.remove('flex'); icon.style.transform = 'rotate(0deg)'; } };
 
 window.construirMenuLateral = function() {
     const contenedor = document.getElementById('contenidoMenuLateral'); if(!contenedor) return; let arbol = {}; 
     competicionesGlobales.forEach(liga => { let deporte = liga.group || 'Otros'; const traducciones = { 'Soccer': 'Fútbol', 'Basketball': 'Baloncesto', 'Tennis': 'Tenis' }; deporte = traducciones[deporte] || deporte; let info = obtenerInfoLiga(liga.key, liga.title); if(!arbol[deporte]) arbol[deporte] = {}; if(!arbol[deporte][info.pais]) arbol[deporte][info.pais] = []; arbol[deporte][info.pais].push({ key: liga.key, name: info.nombreLiga, bandera: info.bandera }); });
-    let html = ''; Object.keys(arbol).sort().forEach(deporte => { const idDep = deporte.replace(/[^a-zA-Z0-9]/g, ''); html += `<div class="mb-2"><button onclick="window.toggleAcordeon('dep_${idDep}')" class="w-full text-left p-3 flex justify-between bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md"><span>${deporte}</span><i id="icon_dep_${idDep}" class="fas fa-chevron-down transition-transform"></i></button><div id="acc_dep_${idDep}" class="hidden flex-col gap-1 mt-1 pl-2">`; Object.keys(arbol[deporte]).sort().forEach(pais => { const idPais = idDep + '_' + pais.replace(/[^a-zA-Z0-9]/g, ''); const bandera = arbol[deporte][pais][0].bandera; html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1"><button onclick="window.toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between text-white font-bold text-[10px] uppercase"><span><span class="mr-2 drop-shadow-md">${bandera}</span> ${pais}</span><i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i></button><div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`; arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { html += `<button onclick="window.ejecutarFiltroFinal('${liga.key}', '${bandera} ${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between group"><span class="truncate pr-2">${liga.name}</span><i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i></button>`; }); html += `</div></div>`; }); html += `</div></div>`; }); contenedor.innerHTML = html;
+    let html = ''; 
+    Object.keys(arbol).sort().forEach(deporte => { 
+        const idDep = deporte.replace(/[^a-zA-Z0-9]/g, ''); 
+        let iconDep = 'fa-futbol';
+        if(deporte === 'Baloncesto') iconDep = 'fa-basketball-ball';
+        else if(deporte === 'Tenis') iconDep = 'fa-table-tennis';
+        else if(deporte === 'Fútbol Americano' || deporte === 'American Football') iconDep = 'fa-football-ball';
+        else if(deporte === 'Béisbol' || deporte === 'Baseball') iconDep = 'fa-baseball-ball';
+        else if(deporte === 'Hockey') iconDep = 'fa-hockey-puck';
+        else if(deporte === 'MMA' || deporte === 'UFC') iconDep = 'fa-hand-rock';
+        else if(deporte === 'Boxeo') iconDep = 'fa-mitten';
+        
+        html += `<div class="mb-2"><button onclick="window.toggleAcordeon('dep_${idDep}')" class="w-full text-left p-3 flex justify-between bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md"><span><i class="fas ${iconDep} mr-2"></i>${deporte}</span><i id="icon_dep_${idDep}" class="fas fa-chevron-down transition-transform"></i></button><div id="acc_dep_${idDep}" class="hidden flex-col gap-1 mt-1 pl-2">`; 
+        Object.keys(arbol[deporte]).sort().forEach(pais => { 
+            const idPais = idDep + '_' + pais.replace(/[^a-zA-Z0-9]/g, ''); const bandera = arbol[deporte][pais][0].bandera; 
+            html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1"><button onclick="window.toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between text-white font-bold text-[10px] uppercase"><span><span class="mr-2 drop-shadow-md">${bandera}</span> ${pais}</span><i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i></button><div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`; 
+            arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { 
+                html += `<button onclick="window.ejecutarFiltroFinal('${liga.key}', '${bandera} ${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between group"><span class="truncate pr-2">${liga.name}</span><i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i></button>`; 
+            }); 
+            html += `</div></div>`; 
+        }); 
+        html += `</div></div>`; 
+    }); 
+    contenedor.innerHTML = html;
 };
 
 // ==========================================
-// 7. FILTROS Y RENDER DE PARTIDOS (ORDEN: PAÍS -> LIGA)
+// 7. FILTROS Y RENDER DE PARTIDOS (PAÍS -> LIGA)
 // ==========================================
 window.toggleFiltroIA = function() {
     filtroIAActivo = !filtroIAActivo;
@@ -1238,7 +1312,6 @@ window.resolverTicketFondo = async function(ticketId, codigoUsuario, estado, mon
             
             let bankActual = uSnap.data().apadrinamiento.bankroll_actual;
 
-            // Matemática Financiera
             if (estado === 'won') {
                 let gananciaNeta = (montoApostar * cuota) - montoApostar;
                 bankActual += gananciaNeta;
@@ -1246,12 +1319,11 @@ window.resolverTicketFondo = async function(ticketId, codigoUsuario, estado, mon
                 bankActual -= montoApostar;
             }
 
-            // Actualizar DB
             await updateDoc(ticketRef, { estado: estado });
             await updateDoc(userRef, { "apadrinamiento.bankroll_actual": bankActual });
 
             window.mostrarAlerta("Operación Liquidada", "Saldo del cliente actualizado exitosamente.", "success");
-            window.verDetalleFondoAdmin(codigoUsuario); // Recargar la vista
+            window.verDetalleFondoAdmin(codigoUsuario); 
 
         } catch (e) {
             window.mostrarAlerta("Error", "No se pudo actualizar el balance.", "error");
@@ -1262,5 +1334,5 @@ window.resolverTicketFondo = async function(ticketId, codigoUsuario, estado, mon
 window.volverAfondoAdmin = function() { 
     document.getElementById('panelDetalleFondoAdmin').classList.add('hidden'); 
     document.getElementById('panelListaFondoAdmin').classList.remove('hidden'); 
-    window.cargarFondosAdmin(); // Refrescar balances
+    window.cargarFondosAdmin(); 
 };
