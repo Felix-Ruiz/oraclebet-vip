@@ -1,5 +1,6 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const axios = require("axios");
 
@@ -156,8 +157,6 @@ async function ejecutarEscaneoGlobal() {
 exports.robotSincronizador = onSchedule({ schedule: "every 4 hours", timeoutSeconds: 1800, memory: "512MiB" }, async (event) => { await ejecutarEscaneoGlobal(); });
 exports.disparadorManual = onRequest({ timeoutSeconds: 1800, memory: "512MiB" }, async (req, res) => { const resultado = await ejecutarEscaneoGlobal(); res.json(resultado); });
 
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-
 // 📢 NUEVO MOTOR DE NOTIFICACIONES PUSH (MEGÁFONO ADMIN)
 exports.enviarPushMasivo = onDocumentCreated({
     document: "notificaciones_push/{docId}",
@@ -187,13 +186,16 @@ exports.enviarPushMasivo = onDocumentCreated({
         return null;
     }
 
+    // 🛡️ FIX DUPLICADOS: Filtramos el array para que no haya tokens repetidos
+    const tokensUnicos = [...new Set(tokensPush)];
+
     // 2. Construir el paquete del mensaje
     const payload = {
         notification: {
             title: titulo,
             body: cuerpo
         },
-        tokens: tokensPush // Firebase permite hasta 500 por lote, perfecto para tu fondo
+        tokens: tokensUnicos // Enviamos a la lista limpia y sin duplicados
     };
 
     // 3. Disparar el mensaje a todos los celulares

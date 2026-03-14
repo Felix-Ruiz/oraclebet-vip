@@ -20,113 +20,118 @@ const db = getFirestore(app);
 const auth = getAuth(app); 
 const messaging = getMessaging(app);
 
-// 🛡️ REGISTRO EXPLÍCITO DEL SERVICE WORKER (OBLIGATORIO PARA iPHONE)
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./firebase-messaging-sw.js') // <-- AQUÍ AGREGAMOS EL PUNTO
-    .then((registration) => { console.log('✅ Service Worker registrado con éxito.', registration); })
-    .catch((err) => { console.error('❌ Error al registrar el Service Worker:', err); });
+    navigator.serviceWorker.register('./firebase-messaging-sw.js')
+    .then((registration) => { console.log('✅ SW registrado.'); })
+    .catch((err) => { console.error('❌ Error SW:', err); });
 }
 
 // ==========================================
-// 2. FUNCIONES VITALES Y NOTIFICACIONES
+// 2. FUNCIONES VITALES Y NOTIFICACIONES IN-APP
 // ==========================================
 const VAPID_KEY = "BO7AkZgMGzNtUBR8ZShudo6sW0zTbS7lyOZszkVrbJ3WLL80yEBRIfgreLnFpPHe4cBCLr_J8XmyckjpwMu6xTo";
 
 window.registrarTokenPush = async function(codigoUsuario) {
     const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
-    
-    if (!("Notification" in window)) {
-        window.mostrarAlerta("iOS Incompatible", "Tu versión de iPhone no soporta notificaciones web. Necesitas actualizar a iOS 16.4+ y agregar la app a la pantalla de inicio.", "error");
-        if(btn) { btn.innerHTML = '<i class="fas fa-times text-lg mr-2"></i> No compatible'; }
-        return;
-    }
+    if (!("Notification" in window)) { window.mostrarAlerta("iOS Incompatible", "Actualiza a iOS 16.4+ y añade la app a la pantalla de inicio.", "error"); return; }
 
     try {
         if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Solicitando permiso...'; }
-
         const permission = await Notification.requestPermission();
-        
         if (permission === 'granted') {
-            if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Despertando SW...'; }
+            if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Vinculando celular...'; }
+            const swRegistration = await navigator.serviceWorker.ready;
+            const tokenPromise = getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
             
-            // 🍎 FIX PARA iPHONE: Usamos la ruta relativa con el punto
-            const swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-            await navigator.serviceWorker.ready;
-            
-            if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Encriptando llave...'; }
-            
-            // ⏱️ Seguro Anti-Cuelgue Infinito (Timeout de 15 segundos)
-            const tokenPromise = getToken(messaging, { 
-                vapidKey: VAPID_KEY,
-                serviceWorkerRegistration: swRegistration 
-            });
-
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Apple bloqueó la respuesta de Firebase (Timeout).")), 15000)
-            );
-            
-            // Ponemos a "competir" la generación del token contra el cronómetro
             const token = await Promise.race([tokenPromise, timeoutPromise]);
             
             if (token) {
-                let codigoGuardar = codigoUsuario;
-                if (!codigoGuardar || codigoGuardar === 'ADMIN_MASTER') {
-                    codigoGuardar = adminAutenticado ? "ADMIN_MASTER" : "DESCONOCIDO";
-                }
-                
+                let codigoGuardar = codigoUsuario || (adminAutenticado ? "ADMIN_MASTER" : "DESCONOCIDO");
                 if (codigoGuardar !== "DESCONOCIDO") {
                     await setDoc(doc(db, "codigos_nube", codigoGuardar), { fcmToken: token }, { merge: true });
-                    window.mostrarAlerta("¡Fondo Vinculado!", "Tu celular ahora recibirá las señales Diamante directamente.", "success");
-                    if(btn) { 
-                        btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Vinculadas'; 
-                        btn.disabled = true; 
-                        btn.classList.replace('bg-blue-600', 'bg-green-600'); 
-                    }
+                    window.mostrarAlerta("¡Fondo Vinculado!", "Recibirás señales Diamante directamente.", "success");
+                    if(btn) { btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Activadas'; btn.disabled = true; btn.classList.replace('bg-blue-600', 'bg-green-600'); }
                 }
-            } else {
-                throw new Error("El Token llegó vacío.");
-            }
+            } else { throw new Error("Token vacío"); }
         } else {
-            window.mostrarAlerta("Permiso Denegado", "Has bloqueado las alertas. Para activarlas, ve a Configuración > Safari en tu iPhone.", "warning");
+            window.mostrarAlerta("Permiso Denegado", "Has bloqueado las alertas. Actívalas en la Configuración de tu celular.", "warning");
             if(btn) { btn.innerHTML = '<i class="fas fa-bell-slash text-lg mr-2"></i> Bloqueado'; }
         }
-    } catch(e) { 
-        window.mostrarAlerta("Fallo de Conexión", "El sistema tardó demasiado o Safari lo bloqueó: " + e.message, "error");
-        console.error('Push error:', e); 
-        if(btn) { btn.innerHTML = '<i class="fas fa-redo text-lg mr-2"></i> Reintentar Conexión'; }
+    } catch(e) { window.mostrarAlerta("Fallo de Conexión", "Error: " + e.message, "error"); if(btn) { btn.innerHTML = '<i class="fas fa-redo text-lg mr-2"></i> Reintentar Conexión'; } }
+};
+
+onMessage(messaging, (payload) => { window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success"); });
+
+// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP (Para que todos puedan leer el historial)
+window.inyectarCampanitaHeader = function() {
+    const header = document.querySelector('header');
+    if(header && !document.getElementById('btnCampanitaInApp')) {
+        let btnHTML = `<button id="btnCampanitaInApp" onclick="window.abrirBandejaNotificaciones()" class="ml-auto mr-3 bg-gray-800 text-yellow-500 w-10 h-10 rounded-full flex items-center justify-center relative shadow-md border border-white/5 active:scale-95 transition-transform"><i class="fas fa-bell text-lg"></i><span class="absolute top-0 right-0 bg-red-600 border border-gray-900 w-3 h-3 rounded-full animate-pulse"></span></button>`;
+        const btnLogin = document.getElementById('btnTopLogin');
+        if(btnLogin) { btnLogin.insertAdjacentHTML('beforebegin', btnHTML); } else { header.insertAdjacentHTML('beforeend', btnHTML); }
     }
 };
 
-// Escuchar si llega una notificación MIENTRAS la app está abierta
-onMessage(messaging, (payload) => {
-    window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success");
-});
-
-const desplegarCalendarioForzado = (e) => {
-    if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'date') {
-        try { e.target.showPicker(); } catch (ex) { }
+window.abrirBandejaNotificaciones = async function() {
+    let modal = document.getElementById('modalBandejaNotificaciones');
+    if (!modal) {
+        document.body.insertAdjacentHTML('beforeend', `
+        <div id="modalBandejaNotificaciones" class="fixed inset-0 bg-black/95 hidden items-end justify-center z-[400] transition-opacity duration-300 backdrop-blur-md">
+            <div class="bg-gray-900 border-t border-blue-500/50 w-full h-[85vh] rounded-t-3xl shadow-[0_-10px_40px_rgba(59,130,246,0.15)] flex flex-col relative transform translate-y-full transition-transform duration-300" id="bandejaContenido">
+                <div class="p-5 flex justify-between items-center border-b border-white/10 bg-black/50 rounded-t-3xl">
+                    <h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Centro Quant</h3>
+                    <button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-gray-900 to-black">
+                    <div class="text-center p-10"><i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i></div>
+                </div>
+            </div>
+        </div>`);
+        modal = document.getElementById('modalBandejaNotificaciones');
     }
-};
-document.addEventListener('click', desplegarCalendarioForzado);
-document.addEventListener('focusin', desplegarCalendarioForzado); 
+    
+    modal.classList.remove('hidden'); modal.style.display = 'flex';
+    setTimeout(() => { document.getElementById('bandejaContenido').classList.remove('translate-y-full'); }, 10);
 
-window.abrirModalLogin = function(e) { 
-    if(e) { e.preventDefault(); e.stopPropagation(); }
-    if(modoVipActivo) return; 
-    const m = document.getElementById('modalLogin'); 
-    if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; } 
+    // Consultar Base de Datos de Mensajes
+    const lista = document.getElementById('listaBandejaNotificaciones');
+    try {
+        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(10));
+        const snap = await getDocs(q);
+        lista.innerHTML = '';
+        if(snap.empty) { lista.innerHTML = `<div class="text-center mt-10 text-gray-500 text-xs font-bold uppercase tracking-widest"><i class="fas fa-inbox text-4xl mb-3 opacity-50 block"></i> No hay mensajes del Gestor.</div>`; return; }
+        
+        snap.forEach(doc => {
+            const data = doc.data(); const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+            let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400';
+            lista.innerHTML += `
+            <div class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden">
+                <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>
+                </div>
+                <p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p>
+                <div class="flex justify-between items-center border-t border-white/5 pt-2">
+                    <span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span>
+                    <span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span>
+                </div>
+            </div>`;
+        });
+    } catch(e) { lista.innerHTML = `<div class="text-center text-red-500 text-xs">Error de red.</div>`; }
 };
 
-window.cerrarModalLogin = function() { 
-    const m = document.getElementById('modalLogin'); 
-    if(m) { m.classList.add('hidden'); m.style.display = 'none'; } 
-    correoAdminTemp = ""; 
-    const inputElement = document.getElementById('vipCode');
-    const btn = document.getElementById('btnValidarCodigo');
-    if(inputElement) { inputElement.type = 'text'; inputElement.placeholder = 'CÓDIGO DE INVERSOR'; inputElement.value = ''; }
-    if(btn) { btn.innerHTML = 'VERIFICAR ACCESO'; }
+window.cerrarBandejaNotificaciones = function() {
+    const modal = document.getElementById('modalBandejaNotificaciones'); const contenido = document.getElementById('bandejaContenido');
+    if(contenido) { contenido.classList.add('translate-y-full'); }
+    setTimeout(() => { if(modal) { modal.classList.add('hidden'); modal.style.display = 'none'; } }, 300);
 };
 
+const desplegarCalendarioForzado = (e) => { if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'date') { try { e.target.showPicker(); } catch (ex) { } } };
+document.addEventListener('click', desplegarCalendarioForzado); document.addEventListener('focusin', desplegarCalendarioForzado); 
+
+window.abrirModalLogin = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } if(modoVipActivo) return; const m = document.getElementById('modalLogin'); if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; } };
+window.cerrarModalLogin = function() { const m = document.getElementById('modalLogin'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } correoAdminTemp = ""; const inputElement = document.getElementById('vipCode'); const btn = document.getElementById('btnValidarCodigo'); if(inputElement) { inputElement.type = 'text'; inputElement.placeholder = 'CÓDIGO DE INVERSOR'; inputElement.value = ''; } if(btn) { btn.innerHTML = 'VERIFICAR ACCESO'; } };
 window.cerrarConfirmGlobal = function() { const m = document.getElementById('modalConfirmGlobal'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } };
 window.cerrarModalAyuda = function() { const m = document.getElementById('modalAyudaApuesta'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } };
 window.cerrarAlertaGlobal = function() { const m = document.getElementById('modalAlertaGlobal'); const c = document.getElementById('modalAlertaContenido'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } if(c) c.classList.replace('scale-100', 'scale-95'); };
@@ -165,25 +170,9 @@ const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': {
 
 function obtenerInfoLiga(key, apiTitle) {
     let pais = "Mundial"; let nombreLiga = apiTitle ? String(apiTitle) : "Competición Genérica"; let bandera = "🌍"; let k = key ? String(key).toLowerCase() : "";
-    
-    if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra";
-    else if(k.includes('spain')) pais = "España"; else if(k.includes('italy')) pais = "Italia"; else if(k.includes('germany')) pais = "Alemania";
-    else if(k.includes('france')) pais = "Francia"; else if(k.includes('colombia')) pais = "Colombia"; else if(k.includes('mexico')) pais = "México";
-    else if(k.includes('argentina')) pais = "Argentina"; else if(k.includes('brazil')) pais = "Brasil"; else if(k.includes('portugal')) pais = "Portugal";
-    else if(k.includes('netherlands')) pais = "Países Bajos"; else if(k.includes('turkey')) pais = "Turquía"; else if(k.includes('belgium')) pais = "Bélgica";
-    else if(k.includes('australia')) pais = "Australia"; else if(k.includes('chile')) pais = "Chile"; else if(k.includes('peru')) pais = "Perú";
-    else if(k.includes('ecuador')) pais = "Ecuador"; else if(k.includes('uruguay')) pais = "Uruguay"; else if(k.includes('bolivia')) pais = "Bolivia";
-    else if(k.includes('paraguay')) pais = "Paraguay"; else if(k.includes('venezuela')) pais = "Venezuela"; else if(k.includes('japan')) pais = "Japón";
-    else if(k.includes('korea')) pais = "Corea del Sur"; else if(k.includes('china')) pais = "China"; else if(k.includes('saudi_arabia') || k.includes('saudi')) pais = "Arabia Saudita";
-    else if(k.includes('scotland')) pais = "Escocia"; else if(k.includes('sweden')) pais = "Suecia"; else if(k.includes('switzerland')) pais = "Suiza";
-    else if(k.includes('denmark')) pais = "Dinamarca"; else if(k.includes('norway')) pais = "Noruega"; else if(k.includes('poland')) pais = "Polonia";
-    else if(k.includes('austria')) pais = "Austria"; else if(k.includes('russia')) pais = "Rusia"; else if(k.includes('greece')) pais = "Grecia";
-    else if(k.includes('conmebol')) pais = "Sudamérica"; else if(k.includes('uefa') || k.includes('euro')) pais = "Europa";
-    else if(k.includes('usa') || k.includes('mls')) pais = "USA"; else if(k.includes('fifa') || k.includes('world_cup')) pais = "Mundial";
-
+    if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra"; else if(k.includes('spain')) pais = "España"; else if(k.includes('italy')) pais = "Italia"; else if(k.includes('germany')) pais = "Alemania"; else if(k.includes('france')) pais = "Francia"; else if(k.includes('colombia')) pais = "Colombia"; else if(k.includes('mexico')) pais = "México"; else if(k.includes('argentina')) pais = "Argentina"; else if(k.includes('brazil')) pais = "Brasil"; else if(k.includes('portugal')) pais = "Portugal"; else if(k.includes('netherlands')) pais = "Países Bajos"; else if(k.includes('turkey')) pais = "Turquía"; else if(k.includes('belgium')) pais = "Bélgica"; else if(k.includes('australia')) pais = "Australia"; else if(k.includes('chile')) pais = "Chile"; else if(k.includes('peru')) pais = "Perú"; else if(k.includes('ecuador')) pais = "Ecuador"; else if(k.includes('uruguay')) pais = "Uruguay"; else if(k.includes('bolivia')) pais = "Bolivia"; else if(k.includes('paraguay')) pais = "Paraguay"; else if(k.includes('venezuela')) pais = "Venezuela"; else if(k.includes('japan')) pais = "Japón"; else if(k.includes('korea')) pais = "Corea del Sur"; else if(k.includes('china')) pais = "China"; else if(k.includes('saudi_arabia') || k.includes('saudi')) pais = "Arabia Saudita"; else if(k.includes('scotland')) pais = "Escocia"; else if(k.includes('sweden')) pais = "Suecia"; else if(k.includes('switzerland')) pais = "Suiza"; else if(k.includes('denmark')) pais = "Dinamarca"; else if(k.includes('norway')) pais = "Noruega"; else if(k.includes('poland')) pais = "Polonia"; else if(k.includes('austria')) pais = "Austria"; else if(k.includes('russia')) pais = "Rusia"; else if(k.includes('greece')) pais = "Grecia"; else if(k.includes('conmebol')) pais = "Sudamérica"; else if(k.includes('uefa') || k.includes('euro')) pais = "Europa"; else if(k.includes('usa') || k.includes('mls')) pais = "USA"; else if(k.includes('fifa') || k.includes('world_cup')) pais = "Mundial";
     const banderas = { 'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'España':'🇪🇸', 'Italia':'🇮🇹', 'Alemania':'🇩🇪', 'Francia':'🇫🇷', 'Colombia':'🇨🇴', 'México':'🇲🇽', 'Argentina':'🇦🇷', 'Brasil':'🇧🇷', 'Sudamérica':'🌎', 'Europa':'🇪🇺', 'USA':'🇺🇸', 'Portugal':'🇵🇹', 'Países Bajos':'🇳🇱', 'Turquía':'🇹🇷', 'Bélgica':'🇧🇪', 'Australia':'🇦🇺', 'Chile':'🇨🇱', 'Perú':'🇵🇪', 'Ecuador':'🇪🇨', 'Uruguay':'🇺🇾', 'Bolivia':'🇧🇴', 'Paraguay':'🇵🇾', 'Venezuela':'🇻🇪', 'Japón':'🇯🇵', 'Corea del Sur':'🇰🇷', 'China':'🇨🇳', 'Arabia Saudita':'🇸🇦', 'Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Suecia':'🇸🇪', 'Suiza':'🇨🇭', 'Dinamarca':'🇩🇰', 'Noruega':'🇳🇴', 'Polonia':'🇵🇱', 'Austria':'🇦🇹', 'Rusia':'🇷🇺', 'Grecia':'🇬🇷', 'Mundial':'🌍' };
     bandera = banderas[pais] || '🌍';
-
     if(nombreLiga === 'EPL') nombreLiga = "Premier League"; else if(nombreLiga.includes(' - ')) nombreLiga = nombreLiga.split(' - ')[0].trim();
     if(k === 'soccer_conmebol_copa_libertadores') nombreLiga = "Copa Libertadores"; if(k === 'soccer_conmebol_copa_sudamericana') nombreLiga = "Copa Sudamericana"; if(k === 'soccer_uefa_europa_league') nombreLiga = "Europa League"; if(k === 'soccer_uefa_europa_conference_league') nombreLiga = "Conference League"; if(k === 'soccer_uefa_champs_league') nombreLiga = "Champions League";
     return { pais, nombreLiga, bandera };
@@ -201,7 +190,6 @@ async function precargarBaseDeDatos() {
         const q = query(collection(db, "eventos_sincronizados"), where("commence_time", ">=", tiempoActualISO)); 
         const snap = await getDocs(q); 
         CACHE_PARTIDOS_FUTUROS = []; let ligasMap = {};
-        
         snap.forEach(doc => { 
             let p = doc.data(); p.id = doc.id; 
             if(p.sport_key && p.sport_key.includes('soccer')) { 
@@ -209,7 +197,7 @@ async function precargarBaseDeDatos() {
                 if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; } 
             } 
         });
-        competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral();
+        competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); window.inyectarCampanitaHeader();
     } catch(e) { 
         console.error("Error DB:", e); 
         const cFree = document.getElementById('containerPartidos'); 
@@ -217,16 +205,13 @@ async function precargarBaseDeDatos() {
     }
 }
 
-// 🛡️ PERSISTENCIA ADMIN
 let adminAutenticado = false;
 onAuthStateChanged(auth, (user) => {
     if (user) { 
         adminAutenticado = true;
         if(document.readyState === 'complete' || document.readyState === 'interactive') { window.renderizarLayoutAdmin(); } 
         else { document.addEventListener('DOMContentLoaded', () => { window.renderizarLayoutAdmin(); }); }
-    } else {
-        adminAutenticado = false;
-    }
+    } else { adminAutenticado = false; }
 });
 
 window.iniciarApp = async function() { 
@@ -256,25 +241,17 @@ window.validarCodigo = async function() {
         btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> AUTENTICANDO...`; btn.disabled = true;
         try {
             await signInWithEmailAndPassword(auth, correoAdminTemp, inputUsuario);
-            window.cerrarModalLogin(); 
-            window.renderizarLayoutAdmin();
-        } catch (error) {
-            window.mostrarAlerta("Acceso Denegado", "Credenciales incorrectas.", "error");
-        } finally {
-            correoAdminTemp = ""; 
-            inputElement.type = 'text'; inputElement.placeholder = 'CÓDIGO DE INVERSOR'; inputElement.value = '';
+            window.cerrarModalLogin(); window.renderizarLayoutAdmin();
+        } catch (error) { window.mostrarAlerta("Acceso Denegado", "Credenciales incorrectas.", "error"); } finally {
+            correoAdminTemp = ""; inputElement.type = 'text'; inputElement.placeholder = 'CÓDIGO DE INVERSOR'; inputElement.value = '';
             if(btn) { btn.innerHTML = "VERIFICAR ACCESO"; btn.disabled = false; }
         }
         return;
     }
 
     if (inputUsuario.includes('@')) {
-        correoAdminTemp = inputUsuario;
-        inputElement.value = '';
-        inputElement.type = 'password';
-        inputElement.placeholder = 'Ingrese Contraseña de Admin';
-        if(btn) { btn.innerHTML = '<i class="fas fa-lock"></i> INICIAR SESIÓN ADMIN'; }
-        return;
+        correoAdminTemp = inputUsuario; inputElement.value = ''; inputElement.type = 'password'; inputElement.placeholder = 'Ingrese Contraseña de Admin';
+        if(btn) { btn.innerHTML = '<i class="fas fa-lock"></i> INICIAR SESIÓN ADMIN'; } return;
     }
 
     if(btn) { btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> VERIFICANDO...`; btn.disabled = true; }
@@ -292,26 +269,14 @@ window.validarCodigo = async function() {
 };
 
 window.enviarNotificacionGlobal = async function() {
-    const titulo = document.getElementById('pushTitulo').value;
-    const cuerpo = document.getElementById('pushCuerpo').value;
+    const titulo = document.getElementById('pushTitulo').value; const cuerpo = document.getElementById('pushCuerpo').value;
     if(!titulo || !cuerpo) { window.mostrarAlerta("Campos Vacíos", "Ingresa un título y un mensaje.", "warning"); return; }
-
-    const btn = document.getElementById('btnEnviarPush');
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ENVIANDO...`; btn.disabled = true;
-
+    const btn = document.getElementById('btnEnviarPush'); btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ENVIANDO...`; btn.disabled = true;
     try {
-        await setDoc(doc(collection(db, "notificaciones_push")), {
-            titulo: titulo,
-            cuerpo: cuerpo,
-            timestamp: Date.now(),
-            enviadoPor: "Félix Ruiz (Admin)"
-        });
-        window.mostrarAlerta("Éxito", "La notificación Push ha sido enviada a todos los dispositivos.", "success");
-        document.getElementById('pushTitulo').value = '';
-        document.getElementById('pushCuerpo').value = '';
-    } catch(e) {
-        window.mostrarAlerta("Error", "No se pudo comunicar con el servidor.", "error");
-    } finally {
+        await setDoc(doc(collection(db, "notificaciones_push")), { titulo: titulo, cuerpo: cuerpo, timestamp: Date.now(), enviadoPor: "Félix Ruiz (Gestor)" });
+        window.mostrarAlerta("Éxito", "La notificación ha sido enviada y guardada en la bandeja.", "success");
+        document.getElementById('pushTitulo').value = ''; document.getElementById('pushCuerpo').value = '';
+    } catch(e) { window.mostrarAlerta("Error", "No se pudo comunicar con el servidor.", "error"); } finally {
         btn.innerHTML = `<i class="fas fa-paper-plane mr-1"></i> Notificar a Inversores`; btn.disabled = false;
     }
 }
@@ -330,22 +295,14 @@ window.renderizarLayoutAdmin = function() {
         nuevoBtn.onclick = async () => { await signOut(auth); location.reload(); }; 
     }
 
-    const aSec = document.getElementById('adminSection');
-    if(!aSec) return;
-    aSec.style.display = 'block';
+    const aSec = document.getElementById('adminSection'); if(!aSec) return; aSec.style.display = 'block';
     
     aSec.innerHTML = `
         <div class="p-4 bg-gray-900 min-h-screen pb-20">
             <div class="flex flex-col items-center justify-center gap-2 mb-6 text-center border-b border-white/5 pb-4 relative">
-                <div class="bg-gray-800 p-4 rounded-full text-yellow-500 shadow-inner mt-4">
-                    <i class="fas fa-chart-line text-2xl"></i>
-                </div>
-                <h2 class="text-yellow-500 font-black text-2xl uppercase tracking-widest flex items-center gap-2">
-                    FR Quant Capital
-                </h2>
-                <h3 class="text-gray-400 text-[10px] font-bold uppercase tracking-[0.3em]">
-                    | Analytics |
-                </h3>
+                <div class="bg-gray-800 p-4 rounded-full text-yellow-500 shadow-inner mt-4"><i class="fas fa-chart-line text-2xl"></i></div>
+                <h2 class="text-yellow-500 font-black text-2xl uppercase tracking-widest flex items-center gap-2">FR Quant Capital</h2>
+                <h3 class="text-gray-400 text-[10px] font-bold uppercase tracking-[0.3em]">| Analytics |</h3>
                 <span class="bg-gray-700 text-white text-[8px] px-2 py-0.5 rounded-full mt-2 font-black tracking-widest">CRM ADMIN</span>
             </div>
             
@@ -358,11 +315,8 @@ window.renderizarLayoutAdmin = function() {
             </div>
 
             <div id="vistaAdm_dash" class="admin-view-content block">
+                <button id="btnActivarPushAdmin" onclick="window.registrarTokenPush('ADMIN_MASTER')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-5 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas Master</button>
                 
-                <button id="btnActivarPushAdmin" onclick="window.registrarTokenPush('ADMIN_MASTER')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-5 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform">
-                    <i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas Master
-                </button>
-
                 <div class="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border border-blue-500/50 p-4 rounded-xl mb-5 shadow-lg relative overflow-hidden">
                     <div class="absolute top-0 right-0 bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">LIVE</div>
                     <h3 class="text-[11px] font-black text-blue-400 uppercase tracking-widest mb-3 flex items-center"><i class="fas fa-bullhorn mr-2 text-lg"></i> Megáfono Inversores</h3>
@@ -380,10 +334,7 @@ window.renderizarLayoutAdmin = function() {
 
             <div id="vistaAdm_users" class="admin-view-content hidden">
                 <div id="panelListaUsuariosAdmin" class="block">
-                    <div class="relative mb-4">
-                        <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
-                        <input type="text" id="buscadorAdminUsuarios" onkeyup="window.filtrarUsuariosAdmin()" placeholder="Buscar código VIP..." class="w-full bg-black/60 border border-white/10 py-3 pl-10 pr-4 rounded-xl text-white text-xs outline-none focus:border-yellow-500 transition-colors shadow-inner">
-                    </div>
+                    <div class="relative mb-4"><i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i><input type="text" id="buscadorAdminUsuarios" onkeyup="window.filtrarUsuariosAdmin()" placeholder="Buscar código VIP..." class="w-full bg-black/60 border border-white/10 py-3 pl-10 pr-4 rounded-xl text-white text-xs outline-none focus:border-yellow-500 transition-colors shadow-inner"></div>
                     <div id="listaUsuariosAdminContainer" class="space-y-2"></div>
                 </div>
                 <div id="panelDetalleUsuarioAdmin" class="hidden">
@@ -419,26 +370,17 @@ window.renderizarLayoutAdmin = function() {
                     <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">MOTOR QUANT</div>
                     <h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-4"><i class="fas fa-rocket text-yellow-500 mr-1"></i> Creador de Escalera</h3>
                     <div class="space-y-4">
-                        <div>
-                            <label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-crosshairs mr-1"></i> Cuota Objetivo (Aprox)</label>
-                            <input type="number" id="inputCuotaObjetivo" step="0.1" value="2.0" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 transition-colors shadow-inner">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-shield-alt mr-1"></i> Seguro: Probabilidad Mínima (%)</label>
-                            <input type="number" id="inputProbMinima" value="85" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 transition-colors shadow-inner">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="far fa-calendar-alt mr-1"></i> Fecha del Reto</label>
-                            <input type="date" id="inputFechaEscalera" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-xs uppercase outline-none focus:border-yellow-500 transition-colors shadow-inner">
-                        </div>
+                        <div><label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-crosshairs mr-1"></i> Cuota Objetivo</label><input type="number" id="inputCuotaObjetivo" step="0.1" value="2.0" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner"></div>
+                        <div><label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-shield-alt mr-1"></i> Seguridad Mínima (%)</label><input type="number" id="inputProbMinima" value="85" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner"></div>
+                        <div><label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="far fa-calendar-alt mr-1"></i> Fecha del Reto</label><input type="date" id="inputFechaEscalera" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-xs uppercase outline-none focus:border-yellow-500 shadow-inner"></div>
                         <button onclick="window.generarRetoAdmin()" class="w-full py-4 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] transition active:scale-95 mt-2"><i class="fas fa-robot mr-1"></i> Analizar Mercado Global</button>
                     </div>
                 </div>
 
                 <div id="previewRetoAdmin" class="hidden mt-4"></div>
-                <textarea id="inputAdminReto" rows="2" class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-gray-300 text-xs mt-4 outline-none focus:border-yellow-500 hidden shadow-inner" placeholder="Escribe instrucciones o gestión de banca para los usuarios..."></textarea>
-                <button id="btnPublicarReto" onclick="window.publicarRetoEscalera()" class="w-full mt-4 py-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(34,197,94,0.3)] transition active:scale-95 hidden"><i class="fas fa-broadcast-tower mr-1"></i> Publicar Escalera Oficial</button>
-                <button onclick="window.eliminarRetoEscaleraGlobal()" class="w-full mt-2 py-3 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl border border-red-500/30 font-black text-[10px] uppercase shadow-lg transition active:scale-95"><i class="fas fa-trash-alt mr-1"></i> Cancelar / Borrar Reto Activo</button>
+                <textarea id="inputAdminReto" rows="2" class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-gray-300 text-xs mt-4 outline-none focus:border-yellow-500 hidden shadow-inner" placeholder="Gestión de banca..."></textarea>
+                <button id="btnPublicarReto" onclick="window.publicarRetoEscalera()" class="w-full mt-4 py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(34,197,94,0.3)] transition active:scale-95 hidden"><i class="fas fa-broadcast-tower mr-1"></i> Publicar Escalera Oficial</button>
+                <button onclick="window.eliminarRetoEscaleraGlobal()" class="w-full mt-2 py-3 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl border border-red-500/30 font-black text-[10px] uppercase shadow-lg transition active:scale-95"><i class="fas fa-trash-alt mr-1"></i> Borrar Reto Activo</button>
             </div>
 
             <div id="vistaAdm_access" class="admin-view-content hidden space-y-4">
@@ -450,39 +392,23 @@ window.renderizarLayoutAdmin = function() {
                         <button onclick="window.crearCodigo(true)" id="btnCrearPrem" class="flex-1 py-3 bg-purple-700 text-white rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-transform"><i class="fas fa-gem mr-1"></i> Crear PREM</button>
                     </div>
                 </div>
-
                 <div class="bg-black/60 p-4 rounded-2xl border border-white/5 shadow-md">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-[10px] text-gray-400 font-bold uppercase"><i class="fas fa-users text-blue-500 mr-1"></i> Base de Datos Activa</h3>
-                        <button onclick="window.renderizarListaAdmin()" class="text-gray-500 hover:text-white p-1"><i class="fas fa-sync-alt"></i></button>
-                    </div>
+                    <div class="flex justify-between items-center mb-3"><h3 class="text-[10px] text-gray-400 font-bold uppercase"><i class="fas fa-users text-blue-500 mr-1"></i> Base de Datos Activa</h3><button onclick="window.renderizarListaAdmin()" class="text-gray-500 hover:text-white p-1"><i class="fas fa-sync-alt"></i></button></div>
                     <div id="codesList" class="space-y-2"></div>
                 </div>
             </div>
         </div>
     `;
 
-    window.cargarMonitorTickets();
-    window.cargarUsuariosAdmin();
-    window.cargarFondosAdmin(); 
-    window.renderizarListaAdmin();
-    window.renderizarSolicitudesAdmin();
-    
-    const hoy = new Date(); let mes = String(hoy.getMonth() + 1).padStart(2, '0'); let dia = String(hoy.getDate()).padStart(2, '0'); 
-    document.getElementById('inputFechaEscalera').value = `${hoy.getFullYear()}-${mes}-${dia}`;
+    window.cargarMonitorTickets(); window.cargarUsuariosAdmin(); window.cargarFondosAdmin(); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin();
+    const hoy = new Date(); let mes = String(hoy.getMonth() + 1).padStart(2, '0'); let dia = String(hoy.getDate()).padStart(2, '0'); document.getElementById('inputFechaEscalera').value = `${hoy.getFullYear()}-${mes}-${dia}`;
 };
 
 window.cambiarTabAdmin = function(tabName) {
     document.querySelectorAll('.admin-view-content').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-        btn.classList.remove('bg-yellow-500', 'text-black', 'shadow-md');
-        btn.classList.add('text-gray-400');
-    });
-    
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => { btn.classList.remove('bg-yellow-500', 'text-black', 'shadow-md'); btn.classList.add('text-gray-400'); });
     document.getElementById('vistaAdm_' + tabName).classList.remove('hidden');
-    let activeBtn = document.getElementById('tab_' + tabName);
-    activeBtn.classList.remove('text-gray-400');
-    activeBtn.classList.add('bg-yellow-500', 'text-black', 'shadow-md');
+    let activeBtn = document.getElementById('tab_' + tabName); activeBtn.classList.remove('text-gray-400'); activeBtn.classList.add('bg-yellow-500', 'text-black', 'shadow-md');
 };
 
 window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBackground = false) {
@@ -491,29 +417,17 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
     try { localStorage.setItem('oracle_session', JSON.stringify({ code: codeString, ilimitado: esIlimitado, ladderStat: ladderStat })); } catch(e) {}
     
     const wrapVIP = document.getElementById('wrapperVIP'); const wrapFree = document.getElementById('wrapperFree');
-    
     if(wrapVIP) {
         wrapVIP.style.display = 'block'; 
-        // 📢 INYECCIÓN DEL BOTÓN GIGANTE VIP PARA ALERTAS
-        let oldBtn = document.getElementById('btnActivarPushVip');
-        if(oldBtn) oldBtn.remove();
-        
-        let pushHtml = `
-            <button id="btnActivarPushVip" onclick="window.registrarTokenPush('${codeString}')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-4 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform">
-                <i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas en este Celular
-            </button>
-        `;
-        wrapVIP.insertAdjacentHTML('afterbegin', pushHtml);
+        let oldBtn = document.getElementById('btnActivarPushVip'); if(oldBtn) oldBtn.remove();
+        wrapVIP.insertAdjacentHTML('afterbegin', `<button id="btnActivarPushVip" onclick="window.registrarTokenPush('${codeString}')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-4 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas en este Celular</button>`);
     }
     if(wrapFree) wrapFree.style.display = 'none'; 
     
     const btnTop = document.getElementById('btnTopLogin'); 
     if(btnTop) {
-        const nuevoBtn = btnTop.cloneNode(true);
-        btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
-        nuevoBtn.removeAttribute('onclick');
-        nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.cerrarSesionLocal(); };
-        
+        const nuevoBtn = btnTop.cloneNode(true); btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
+        nuevoBtn.removeAttribute('onclick'); nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.cerrarSesionLocal(); };
         if(esIlimitado) { nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR PREM</span>`; nuevoBtn.className = "shrink-0 bg-purple-900 text-purple-300 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-purple-500/50 flex items-center gap-1.5 transition-all"; } 
         else { nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR VIP</span>`; nuevoBtn.className = "shrink-0 bg-yellow-900 text-yellow-500 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-yellow-600/50 flex items-center gap-1.5 transition-all"; }
     }
@@ -521,36 +435,18 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
     if(window.suscribirApadrinamiento) window.suscribirApadrinamiento(); if(window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI();
 };
 
-window.cerrarSesionLocal = function(e) { 
-    if(e) { e.preventDefault(); e.stopPropagation(); }
-    window.cerrarModalLogin(); 
-    window.mostrarConfirmacion("Cerrar Sesión", "¿Estás seguro que deseas salir de tu cuenta VIP?", () => { 
-        window.ejecutarCierreSesion(); 
-        setTimeout(() => { window.abrirModalLogin(); }, 300);
-    }); 
-};
-
+window.cerrarSesionLocal = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.cerrarModalLogin(); window.mostrarConfirmacion("Cerrar Sesión", "¿Deseas salir de tu cuenta VIP?", () => { window.ejecutarCierreSesion(); setTimeout(() => { window.abrirModalLogin(); }, 300); }); };
 window.ejecutarCierreSesion = function() {
     modoVipActivo = false; modoIlimitadoActivo = false; codigoActivoUsuario = ''; estadoEscalera = 'none'; seleccionesVIPGlobal = []; ticketDinamicoVIP = [];
     const contadorSel = document.getElementById('contadorSeleccion'); if(contadorSel) contadorSel.innerText = "0 Seleccionados";
     const resDiv = document.getElementById('resultadoVIP'); if(resDiv) resDiv.innerHTML = "";
-    
     let btnPushVip = document.getElementById('btnActivarPushVip'); if(btnPushVip) btnPushVip.remove();
-
     if (unsubscribeApadrinamiento) unsubscribeApadrinamiento(); perfilApadrinamiento = null; clearInterval(timerInactividad); 
     try { localStorage.removeItem('oracle_session'); } catch(e){}
     const wrapVIP = document.getElementById('wrapperVIP'); const wrapFree = document.getElementById('wrapperFree');
     if(wrapVIP) wrapVIP.style.display = 'none'; if(wrapFree) wrapFree.style.display = 'block';
-    
     const btnTop = document.getElementById('btnTopLogin');
-    if(btnTop) { 
-        const nuevoBtn = btnTop.cloneNode(true);
-        btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
-        nuevoBtn.removeAttribute('onclick');
-        nuevoBtn.innerHTML = '<i class="fas fa-lock"></i> <span>INGRESAR</span>'; 
-        nuevoBtn.className = "shrink-0 bg-gray-800 text-yellow-500 text-[9px] px-3 py-2 rounded-lg font-black uppercase tracking-widest shadow-md flex items-center gap-2 border border-yellow-500/30 transition-all hover:bg-gray-700"; 
-        nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.abrirModalLogin(); };
-    }
+    if(btnTop) { const nuevoBtn = btnTop.cloneNode(true); btnTop.parentNode.replaceChild(nuevoBtn, btnTop); nuevoBtn.removeAttribute('onclick'); nuevoBtn.innerHTML = '<i class="fas fa-lock"></i> <span>INGRESAR</span>'; nuevoBtn.className = "shrink-0 bg-gray-800 text-yellow-500 text-[9px] px-3 py-2 rounded-lg font-black uppercase tracking-widest shadow-md flex items-center gap-2 border border-yellow-500/30 transition-all hover:bg-gray-700"; nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.abrirModalLogin(); }; }
     if(window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI(); if(window.chequearApadrinamientoUI) window.chequearApadrinamientoUI(); window.ejecutarTopFutbol(); window.cambiarVista('picks');
 };
 
@@ -565,254 +461,95 @@ window.cambiarVista = function(vista) {
 };
 
 window.resaltarBotonCarrusel = function(keyLiga) { document.querySelectorAll('.carrusel-btn').forEach(btn => { btn.classList.remove('border-yellow-500', 'shadow-[0_0_15px_rgba(212,175,55,0.6)]', 'scale-105'); btn.classList.add('border-white/10'); }); if(keyLiga) { let btnActivo = document.getElementById('btn_carrusel_' + keyLiga); if(btnActivo) { btnActivo.classList.remove('border-white/10'); btnActivo.classList.add('border-yellow-500', 'shadow-[0_0_15px_rgba(212,175,55,0.6)]', 'scale-105'); btnActivo.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } } };
-
-window.abrirMenuLateral = function() { 
-    const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); 
-    if(o) { o.classList.remove('hidden'); o.style.display = 'block'; } 
-    if(m) m.classList.remove('-translate-x-full'); 
-};
-window.cerrarMenuLateral = function() { 
-    const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); 
-    if(o) { o.classList.add('hidden'); o.style.display = 'none'; } 
-    if(m) m.classList.add('-translate-x-full'); 
-};
-
+window.abrirMenuLateral = function() { const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); if(o) { o.classList.remove('hidden'); o.style.display = 'block'; } if(m) m.classList.remove('-translate-x-full'); };
+window.cerrarMenuLateral = function() { const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); if(o) { o.classList.add('hidden'); o.style.display = 'none'; } if(m) m.classList.add('-translate-x-full'); };
 window.toggleAcordeon = function(id) { const acc = document.getElementById('acc_' + id); const icon = document.getElementById('icon_' + id); if(!acc || !icon) return; acc.classList.toggle('hidden'); acc.classList.toggle('flex'); icon.style.transform = acc.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; };
 window.toggleLigaList = function(idLiga) { const content = document.getElementById('lista_partidos_' + idLiga); const icon = document.getElementById('icon_lista_' + idLiga); if(!content || !icon) return; if(content.classList.contains('hidden')) { content.classList.remove('hidden'); content.classList.add('flex'); icon.style.transform = 'rotate(180deg)'; } else { content.classList.add('hidden'); content.classList.remove('flex'); icon.style.transform = 'rotate(0deg)'; } };
 
 window.construirMenuLateral = function() {
     const contenedor = document.getElementById('contenidoMenuLateral'); if(!contenedor) return; let arbol = {}; 
     competicionesGlobales.forEach(liga => { let deporte = liga.group || 'Otros'; const traducciones = { 'Soccer': 'Fútbol', 'Basketball': 'Baloncesto', 'Tennis': 'Tenis' }; deporte = traducciones[deporte] || deporte; let info = obtenerInfoLiga(liga.key, liga.title); if(!arbol[deporte]) arbol[deporte] = {}; if(!arbol[deporte][info.pais]) arbol[deporte][info.pais] = []; arbol[deporte][info.pais].push({ key: liga.key, name: info.nombreLiga, bandera: info.bandera }); });
-    let html = ''; 
-    Object.keys(arbol).sort().forEach(deporte => { 
-        const idDep = deporte.replace(/[^a-zA-Z0-9]/g, ''); 
-        let iconDep = 'fa-futbol';
-        if(deporte === 'Baloncesto') iconDep = 'fa-basketball-ball';
-        else if(deporte === 'Tenis') iconDep = 'fa-table-tennis';
-        else if(deporte === 'Fútbol Americano' || deporte === 'American Football') iconDep = 'fa-football-ball';
-        else if(deporte === 'Béisbol' || deporte === 'Baseball') iconDep = 'fa-baseball-ball';
-        else if(deporte === 'Hockey') iconDep = 'fa-hockey-puck';
-        else if(deporte === 'MMA' || deporte === 'UFC') iconDep = 'fa-hand-rock';
-        else if(deporte === 'Boxeo') iconDep = 'fa-mitten';
-        
-        html += `<div class="mb-2"><button onclick="window.toggleAcordeon('dep_${idDep}')" class="w-full text-left p-3 flex justify-between bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md"><span><i class="fas ${iconDep} mr-2"></i>${deporte}</span><i id="icon_dep_${idDep}" class="fas fa-chevron-down transition-transform"></i></button><div id="acc_dep_${idDep}" class="hidden flex-col gap-1 mt-1 pl-2">`; 
-        Object.keys(arbol[deporte]).sort().forEach(pais => { 
-            const idPais = idDep + '_' + pais.replace(/[^a-zA-Z0-9]/g, ''); const bandera = arbol[deporte][pais][0].bandera; 
-            html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1"><button onclick="window.toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between text-white font-bold text-[10px] uppercase"><span><span class="mr-2 drop-shadow-md">${bandera}</span> ${pais}</span><i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i></button><div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`; 
-            arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { 
-                html += `<button onclick="window.ejecutarFiltroFinal('${liga.key}', '${bandera} ${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between group"><span class="truncate pr-2">${liga.name}</span><i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i></button>`; 
-            }); 
-            html += `</div></div>`; 
-        }); 
-        html += `</div></div>`; 
-    }); 
-    contenedor.innerHTML = html;
+    let html = ''; Object.keys(arbol).sort().forEach(deporte => { const idDep = deporte.replace(/[^a-zA-Z0-9]/g, ''); let iconDep = 'fa-futbol'; if(deporte === 'Baloncesto') iconDep = 'fa-basketball-ball'; else if(deporte === 'Tenis') iconDep = 'fa-table-tennis'; else if(deporte === 'Fútbol Americano' || deporte === 'American Football') iconDep = 'fa-football-ball'; else if(deporte === 'Béisbol' || deporte === 'Baseball') iconDep = 'fa-baseball-ball'; else if(deporte === 'Hockey') iconDep = 'fa-hockey-puck'; else if(deporte === 'MMA' || deporte === 'UFC') iconDep = 'fa-hand-rock'; else if(deporte === 'Boxeo') iconDep = 'fa-mitten'; html += `<div class="mb-2"><button onclick="window.toggleAcordeon('dep_${idDep}')" class="w-full text-left p-3 flex justify-between bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md"><span><i class="fas ${iconDep} mr-2"></i>${deporte}</span><i id="icon_dep_${idDep}" class="fas fa-chevron-down transition-transform"></i></button><div id="acc_dep_${idDep}" class="hidden flex-col gap-1 mt-1 pl-2">`; Object.keys(arbol[deporte]).sort().forEach(pais => { const idPais = idDep + '_' + pais.replace(/[^a-zA-Z0-9]/g, ''); const bandera = arbol[deporte][pais][0].bandera; html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1"><button onclick="window.toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between text-white font-bold text-[10px] uppercase"><span><span class="mr-2 drop-shadow-md">${bandera}</span> ${pais}</span><i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i></button><div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`; arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { html += `<button onclick="window.ejecutarFiltroFinal('${liga.key}', '${bandera} ${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between group"><span class="truncate pr-2">${liga.name}</span><i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i></button>`; }); html += `</div></div>`; }); html += `</div></div>`; }); contenedor.innerHTML = html;
 };
 
 // ==========================================
 // 7. FILTROS Y RENDER DE PARTIDOS (PAÍS -> LIGA)
 // ==========================================
-window.toggleFiltroIA = function() {
-    filtroIAActivo = !filtroIAActivo;
-    const btn = document.getElementById('btnFiltroIA');
-    if(filtroIAActivo) { btn.classList.replace('bg-gray-900', 'bg-blue-600'); btn.classList.replace('text-blue-400', 'text-white'); } 
-    else { btn.classList.replace('bg-blue-600', 'bg-gray-900'); btn.classList.replace('text-white', 'text-blue-400'); }
-    window.aplicarFiltrosLocales();
-};
+window.toggleFiltroIA = function() { filtroIAActivo = !filtroIAActivo; const btn = document.getElementById('btnFiltroIA'); if(filtroIAActivo) { btn.classList.replace('bg-gray-900', 'bg-blue-600'); btn.classList.replace('text-blue-400', 'text-white'); } else { btn.classList.replace('bg-blue-600', 'bg-gray-900'); btn.classList.replace('text-white', 'text-blue-400'); } window.aplicarFiltrosLocales(); };
 
 window.aplicarFiltrosLocales = function() {
     const buscador = document.getElementById('buscadorEquipos'); const filtroF = document.getElementById('filtroFecha');
     const texto = buscador ? buscador.value.toLowerCase() : ""; const fechaFiltro = filtroF ? filtroF.value : ""; 
     const ahora = new Date(); 
-
     partidosFiltrados = partidosGlobales.filter(p => { 
-        const fechaPartido = new Date(p.commence_time);
-        if (fechaPartido < ahora) return false; 
-
-        const hTeam = p.home_team ? String(p.home_team).toLowerCase() : ""; 
-        const aTeam = p.away_team ? String(p.away_team).toLowerCase() : ""; 
+        const fechaPartido = new Date(p.commence_time); if (fechaPartido < ahora) return false; 
+        const hTeam = p.home_team ? String(p.home_team).toLowerCase() : ""; const aTeam = p.away_team ? String(p.away_team).toLowerCase() : ""; 
         const cumpleTexto = hTeam.includes(texto) || aTeam.includes(texto); 
-        let cumpleFecha = true; 
-        if(fechaFiltro) { 
-            let mes = String(fechaPartido.getMonth() + 1).padStart(2, '0'); let dia = String(fechaPartido.getDate()).padStart(2, '0'); 
-            cumpleFecha = (`${fechaPartido.getFullYear()}-${mes}-${dia}` === fechaFiltro); 
-        } 
-        let cumpleIA = true;
-        if (filtroIAActivo) {
-            cumpleIA = false;
-            if(p.bookmakers) { p.bookmakers.forEach(b => { b.markets?.forEach(m => { m.outcomes?.forEach(o => { if (o.verificado_ia) cumpleIA = true; }); }); }); }
-        }
+        let cumpleFecha = true; if(fechaFiltro) { let mes = String(fechaPartido.getMonth() + 1).padStart(2, '0'); let dia = String(fechaPartido.getDate()).padStart(2, '0'); cumpleFecha = (`${fechaPartido.getFullYear()}-${mes}-${dia}` === fechaFiltro); } 
+        let cumpleIA = true; if (filtroIAActivo) { cumpleIA = false; if(p.bookmakers) { p.bookmakers.forEach(b => { b.markets?.forEach(m => { m.outcomes?.forEach(o => { if (o.verificado_ia) cumpleIA = true; }); }); }); } }
         return cumpleTexto && cumpleFecha && cumpleIA; 
     });
-    
-    const cont = document.getElementById('contadorPartidosActivos'); 
-    if(cont) cont.innerText = `${partidosFiltrados.length} Eventos`;
+    const cont = document.getElementById('contadorPartidosActivos'); if(cont) cont.innerText = `${partidosFiltrados.length} Eventos`;
     if(modoVipActivo) { if(window.renderizarPartidosVIP) window.renderizarPartidosVIP(); } else { if(window.renderizarPartidosFree) window.renderizarPartidosFree(); }
 };
 
-window.ejecutarTopFutbol = function() {
-    window.cerrarMenuLateral(); window.resaltarBotonCarrusel(null); const title = document.getElementById('nombreLigaActiva'); if(title) title.innerText = "Cartelera Global"; 
-    let soccerLigas = competicionesGlobales.map(l => l.key); if(soccerLigas.length === 0) { soccerLigas = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_uefa_champs_league', 'soccer_italy_serie_a', 'soccer_conmebol_copa_libertadores', 'soccer_conmebol_copa_sudamericana', 'soccer_uefa_europa_league', 'soccer_uefa_europa_conference_league']; }
-    partidosGlobales = CACHE_PARTIDOS_FUTUROS.filter(p => soccerLigas.includes(p.sport_key)); partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time)); window.aplicarFiltrosLocales();
-};
+window.ejecutarTopFutbol = function() { window.cerrarMenuLateral(); window.resaltarBotonCarrusel(null); const title = document.getElementById('nombreLigaActiva'); if(title) title.innerText = "Cartelera Global"; let soccerLigas = competicionesGlobales.map(l => l.key); if(soccerLigas.length === 0) { soccerLigas = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_uefa_champs_league', 'soccer_italy_serie_a', 'soccer_conmebol_copa_libertadores', 'soccer_conmebol_copa_sudamericana', 'soccer_uefa_europa_league', 'soccer_uefa_europa_conference_league']; } partidosGlobales = CACHE_PARTIDOS_FUTUROS.filter(p => soccerLigas.includes(p.sport_key)); partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time)); window.aplicarFiltrosLocales(); };
 
 window.ejecutarFiltroFinal = function(keyLiga, nombreMostrar) { window.cerrarMenuLateral(); const title = document.getElementById('nombreLigaActiva'); if(title) title.innerText = nombreMostrar; window.resaltarBotonCarrusel(keyLiga); const fFecha = document.getElementById('filtroFecha'); if(fFecha) fFecha.value = ""; partidosGlobales = CACHE_PARTIDOS_FUTUROS.filter(p => p.sport_key === keyLiga); partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time)); window.aplicarFiltrosLocales(); };
 
-function agruparPorPaisYLiga(partidos) { 
-    const paises = {}; 
-    partidos.forEach(p => { 
-        let info = obtenerInfoLiga(p.sport_key, p.sport_title); 
-        if (!paises[info.pais]) paises[info.pais] = { bandera: info.bandera, ligas: {} };
-        if (!paises[info.pais].ligas[info.nombreLiga]) paises[info.pais].ligas[info.nombreLiga] = [];
-        paises[info.pais].ligas[info.nombreLiga].push(p);
-    }); 
-    return paises; 
-}
+function agruparPorPaisYLiga(partidos) { const paises = {}; partidos.forEach(p => { let info = obtenerInfoLiga(p.sport_key, p.sport_title); if (!paises[info.pais]) paises[info.pais] = { bandera: info.bandera, ligas: {} }; if (!paises[info.pais].ligas[info.nombreLiga]) paises[info.pais].ligas[info.nombreLiga] = []; paises[info.pais].ligas[info.nombreLiga].push(p); }); return paises; }
 
 window.renderizarPartidosFree = function() {
     const container = document.getElementById('containerPartidos'); if(!container) return; container.innerHTML = '';
-    if(partidosFiltrados.length === 0) { 
-        let extraBtn = ""; const fFecha = document.getElementById('filtroFecha'); 
-        if (partidosGlobales.length > 0 && (fFecha && fFecha.value !== "" || filtroIAActivo)) { extraBtn = `<button onclick="document.getElementById('filtroFecha').value=''; if(filtroIAActivo) window.toggleFiltroIA(); window.aplicarFiltrosLocales();" class="mt-4 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-lg text-[10px] uppercase transition-all">Ver Toda la Cartelera</button>`; } 
-        container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5 shadow-inner"><i class="far fa-calendar-times text-3xl text-gray-600 mb-3"></i><p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">No hay eventos para estos filtros.</p>${extraBtn}</div>`; return; 
-    }
+    if(partidosFiltrados.length === 0) { let extraBtn = ""; const fFecha = document.getElementById('filtroFecha'); if (partidosGlobales.length > 0 && (fFecha && fFecha.value !== "" || filtroIAActivo)) { extraBtn = `<button onclick="document.getElementById('filtroFecha').value=''; if(filtroIAActivo) window.toggleFiltroIA(); window.aplicarFiltrosLocales();" class="mt-4 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-lg text-[10px] uppercase transition-all">Ver Toda la Cartelera</button>`; } container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5 shadow-inner"><i class="far fa-calendar-times text-3xl text-gray-600 mb-3"></i><p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">No hay eventos para estos filtros.</p>${extraBtn}</div>`; return; }
     const paisesAgrupados = agruparPorPaisYLiga(partidosFiltrados); let idC = 0;
-    
     for(const [nombrePais, dataPais] of Object.entries(paisesAgrupados)) {
-        idC++; let paisId = 'free_pais_' + idC;
-        let totalPartidosPais = Object.values(dataPais.ligas).reduce((acc, lig) => acc + lig.length, 0);
-        
-        let htmlLiga = `<div class="mb-4 bg-gray-900/50 rounded-xl overflow-hidden border border-white/5 shadow-lg">
-            <button onclick="window.toggleLigaList('${paisId}')" class="w-full bg-gray-800 p-3 flex justify-between items-center hover:bg-gray-700 transition-colors border-b border-yellow-500/20">
-                <h3 class="text-[11px] font-black text-white uppercase flex items-center gap-2 text-left"><span class="text-sm drop-shadow-md">${dataPais.bandera}</span> ${nombrePais} <span class="bg-gray-700 text-white text-[9px] px-1.5 py-0.5 rounded ml-1">${totalPartidosPais}</span></h3>
-                <i id="icon_lista_${paisId}" class="fas fa-chevron-down text-gray-400 transition-transform"></i>
-            </button>
-            <div id="lista_partidos_${paisId}" class="hidden flex-col p-3 space-y-4 bg-black/20">`;
-
+        idC++; let paisId = 'free_pais_' + idC; let totalPartidosPais = Object.values(dataPais.ligas).reduce((acc, lig) => acc + lig.length, 0);
+        let htmlLiga = `<div class="mb-4 bg-gray-900/50 rounded-xl overflow-hidden border border-white/5 shadow-lg"><button onclick="window.toggleLigaList('${paisId}')" class="w-full bg-gray-800 p-3 flex justify-between items-center hover:bg-gray-700 transition-colors border-b border-yellow-500/20"><h3 class="text-[11px] font-black text-white uppercase flex items-center gap-2 text-left"><span class="text-sm drop-shadow-md">${dataPais.bandera}</span> ${nombrePais} <span class="bg-gray-700 text-white text-[9px] px-1.5 py-0.5 rounded ml-1">${totalPartidosPais}</span></h3><i id="icon_lista_${paisId}" class="fas fa-chevron-down text-gray-400 transition-transform"></i></button><div id="lista_partidos_${paisId}" class="hidden flex-col p-3 space-y-4 bg-black/20">`;
         for(const [nombreLiga, partidos] of Object.entries(dataPais.ligas)) {
-            htmlLiga += `<div class="border-l-2 border-yellow-500/50 pl-3 mb-2">
-                <h4 class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-trophy"></i> ${nombreLiga}</h4>
-                <div class="space-y-3">`;
-
-            partidos.forEach(p => { 
-                const d = new Date(p.commence_time); const f = d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short'}) + ' • ' + d.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'}); 
-                htmlLiga += `<div class="card-glass p-4 relative overflow-hidden shadow-md border border-white/5 rounded-xl"><div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">OPORTUNIDAD</div><div class="text-[9px] font-bold text-gray-500 mb-2 mt-1 flex items-center gap-1"><i class="far fa-clock text-yellow-500/70"></i> <span class="bg-gray-800 px-2 py-0.5 rounded text-gray-300">${f}</span></div><div class="flex justify-between items-center mb-3 px-1"><div class="w-2/5 text-center"><p class="font-bold text-[11px] text-white leading-tight">${p.home_team}</p></div><div class="text-yellow-500 font-black italic text-xs">VS</div><div class="w-2/5 text-center"><p class="font-bold text-[11px] text-white leading-tight">${p.away_team}</p></div></div><button onclick="window.abrirModalLogin()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 transition-colors rounded-lg text-[9px] font-black text-yellow-500 shadow-lg flex justify-center items-center gap-2 tracking-widest border border-gray-700"><i class="fas fa-lock"></i> VER PREDICCIÓN</button></div>`; 
-            });
+            htmlLiga += `<div class="border-l-2 border-yellow-500/50 pl-3 mb-2"><h4 class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-trophy"></i> ${nombreLiga}</h4><div class="space-y-3">`;
+            partidos.forEach(p => { const d = new Date(p.commence_time); const f = d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short'}) + ' • ' + d.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'}); htmlLiga += `<div class="card-glass p-4 relative overflow-hidden shadow-md border border-white/5 rounded-xl"><div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">OPORTUNIDAD</div><div class="text-[9px] font-bold text-gray-500 mb-2 mt-1 flex items-center gap-1"><i class="far fa-clock text-yellow-500/70"></i> <span class="bg-gray-800 px-2 py-0.5 rounded text-gray-300">${f}</span></div><div class="flex justify-between items-center mb-3 px-1"><div class="w-2/5 text-center"><p class="font-bold text-[11px] text-white leading-tight">${p.home_team}</p></div><div class="text-yellow-500 font-black italic text-xs">VS</div><div class="w-2/5 text-center"><p class="font-bold text-[11px] text-white leading-tight">${p.away_team}</p></div></div><button onclick="window.abrirModalLogin()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 transition-colors rounded-lg text-[9px] font-black text-yellow-500 shadow-lg flex justify-center items-center gap-2 tracking-widest border border-gray-700"><i class="fas fa-lock"></i> VER PREDICCIÓN</button></div>`; });
             htmlLiga += `</div></div>`;
-        }
-        htmlLiga += `</div></div>`; container.innerHTML += htmlLiga;
+        } htmlLiga += `</div></div>`; container.innerHTML += htmlLiga;
     }
 };
 
 window.renderizarPartidosVIP = function() {
     const container = document.getElementById('containerPartidosVIP'); if(!container) return; container.innerHTML = '';
-    if(partidosFiltrados.length === 0) { 
-        let extraBtn = ""; const fFecha = document.getElementById('filtroFecha'); 
-        if (partidosGlobales.length > 0 && (fFecha && fFecha.value !== "" || filtroIAActivo)) { extraBtn = `<button onclick="document.getElementById('filtroFecha').value=''; if(filtroIAActivo) window.toggleFiltroIA(); window.aplicarFiltrosLocales();" class="mt-4 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-lg text-[10px] uppercase transition-all">Ver Todos</button>`; } 
-        container.innerHTML = `<div class="text-center opacity-50 py-10"><i class="far fa-calendar-times text-3xl mb-2"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin resultados para estos filtros</p>${extraBtn}</div>`; return; 
-    }
-    
+    if(partidosFiltrados.length === 0) { let extraBtn = ""; const fFecha = document.getElementById('filtroFecha'); if (partidosGlobales.length > 0 && (fFecha && fFecha.value !== "" || filtroIAActivo)) { extraBtn = `<button onclick="document.getElementById('filtroFecha').value=''; if(filtroIAActivo) window.toggleFiltroIA(); window.aplicarFiltrosLocales();" class="mt-4 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-lg text-[10px] uppercase transition-all">Ver Todos</button>`; } container.innerHTML = `<div class="text-center opacity-50 py-10"><i class="far fa-calendar-times text-3xl mb-2"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin resultados para estos filtros</p>${extraBtn}</div>`; return; }
     const paisesAgrupados = agruparPorPaisYLiga(partidosFiltrados); let idC = 0;
-    
     for(const [nombrePais, dataPais] of Object.entries(paisesAgrupados)) {
-        idC++; let paisId = 'vip_pais_' + idC;
-        let totalPartidosPais = Object.values(dataPais.ligas).reduce((acc, lig) => acc + lig.length, 0);
-
-        let htmlLiga = `<div class="mb-4 bg-gray-900/50 rounded-xl overflow-hidden border border-white/5 shadow-lg">
-            <button onclick="window.toggleLigaList('${paisId}')" class="w-full bg-gray-800 p-3 flex justify-between items-center hover:bg-gray-700 transition-colors border-b border-yellow-500/20">
-                <h3 class="text-[11px] font-black text-white uppercase flex items-center gap-2 text-left"><span class="text-sm drop-shadow-md">${dataPais.bandera}</span> ${nombrePais} <span class="bg-gray-700 text-white text-[9px] px-1.5 py-0.5 rounded ml-1">${totalPartidosPais}</span></h3>
-                <i id="icon_lista_${paisId}" class="fas fa-chevron-down text-gray-400 transition-transform"></i>
-            </button>
-            <div id="lista_partidos_${paisId}" class="hidden flex-col p-3 space-y-4 bg-black/20">`;
-
+        idC++; let paisId = 'vip_pais_' + idC; let totalPartidosPais = Object.values(dataPais.ligas).reduce((acc, lig) => acc + lig.length, 0);
+        let htmlLiga = `<div class="mb-4 bg-gray-900/50 rounded-xl overflow-hidden border border-white/5 shadow-lg"><button onclick="window.toggleLigaList('${paisId}')" class="w-full bg-gray-800 p-3 flex justify-between items-center hover:bg-gray-700 transition-colors border-b border-yellow-500/20"><h3 class="text-[11px] font-black text-white uppercase flex items-center gap-2 text-left"><span class="text-sm drop-shadow-md">${dataPais.bandera}</span> ${nombrePais} <span class="bg-gray-700 text-white text-[9px] px-1.5 py-0.5 rounded ml-1">${totalPartidosPais}</span></h3><i id="icon_lista_${paisId}" class="fas fa-chevron-down text-gray-400 transition-transform"></i></button><div id="lista_partidos_${paisId}" class="hidden flex-col p-3 space-y-4 bg-black/20">`;
         for(const [nombreLiga, partidos] of Object.entries(dataPais.ligas)) {
-            htmlLiga += `<div class="border-l-2 border-yellow-500/50 pl-3 mb-2">
-                <h4 class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-trophy"></i> ${nombreLiga}</h4>
-                <div class="space-y-2">`;
-
-            partidos.forEach(p => { 
-                const d = new Date(p.commence_time); const f = d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short'}) + ' • ' + d.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'}); 
-                const sel = seleccionesVIPGlobal.some(s => s.id === p.id); let cardClasses = sel ? 'border-yellow-500/50 bg-yellow-500/5 shadow-[0_0_10px_rgba(212,175,55,0.1)]' : 'border-white/5'; let checkAttr = sel ? 'checked' : ''; 
-                htmlLiga += `<div class="bg-black/40 border ${cardClasses} p-3 rounded-xl flex items-center justify-between hover:border-yellow-500/30 transition-all"><div class="flex items-center gap-3 w-full"><input type="checkbox" id="check_${p.id}" onchange="window.toggleSeleccionVIP('${p.id}')" class="checkbox-vip w-5 h-5 ml-1" ${checkAttr}><label for="check_${p.id}" class="flex flex-col cursor-pointer w-full pl-2"><div class="flex justify-between items-center mb-1"><span class="text-[9px] text-gray-400 font-bold tracking-wider"><i class="far fa-clock text-yellow-500/70 mr-1"></i> ${f}</span></div><span class="text-[11px] font-bold text-white leading-tight">${p.home_team} <span class="text-gray-500 font-normal text-[9px] mx-1 italic">vs</span> ${p.away_team}</span></label></div></div>`; 
-            });
+            htmlLiga += `<div class="border-l-2 border-yellow-500/50 pl-3 mb-2"><h4 class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-trophy"></i> ${nombreLiga}</h4><div class="space-y-2">`;
+            partidos.forEach(p => { const d = new Date(p.commence_time); const f = d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short'}) + ' • ' + d.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'}); const sel = seleccionesVIPGlobal.some(s => s.id === p.id); let cardClasses = sel ? 'border-yellow-500/50 bg-yellow-500/5 shadow-[0_0_10px_rgba(212,175,55,0.1)]' : 'border-white/5'; let checkAttr = sel ? 'checked' : ''; htmlLiga += `<div class="bg-black/40 border ${cardClasses} p-3 rounded-xl flex items-center justify-between hover:border-yellow-500/30 transition-all"><div class="flex items-center gap-3 w-full"><input type="checkbox" id="check_${p.id}" onchange="window.toggleSeleccionVIP('${p.id}')" class="checkbox-vip w-5 h-5 ml-1" ${checkAttr}><label for="check_${p.id}" class="flex flex-col cursor-pointer w-full pl-2"><div class="flex justify-between items-center mb-1"><span class="text-[9px] text-gray-400 font-bold tracking-wider"><i class="far fa-clock text-yellow-500/70 mr-1"></i> ${f}</span></div><span class="text-[11px] font-bold text-white leading-tight">${p.home_team} <span class="text-gray-500 font-normal text-[9px] mx-1 italic">vs</span> ${p.away_team}</span></label></div></div>`; });
             htmlLiga += `</div></div>`;
-        }
-        htmlLiga += `</div></div>`; container.innerHTML += htmlLiga;
+        } htmlLiga += `</div></div>`; container.innerHTML += htmlLiga;
     }
     if(window.actualizarContadorVIP) { window.actualizarContadorVIP(); }
 };
 
-// ==========================================
-// 8. CREADOR DE TICKETS VIP Y BLINDAJE
-// ==========================================
 window.toggleSeleccionVIP = function(id) {
     const cb = document.getElementById('check_' + id);
     if(cb.checked) { if(!modoIlimitadoActivo && seleccionesVIPGlobal.length >= 5) { cb.checked = false; window.mostrarAlerta("Límite Alcanzado", "Límite VIP (Máx 5 eventos).", "warning"); return; } const p = partidosGlobales.find(x => x.id === id); if(p && !seleccionesVIPGlobal.some(s=>s.id===id)) { seleccionesVIPGlobal.push(p); } } else { seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== id); }
     const card = cb.closest('.bg-black\\/40'); if(cb.checked) { card.classList.add('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.remove('border-white/5'); } else { card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5'); } window.actualizarContadorVIP();
 };
+
 window.actualizarContadorVIP = function() { const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion'); if(!btn || !contador) return; const cantidad = seleccionesVIPGlobal.length; contador.innerText = `${cantidad} Seleccionados`; if(!modoIlimitadoActivo) { document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); }); } if(cantidad >= 1) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); } else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); } };
 
-// 🛡️ ELIMINACIÓN DINÁMICA DE PARTIDOS EN EL TICKET
 window.quitarPartidoDelTicket = function(idPartido) {
-    seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== idPartido);
-    ticketDinamicoVIP = ticketDinamicoVIP.filter(item => item.partido.id !== idPartido);
-    
-    const cb = document.getElementById('check_' + idPartido);
-    if(cb) {
-        cb.checked = false;
-        const card = cb.closest('.bg-black\\/40');
-        if(card) { card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5'); }
-    }
-    
+    seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== idPartido); ticketDinamicoVIP = ticketDinamicoVIP.filter(item => item.partido.id !== idPartido);
+    const cb = document.getElementById('check_' + idPartido); if(cb) { cb.checked = false; const card = cb.closest('.bg-black\\/40'); if(card) { card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5'); } }
     window.actualizarContadorVIP();
-    
-    if(ticketDinamicoVIP.length > 0) {
-        window.dibujarTicketDinamico(false);
-    } else {
-        const resDiv = document.getElementById('resultadoVIP');
-        if(resDiv) resDiv.innerHTML = `<div class="p-6 text-center bg-black/40 rounded-xl border border-white/5 text-gray-500 text-[10px] uppercase font-bold tracking-widest"><i class="fas fa-info-circle text-2xl mb-2 block"></i> Ticket vacío</div>`;
-    }
+    if(ticketDinamicoVIP.length > 0) { window.dibujarTicketDinamico(false); } else { const resDiv = document.getElementById('resultadoVIP'); if(resDiv) resDiv.innerHTML = `<div class="p-6 text-center bg-black/40 rounded-xl border border-white/5 text-gray-500 text-[10px] uppercase font-bold tracking-widest"><i class="fas fa-info-circle text-2xl mb-2 block"></i> Ticket vacío</div>`; }
 };
 
 function obtenerOpcionesRentables(partido) {
     let mapaResultados = {}; if (!partido.bookmakers) return [];
-    partido.bookmakers.forEach(b => { 
-        if (!b.markets) return; 
-        b.markets.forEach(m => { 
-            if (!m.outcomes) return; 
-            m.outcomes.forEach(o => {
-                let nombreOpcion = o.name || ""; let descripcion = o.description || ""; if (descripcion && descripcion !== nombreOpcion) { nombreOpcion = `${descripcion} | ${nombreOpcion}`; }
-                let k = `${m.key}-${nombreOpcion}-${o.point||''}`; 
-                if(!mapaResultados[k]) { mapaResultados[k] = { mercadoKey: m.key, nombre: nombreOpcion, point: o.point, cuotas: [], brokers: [] }; }
-                if(o.price > 1.0) { 
-                    mapaResultados[k].cuotas.push(o.price); 
-                    mapaResultados[k].brokers.push({ broker: b.title, cuota: o.price, probabilidad_real: o.probabilidad_real || null, ev_porcentaje: o.ev_porcentaje || null, es_valor: o.es_valor || false, verificado_ia: o.verificado_ia || false }); 
-                }
-            }); 
-        }); 
-    });
-    
-    let opcionesFinales = []; 
-    Object.values(mapaResultados).forEach(res => { 
-        let esExotico = res.mercadoKey.includes('cards') || res.mercadoKey.includes('corners') || res.mercadoKey.includes('shots') || res.mercadoKey.includes('player');
-        let liquidezMinima = esExotico ? 3 : 1; 
-
-        if(res.cuotas.length >= liquidezMinima) { 
-            res.brokers.sort((a,b) => b.cuota - a.cuota); let mejorOpcion = res.brokers[0]; 
-            let probFinal = mejorOpcion.probabilidad_real; let edgeFinal = mejorOpcion.ev_porcentaje;
-            if (probFinal === null || probFinal === undefined) { let cuotaPromedio = res.cuotas.reduce((a,b) => a+b, 0) / res.cuotas.length; probFinal = Math.min(Math.round((1 / cuotaPromedio) * 100), 99); edgeFinal = parseFloat((((mejorOpcion.cuota / cuotaPromedio) - 1) * 100).toFixed(2)); }
-            if(mejorOpcion.cuota >= 1.05 && mejorOpcion.cuota <= 4.50) { 
-                opcionesFinales.push({ broker: mejorOpcion.broker, mercadoKey: res.mercadoKey, nombre: res.nombre, point: res.point, cuota: mejorOpcion.cuota, probabilidad: probFinal, edgeValor: edgeFinal, es_valor: mejorOpcion.es_valor || (edgeFinal > 0), verificado_ia: mejorOpcion.verificado_ia }); 
-            } 
-        } 
-    });
-    
-    opcionesFinales.sort((a, b) => {
-        if (a.verificado_ia && !b.verificado_ia) return -1; if (!a.verificado_ia && b.verificado_ia) return 1;
-        if (a.es_valor && !b.es_valor) return -1; if (!a.es_valor && b.es_valor) return 1;
-        if (b.edgeValor !== a.edgeValor) return b.edgeValor - a.edgeValor; return b.probabilidad - a.probabilidad;
-    });
-    return opcionesFinales;
+    partido.bookmakers.forEach(b => { b.markets?.forEach(m => { m.outcomes?.forEach(o => { let nombreOpcion = o.name || ""; let descripcion = o.description || ""; if (descripcion && descripcion !== nombreOpcion) { nombreOpcion = `${descripcion} | ${nombreOpcion}`; } let k = `${m.key}-${nombreOpcion}-${o.point||''}`; if(!mapaResultados[k]) { mapaResultados[k] = { mercadoKey: m.key, nombre: nombreOpcion, point: o.point, cuotas: [], brokers: [] }; } if(o.price > 1.0) { mapaResultados[k].cuotas.push(o.price); mapaResultados[k].brokers.push({ broker: b.title, cuota: o.price, probabilidad_real: o.probabilidad_real || null, ev_porcentaje: o.ev_porcentaje || null, es_valor: o.es_valor || false, verificado_ia: o.verificado_ia || false }); } }); }); });
+    let opcionesFinales = []; Object.values(mapaResultados).forEach(res => { let esExotico = res.mercadoKey.includes('cards') || res.mercadoKey.includes('corners') || res.mercadoKey.includes('shots') || res.mercadoKey.includes('player'); let liquidezMinima = esExotico ? 3 : 1; if(res.cuotas.length >= liquidezMinima) { res.brokers.sort((a,b) => b.cuota - a.cuota); let mejorOpcion = res.brokers[0]; let probFinal = mejorOpcion.probabilidad_real; let edgeFinal = mejorOpcion.ev_porcentaje; if (probFinal === null || probFinal === undefined) { let cuotaPromedio = res.cuotas.reduce((a,b) => a+b, 0) / res.cuotas.length; probFinal = Math.min(Math.round((1 / cuotaPromedio) * 100), 99); edgeFinal = parseFloat((((mejorOpcion.cuota / cuotaPromedio) - 1) * 100).toFixed(2)); } if(mejorOpcion.cuota >= 1.05 && mejorOpcion.cuota <= 4.50) { opcionesFinales.push({ broker: mejorOpcion.broker, mercadoKey: res.mercadoKey, nombre: res.nombre, point: res.point, cuota: mejorOpcion.cuota, probabilidad: probFinal, edgeValor: edgeFinal, es_valor: mejorOpcion.es_valor || (edgeFinal > 0), verificado_ia: mejorOpcion.verificado_ia }); } } });
+    opcionesFinales.sort((a, b) => { if (a.verificado_ia && !b.verificado_ia) return -1; if (!a.verificado_ia && b.verificado_ia) return 1; if (a.es_valor && !b.es_valor) return -1; if (!a.es_valor && b.es_valor) return 1; if (b.edgeValor !== a.edgeValor) return b.edgeValor - a.edgeValor; return b.probabilidad - a.probabilidad; }); return opcionesFinales;
 }
 
 window.procesarTicketVIP = function() {
@@ -822,44 +559,17 @@ window.procesarTicketVIP = function() {
 };
 
 window.mejorarProbabilidadTicket = function() {
-    let huboMejoras = false;
-    function fuzzyMatchLocal(s1, s2) { let t1 = s1.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); let t2 = s2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); if(t1.length < 3 || t2.length < 3) return t1 === t2; return t1.includes(t2) || t2.includes(t1); }
-
+    let huboMejoras = false; function fuzzyMatchLocal(s1, s2) { let t1 = s1.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); let t2 = s2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); if(t1.length < 3 || t2.length < 3) return t1 === t2; return t1.includes(t2) || t2.includes(t1); }
     ticketDinamicoVIP.forEach(item => {
         const p = item.partido; const idxUsado = modoRiesgoGlobal ? item.indexRiesgo : item.indexSeleccionado; const oOriginal = item.opciones[idxUsado]; let candidatos = []; let origLower = oOriginal.nombre.toLowerCase();
-        p.bookmakers?.forEach(b => {
-            b.markets?.forEach(m => {
-                m.outcomes?.forEach(o => {
-                    let nombreOpcion = o.name || ""; let descripcion = o.description || ""; let nombreReal = descripcion && descripcion !== nombreOpcion ? `${descripcion} | ${nombreOpcion}` : nombreOpcion; let nombreLower = nombreReal.toLowerCase(); let esCandidato = false; let pointNum = parseFloat(o.point); 
-                    let esMismoEquipo = fuzzyMatchLocal(nombreReal, oOriginal.nombre);
-
-                    if (oOriginal.mercadoKey === 'h2h' && m.key === 'spreads' && !origLower.includes('draw') && !origLower.includes('empate') && esMismoEquipo) { if (!isNaN(pointNum) && pointNum >= 0) esCandidato = true; }
-                    else if (oOriginal.mercadoKey.includes('totals') && m.key === oOriginal.mercadoKey) { if ((nombreLower.includes('over') || origLower.includes('over') || nombreLower.includes('más') || origLower.includes('más')) && pointNum < parseFloat(oOriginal.point)) { esCandidato = true; } }
-                    else if (oOriginal.mercadoKey.includes('totals') && m.key === oOriginal.mercadoKey) { if ((nombreLower.includes('under') || origLower.includes('under') || nombreLower.includes('menos') || origLower.includes('menos')) && pointNum > parseFloat(oOriginal.point)) { esCandidato = true; } }
-                    else if (oOriginal.mercadoKey === 'spreads' && m.key === 'spreads' && esMismoEquipo) { if (!isNaN(pointNum) && pointNum > parseFloat(oOriginal.point)) esCandidato = true; }
-
-                    if (esCandidato && o.price >= 1.05 && o.price < oOriginal.cuota) { let probAprox = Math.min(98, Math.round((1 / o.price) * 105)); let edgeMejora = oOriginal.edgeValor > 0 ? parseFloat((oOriginal.edgeValor * 0.5).toFixed(2)) : 0; candidatos.push({ broker: b.title, mercadoKey: m.key, nombre: nombreReal, point: o.point, cuota: o.price, probabilidad: probAprox, edgeValor: edgeMejora, es_valor: edgeMejora > 0, verificado_ia: oOriginal.verificado_ia, es_mejora: true }); }
-                });
-            });
-        });
-
-        if (candidatos.length > 0) {
-            candidatos.sort((a, b) => a.cuota - b.cuota); let mejorCandidato = candidatos.find(c => c.cuota >= 1.15) || candidatos[0];
-            let existeIdx = item.opciones.findIndex(opt => opt.mercadoKey === mejorCandidato.mercadoKey && opt.nombre === mejorCandidato.nombre && opt.point === mejorCandidato.point);
-            if (existeIdx !== -1) { if (!modoRiesgoGlobal) item.indexSeleccionado = existeIdx; else item.indexRiesgo = existeIdx; } else { item.opciones.push(mejorCandidato); if (!modoRiesgoGlobal) item.indexSeleccionado = item.opciones.length - 1; else item.indexRiesgo = item.opciones.length - 1; }
-            huboMejoras = true;
-        }
+        p.bookmakers?.forEach(b => { b.markets?.forEach(m => { m.outcomes?.forEach(o => { let nombreOpcion = o.name || ""; let descripcion = o.description || ""; let nombreReal = descripcion && descripcion !== nombreOpcion ? `${descripcion} | ${nombreOpcion}` : nombreOpcion; let nombreLower = nombreReal.toLowerCase(); let esCandidato = false; let pointNum = parseFloat(o.point); let esMismoEquipo = fuzzyMatchLocal(nombreReal, oOriginal.nombre); if (oOriginal.mercadoKey === 'h2h' && m.key === 'spreads' && !origLower.includes('draw') && !origLower.includes('empate') && esMismoEquipo) { if (!isNaN(pointNum) && pointNum >= 0) esCandidato = true; } else if (oOriginal.mercadoKey.includes('totals') && m.key === oOriginal.mercadoKey) { if ((nombreLower.includes('over') || origLower.includes('over') || nombreLower.includes('más') || origLower.includes('más')) && pointNum < parseFloat(oOriginal.point)) { esCandidato = true; } } else if (oOriginal.mercadoKey.includes('totals') && m.key === oOriginal.mercadoKey) { if ((nombreLower.includes('under') || origLower.includes('under') || nombreLower.includes('menos') || origLower.includes('menos')) && pointNum > parseFloat(oOriginal.point)) { esCandidato = true; } } else if (oOriginal.mercadoKey === 'spreads' && m.key === 'spreads' && esMismoEquipo) { if (!isNaN(pointNum) && pointNum > parseFloat(oOriginal.point)) esCandidato = true; } if (esCandidato && o.price >= 1.05 && o.price < oOriginal.cuota) { let probAprox = Math.min(98, Math.round((1 / o.price) * 105)); let edgeMejora = oOriginal.edgeValor > 0 ? parseFloat((oOriginal.edgeValor * 0.5).toFixed(2)) : 0; candidatos.push({ broker: b.title, mercadoKey: m.key, nombre: nombreReal, point: o.point, cuota: o.price, probabilidad: probAprox, edgeValor: edgeMejora, es_valor: edgeMejora > 0, verificado_ia: oOriginal.verificado_ia, es_mejora: true }); } }); }); });
+        if (candidatos.length > 0) { candidatos.sort((a, b) => a.cuota - b.cuota); let mejorCandidato = candidatos.find(c => c.cuota >= 1.15) || candidatos[0]; let existeIdx = item.opciones.findIndex(opt => opt.mercadoKey === mejorCandidato.mercadoKey && opt.nombre === mejorCandidato.nombre && opt.point === mejorCandidato.point); if (existeIdx !== -1) { if (!modoRiesgoGlobal) item.indexSeleccionado = existeIdx; else item.indexRiesgo = existeIdx; } else { item.opciones.push(mejorCandidato); if (!modoRiesgoGlobal) item.indexSeleccionado = item.opciones.length - 1; else item.indexRiesgo = item.opciones.length - 1; } huboMejoras = true; }
     });
-
     if (huboMejoras) { window.mostrarAlerta("Ticket Blindado", "El algoritmo ha encontrado líneas de protección bajando drásticamente el riesgo.", "success"); window.dibujarTicketDinamico(false); } else { window.mostrarAlerta("Límites Alcanzados", "El mercado no ofrece Hándicaps Asiáticos o líneas más seguras para estos equipos en este momento.", "warning"); }
 };
 
 window.toggleModoRiesgo = function() { modoRiesgoGlobal = !modoRiesgoGlobal; window.dibujarTicketDinamico(false); };
-window.cambiarModoMercado = function(modo) {
-    modoMercadoGlobal = modo; let encontroOpciones = false;
-    ticketDinamicoVIP.forEach(item => { const isProp = (k) => k.includes('shots') || k.includes('corners') || k.includes('cards') || k.includes('player'); if(modo === 'props') { const idxS = item.opciones.findIndex(o => isProp(o.mercadoKey)); if (idxS !== -1) { item.indexSeleccionado = idxS; let lastIdxR = -1; item.opciones.forEach((o, i) => { if (isProp(o.mercadoKey)) lastIdxR = i; }); item.indexRiesgo = lastIdxR !== -1 ? lastIdxR : idxS; encontroOpciones = true; } } else if(modo === 'h2h' || modo === 'totals' || modo === 'spreads') { const idxS = item.opciones.findIndex(o => o.mercadoKey === modo); if(idxS !== -1) { item.indexSeleccionado = idxS; let lastIdxR = -1; item.opciones.forEach((o, i) => { if(o.mercadoKey === modo) lastIdxR = i; }); item.indexRiesgo = lastIdxR !== -1 ? lastIdxR : idxS; encontroOpciones = true; } } else { item.indexSeleccionado = 0; let validRisk = item.opciones.findIndex(opt => opt.cuota >= 2.2); item.indexRiesgo = validRisk !== -1 ? validRisk : item.opciones.length - 1; encontroOpciones = true; } });
-    window.dibujarTicketDinamico(false); if (modo === 'props' && !encontroOpciones) { window.mostrarAlerta("Mercados Cerrados", "Casas de apuestas aún no habilitan Props.", "warning"); }
-};
+window.cambiarModoMercado = function(modo) { modoMercadoGlobal = modo; let encontroOpciones = false; ticketDinamicoVIP.forEach(item => { const isProp = (k) => k.includes('shots') || k.includes('corners') || k.includes('cards') || k.includes('player'); if(modo === 'props') { const idxS = item.opciones.findIndex(o => isProp(o.mercadoKey)); if (idxS !== -1) { item.indexSeleccionado = idxS; let lastIdxR = -1; item.opciones.forEach((o, i) => { if (isProp(o.mercadoKey)) lastIdxR = i; }); item.indexRiesgo = lastIdxR !== -1 ? lastIdxR : idxS; encontroOpciones = true; } } else if(modo === 'h2h' || modo === 'totals' || modo === 'spreads') { const idxS = item.opciones.findIndex(o => o.mercadoKey === modo); if(idxS !== -1) { item.indexSeleccionado = idxS; let lastIdxR = -1; item.opciones.forEach((o, i) => { if(o.mercadoKey === modo) lastIdxR = i; }); item.indexRiesgo = lastIdxR !== -1 ? lastIdxR : idxS; encontroOpciones = true; } } else { item.indexSeleccionado = 0; let validRisk = item.opciones.findIndex(opt => opt.cuota >= 2.2); item.indexRiesgo = validRisk !== -1 ? validRisk : item.opciones.length - 1; encontroOpciones = true; } }); window.dibujarTicketDinamico(false); if (modo === 'props' && !encontroOpciones) { window.mostrarAlerta("Mercados Cerrados", "Casas de apuestas aún no habilitan Props.", "warning"); } };
 window.rotarPickIndividual = function(id) { let i = ticketDinamicoVIP.find(t => t.partido.id === id); if(i) { let opcionesValidas = []; const isProp = (k) => k.includes('shots') || k.includes('corners') || k.includes('cards') || k.includes('player'); if (modoMercadoGlobal === 'props') { i.opciones.forEach((o, idx) => { if(isProp(o.mercadoKey)) opcionesValidas.push(idx); }); } else if (modoMercadoGlobal === 'mixto') { i.opciones.forEach((o, idx) => opcionesValidas.push(idx)); } else { i.opciones.forEach((o, idx) => { if(o.mercadoKey === modoMercadoGlobal) opcionesValidas.push(idx); }); } if(opcionesValidas.length > 0) { let actualStr = modoRiesgoGlobal ? i.indexRiesgo : i.indexSeleccionado; let arrayIdx = opcionesValidas.indexOf(actualStr); if(arrayIdx === -1) arrayIdx = 0; let nextRealIdx = opcionesValidas[(arrayIdx + 1) % opcionesValidas.length]; if(!modoRiesgoGlobal) { i.indexSeleccionado = nextRealIdx; } else { i.indexRiesgo = nextRealIdx; } } window.dibujarTicketDinamico(false); } };
 window.regenerarTicketCompleto = function() { ticketDinamicoVIP.forEach(item => { let max = item.opciones.length; if(!modoRiesgoGlobal) { item.indexSeleccionado = Math.floor(Math.random() * (max > 4 ? 4 : max)); } else { item.indexRiesgo = Math.floor(Math.random() * max); } }); window.dibujarTicketDinamico(false); };
 
@@ -873,22 +583,14 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
         let colorConf = o.verificado_ia ? 'bg-blue-600' : (o.es_valor ? 'bg-green-600' : (modoRiesgoGlobal ? 'bg-red-600' : 'bg-yellow-600'));
         let colorPick = o.verificado_ia ? 'text-blue-400' : (o.es_valor ? 'text-green-400' : (modoRiesgoGlobal ? 'text-red-400' : (esRadarAuto ? 'text-purple-400' : 'text-yellow-500')));
         
-        let badgeValor = '';
-        if (o.verificado_ia) { badgeValor = `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/50 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm animate-pulse"><i class="fas fa-robot"></i> IA Verificado</span>`; } 
-        else if (o.edgeValor > 0) { badgeValor = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm"><i class="fas fa-bolt text-yellow-400"></i> +${o.edgeValor}% EV</span>`; } 
-        else { badgeValor = `<span class="bg-gray-700/50 text-gray-400 border border-gray-600 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm">Estándar</span>`; }
-
+        let badgeValor = ''; if (o.verificado_ia) { badgeValor = `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/50 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm animate-pulse"><i class="fas fa-robot"></i> IA Verificado</span>`; } else if (o.edgeValor > 0) { badgeValor = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm"><i class="fas fa-bolt text-yellow-400"></i> +${o.edgeValor}% EV</span>`; } else { badgeValor = `<span class="bg-gray-700/50 text-gray-400 border border-gray-600 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm">Estándar</span>`; }
         let escudoMejora = o.es_mejora ? `<span class="bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-md animate-bounce"><i class="fas fa-shield-alt"></i> BLINDADO</span>` : '';
-
         let warningFaltaMercado = ''; if (modoMercadoGlobal === 'props' && !isProp(o.mercadoKey)) { warningFaltaMercado = `<div class="text-[8px] text-red-400 bg-red-900/30 p-1 rounded mt-1 border border-red-500/30 text-center"><i class="fas fa-exclamation-circle"></i> Props no publicados. Mostrando alternativa.</div>`; }
         
-        // 🛡️ BOTÓN DE ELIMINAR AÑADIDO AQUÍ
         htmlPartidos += `<div class="${bg} p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden shadow-lg"><div class="absolute top-0 right-0 ${colorConf} text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md z-10">PROB REAL: ${o.probabilidad > 96 ? 96 : o.probabilidad}%</div><div class="text-[9px] text-gray-400 font-bold uppercase mb-2"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-3">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-gray-700 shadow-inner"><div class="flex flex-col"><div class="flex items-center gap-1.5 mb-1"><span class="text-[11px] ${colorPick} font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${o.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button>${escudoMejora}</div><div class="mt-0.5 flex items-center"><span class="text-[8px] text-gray-500 uppercase font-bold"><i class="fas fa-shield-alt mr-1"></i> Quant: </span>${badgeValor}</div></div><div class="flex items-center gap-1.5"><span class="text-white font-black text-[15px] mr-1">${o.cuota.toFixed(2)}</span>${!esRadarAuto ? `<button onclick="window.rotarPickIndividual('${p.id}')" class="text-gray-400 bg-white/5 p-1.5 rounded-lg hover:text-white transition" title="Rotar Pick"><i class="fas fa-sync-alt"></i></button><button onclick="window.quitarPartidoDelTicket('${p.id}')" class="text-red-400 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-300 transition" title="Quitar Partido"><i class="fas fa-trash-alt"></i></button>` : ''}</div></div>${warningFaltaMercado}</div>`;
     });
     probPromedio = Math.floor(probPromedio / ticketDinamicoVIP.length); if(probPromedio > 96) probPromedio = 96; let c1 = modoMercadoGlobal === 'mixto' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c2 = modoMercadoGlobal === 'h2h' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c3 = modoMercadoGlobal === 'totals' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c4 = modoMercadoGlobal === 'spreads' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c5 = modoMercadoGlobal === 'props' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-yellow-500/50'; let ctrls = esRadarAuto ? '' : `<div class="grid grid-cols-5 gap-1 bg-black/60 p-1 rounded-lg mb-4"><button onclick="window.cambiarModoMercado('mixto')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c1}">Mixto</button><button onclick="window.cambiarModoMercado('h2h')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c2}">1X2</button><button onclick="window.cambiarModoMercado('totals')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c3}">Goles</button><button onclick="window.cambiarModoMercado('spreads')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c4}">Hándicap</button><button onclick="window.cambiarModoMercado('props')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c5} shadow-md"><i class="fas fa-star mr-0.5"></i>Props</button></div>`; 
-    
     let btnBar = esRadarAuto ? '' : `<div class="flex gap-2 mt-4"><button onclick="window.mejorarProbabilidadTicket()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-[0_0_15px_rgba(59,130,246,0.3)] transition active:scale-95"><i class="fas fa-shield-alt mr-1"></i> Blindar Picks</button><button onclick="window.regenerarTicketCompleto()" class="flex-1 py-3 border border-yellow-500/30 text-yellow-500 rounded-xl text-[10px] font-black uppercase hover:bg-yellow-500/10 transition active:scale-95"><i class="fas fa-random mr-1"></i> Rotar Picks</button></div>`; 
-    
     let riskBanner = esRadarAuto ? '' : `<div class="mb-4 p-3 rounded-lg ${modoRiesgoGlobal ? 'bg-red-900/20 border border-red-500/50' : 'bg-green-900/20 border border-green-500/50'} transition-colors flex justify-between items-center shadow-inner"><div class="flex flex-col w-2/3"><span class="text-[10px] font-black uppercase ${modoRiesgoGlobal ? 'text-red-400' : 'text-green-400'} mb-1">${modoRiesgoGlobal ? '<i class="fas fa-exclamation-triangle"></i> ALTO RIESGO / ALTA GANANCIA' : '<i class="fas fa-shield-alt"></i> MODO SEGURO (Banca)'}</span><span class="text-[8px] text-gray-400 leading-tight">${modoRiesgoGlobal ? 'Análisis cuantitativo de alto riesgo.' : 'Algoritmo ajustado a alta probabilidad.'}</span></div><button onclick="window.toggleModoRiesgo()" class="py-2.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest ${modoRiesgoGlobal ? 'bg-green-600 text-white' : 'bg-red-600 text-white'} shadow-lg active:scale-95 transition-all">${modoRiesgoGlobal ? 'Ir a Seguro' : 'Arriesgar'}</button></div>`;
     resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${modoRiesgoGlobal ? 'border-red-500 bg-red-500/5' : (esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5')} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${modoRiesgoGlobal ? 'text-red-500' : (esRadarAuto?'text-purple-500':'text-yellow-500')} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Análisis de FR Quant</span><span class="text-[10px] ${modoRiesgoGlobal ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10'} font-black px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${riskBanner} ${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final Calculada</span></div><span class="text-3xl font-black ${modoRiesgoGlobal ? 'text-red-400' : 'text-white'}">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button onclick="window.guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-yellow-600 hover:bg-yellow-500 text-black rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
 };
@@ -899,8 +601,7 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
 window.guardarTicketHistorial = async function(cuota) {
     if(!codigoActivoUsuario) return;
     let picksObj = ticketDinamicoVIP.map(t => { 
-        const idxUsado = modoRiesgoGlobal ? t.indexRiesgo : t.indexSeleccionado; 
-        const o = t.opciones[idxUsado]; 
+        const idxUsado = modoRiesgoGlobal ? t.indexRiesgo : t.indexSeleccionado; const o = t.opciones[idxUsado]; 
         return { partido: `${t.partido.home_team} vs ${t.partido.away_team}`, mercadoKey: o.mercadoKey, pick: formatearPickEspanol(o.nombre, o.point, o.mercadoKey), cuota: o.cuota, probabilidad: o.probabilidad, verificado_ia: o.verificado_ia, es_valor: o.es_valor, edgeValor: o.edgeValor }; 
     });
     try { 
@@ -921,7 +622,6 @@ window.renderizarHistorial = function() {
                 if(t.estado === 'won') ganados++; if(t.estado === 'lost') perdidos++; let bgStatus = 'bg-black/40 border-white/10'; let txtStatus = '<span class="text-gray-400"><i class="far fa-clock"></i> Pendiente</span>';
                 if(t.estado === 'won') { bgStatus = 'bg-green-900/20 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)]'; txtStatus = '<span class="text-green-400 font-black"><i class="fas fa-check-circle"></i> ACERTADO</span>'; }
                 if(t.estado === 'lost') { bgStatus = 'bg-red-900/20 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]'; txtStatus = '<span class="text-red-400 font-black"><i class="fas fa-times-circle"></i> FALLADO</span>'; }
-                
                 let picksHtml = ''; 
                 if(t.picksObj) { 
                     picksHtml = t.picksObj.map(p => { 
@@ -941,15 +641,7 @@ window.renderizarHistorial = function() {
 
 window.marcarTicket = async function(id, estado) { try { let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)); let index = hist.findIndex(t => t.id === id); if(index !== -1) { hist[index].estado = estado; localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist)); window.renderizarHistorial(); } await updateDoc(doc(db, "tickets_guardados", id.toString()), { estado: estado }); } catch(e) {} };
 
-window.limpiarHistorialSeguro = function() { 
-    window.mostrarConfirmacion("Limpiar Historial", "¿Estás seguro que deseas borrar todos los tickets guardados?", () => { 
-        try { 
-            localStorage.removeItem('oracle_historial_' + codigoActivoUsuario); 
-            window.renderizarHistorial(); 
-            window.mostrarAlerta("Historial Limpio", "Tus tickets han sido eliminados de tu dispositivo.", "success"); 
-        } catch(e){} 
-    }); 
-};
+window.limpiarHistorialSeguro = function() { window.mostrarConfirmacion("Limpiar Historial", "¿Estás seguro que deseas borrar todos los tickets guardados?", () => { try { localStorage.removeItem('oracle_historial_' + codigoActivoUsuario); window.renderizarHistorial(); window.mostrarAlerta("Historial Limpio", "Tus tickets han sido eliminados de tu dispositivo.", "success"); } catch(e){} }); };
 
 // ==========================================
 // 11. ESCALERA VIP Y APADRINAMIENTO 
@@ -957,28 +649,14 @@ window.limpiarHistorialSeguro = function() {
 window.chequearEstadoEscaleraUI = function() {
     let btn = document.getElementById('btnSolicitarEscalera'); const divBloqueada = document.getElementById('escaleraBloqueada'); const divAprobada = document.getElementById('escaleraAprobada'); if(!btn || !divBloqueada || !divAprobada) return;
     let nuevoBtn = btn.cloneNode(true); btn.parentNode.replaceChild(nuevoBtn, btn); nuevoBtn.removeAttribute('onclick');
-
-    if(!codigoActivoUsuario) { 
-        nuevoBtn.disabled = false; nuevoBtn.innerText = "INICIAR SESIÓN"; 
-        nuevoBtn.className = "w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(220,38,38,0.3)] transition active:scale-95"; 
-        nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.abrirModalLogin(); }; 
-        divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; return; 
-    }
-    if(estadoEscalera === 'none') { 
-        nuevoBtn.disabled = false; nuevoBtn.innerText = "SOLICITAR INVITACIÓN"; 
-        nuevoBtn.className = "w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition active:scale-95"; 
-        nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.solicitarAccesoEscalera(); }; 
-        divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; 
-    } else if (estadoEscalera === 'pending') { 
-        nuevoBtn.disabled = true; nuevoBtn.innerText = "REVISIÓN PENDIENTE..."; 
-        nuevoBtn.className = "w-full py-4 bg-gray-600 text-white rounded-lg font-black text-[11px] uppercase tracking-widest transition"; 
-        nuevoBtn.onclick = null; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; 
-    } else if (estadoEscalera === 'approved') { 
-        divBloqueada.style.display = 'none'; divAprobada.style.display = 'block'; window.cargarRetoEscaleraNube(); 
-    }
+    if(!codigoActivoUsuario) { nuevoBtn.disabled = false; nuevoBtn.innerText = "INICIAR SESIÓN"; nuevoBtn.className = "w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(220,38,38,0.3)] transition active:scale-95"; nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.abrirModalLogin(); }; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; return; }
+    if(estadoEscalera === 'none') { nuevoBtn.disabled = false; nuevoBtn.innerText = "SOLICITAR INVITACIÓN"; nuevoBtn.className = "w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition active:scale-95"; nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.solicitarAccesoEscalera(); }; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; } 
+    else if (estadoEscalera === 'pending') { nuevoBtn.disabled = true; nuevoBtn.innerText = "REVISIÓN PENDIENTE..."; nuevoBtn.className = "w-full py-4 bg-gray-600 text-white rounded-lg font-black text-[11px] uppercase tracking-widest transition"; nuevoBtn.onclick = null; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; } 
+    else if (estadoEscalera === 'approved') { divBloqueada.style.display = 'none'; divAprobada.style.display = 'block'; window.cargarRetoEscaleraNube(); }
 };
 
 window.solicitarAccesoEscalera = async function() { const btn = document.getElementById('btnSolicitarEscalera'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true; try { await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' }); estadoEscalera = 'pending'; window.chequearEstadoEscaleraUI(); window.mostrarAlerta("Solicitud Enviada", "En revisión por el Administrador.", "success"); } catch (e) { window.mostrarAlerta("Error", "Error al enviar la solicitud.", "error"); btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; } };
+
 window.cargarRetoEscaleraNube = async function() {
     const divTexto = document.getElementById('textoRetoAdmin'); try { const snap = await getDoc(doc(db, "global", "escalera")); if(snap.exists()) { const data = snap.data(); let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; if(data.ticket_data && data.ticket_data.picks) { html += `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${data.ticket_data.cuotaTotal}</span></div>`; data.ticket_data.picks.forEach(p => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; else if(p.mercadoKey.includes('cards')) ico = "fa-square"; else if(p.mercadoKey === 'totals') ico = "fa-futbol"; else if(p.mercadoKey === 'spreads') ico = "fa-balance-scale"; html += `<div class="bg-gray-900/50 p-3 rounded-lg mb-2 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.partido.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; }); html += `</div>`; } divTexto.innerHTML = html; } else { divTexto.innerHTML = "Sin reto oficial hoy."; } } catch(e) { divTexto.innerHTML = "Error cargando el reto del servidor."; }
 };
@@ -1089,9 +767,7 @@ window.generarRetoAdmin = async function() {
     if(!meta || meta <= 1.0) { window.mostrarAlerta("Error", "Cuota válida > 1.0", "error"); return; }
     
     const btn = document.querySelector('button[onclick="window.generarRetoAdmin()"]'); 
-    const originalBtn = btn.innerHTML; 
-    btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> BUSCANDO...'; 
-    btn.disabled = true;
+    const originalBtn = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> BUSCANDO...'; btn.disabled = true;
     
     try {
         let soccerLigas = competicionesGlobales.map(l => l.key); 
@@ -1132,7 +808,21 @@ window.generarRetoAdmin = async function() {
 window.publicarRetoEscalera = async function() {
     const txt = document.getElementById('inputAdminReto').value; if(!txt && !window.retoPendientePublicar) return window.mostrarAlerta("Error", "Nada para publicar.", "error");
     const btn = document.getElementById('btnPublicarReto'); const originalTxt = btn.innerText; btn.innerText = "Publicando..."; btn.disabled = true;
-    try { await setDoc(doc(db, "global", "escalera"), { mensaje: txt, ticket_data: window.retoPendientePublicar, timestamp: Date.now() }); window.mostrarAlerta("Publicado", "Ticket publicado.", "success"); document.getElementById('inputAdminReto').value=''; document.getElementById('previewRetoAdmin').innerHTML=''; document.getElementById('previewRetoAdmin').classList.add('hidden'); document.getElementById('inputAdminReto').classList.add('hidden'); document.getElementById('btnPublicarReto').classList.add('hidden'); window.retoPendientePublicar = null; } catch(e){ window.mostrarAlerta("Error", "Error de red.", "error"); } finally { btn.innerText = originalTxt; btn.disabled = false; }
+    try { 
+        await setDoc(doc(db, "global", "escalera"), { mensaje: txt, ticket_data: window.retoPendientePublicar, timestamp: Date.now() }); 
+        
+        // 🤖 AUTO-NOTIFICACIÓN DE ESCALERA A LA BASE DE DATOS
+        await setDoc(doc(collection(db, "notificaciones_push")), {
+            titulo: "🔥 NUEVO RETO ESCALERA DISPONIBLE",
+            cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
+            timestamp: Date.now(),
+            enviadoPor: "FR Quant (Bot)"
+        });
+
+        window.mostrarAlerta("Publicado", "Ticket publicado y notificación automática enviada a los Inversores.", "success"); 
+        
+        document.getElementById('inputAdminReto').value=''; document.getElementById('previewRetoAdmin').innerHTML=''; document.getElementById('previewRetoAdmin').classList.add('hidden'); document.getElementById('inputAdminReto').classList.add('hidden'); document.getElementById('btnPublicarReto').classList.add('hidden'); window.retoPendientePublicar = null; 
+    } catch(e){ window.mostrarAlerta("Error", "Error de red.", "error"); } finally { btn.innerText = originalTxt; btn.disabled = false; }
 };
 
 window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto", "¿Deseas borrar el Reto Escalera activo para todos los usuarios?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Sistema Limpio", "El reto escalera ha sido eliminado de la nube.", "success"); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
