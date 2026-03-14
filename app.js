@@ -54,15 +54,22 @@ if ('serviceWorker' in navigator) {
 // ==========================================
 const VAPID_KEY = "BO7AkZgMGzNtUBR8ZShudo6sW0zTbS7lyOZszkVrbJ3WLL80yEBRIfgreLnFpPHe4cBCLr_J8XmyckjpwMu6xTo";
 
-window.registrarTokenPush = async function(codigoUsuario) {
+// 🚀 INTELIGENCIA DE BOTÓN: Oculta el botón o lo desaparece con animación
+window.registrarTokenPush = async function(codigoUsuario, modoSilencioso = false) {
     const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
-    if (!("Notification" in window)) { window.mostrarAlerta("iOS Incompatible", "Actualiza a iOS 16.4+ y añade la app a la pantalla de inicio.", "error"); return; }
+    if (!("Notification" in window)) { 
+        if(!modoSilencioso) window.mostrarAlerta("iOS Incompatible", "Actualiza a iOS 16.4+ y añade la app a la pantalla de inicio.", "error"); 
+        if(btn) btn.remove();
+        return; 
+    }
 
     try {
-        if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Solicitando permiso...'; }
-        const permission = await Notification.requestPermission();
+        if(btn && !modoSilencioso) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Solicitando permiso...'; }
+        
+        const permission = modoSilencioso ? Notification.permission : await Notification.requestPermission();
+        
         if (permission === 'granted') {
-            if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Vinculando celular...'; }
+            if(btn && !modoSilencioso) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Vinculando celular...'; }
             const swRegistration = await navigator.serviceWorker.ready;
             const tokenPromise = getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
@@ -73,15 +80,39 @@ window.registrarTokenPush = async function(codigoUsuario) {
                 let codigoGuardar = codigoUsuario || (adminAutenticado ? "ADMIN_MASTER" : "DESCONOCIDO");
                 if (codigoGuardar !== "DESCONOCIDO") {
                     await setDoc(doc(db, "codigos_nube", codigoGuardar), { fcmToken: token }, { merge: true });
-                    window.mostrarAlerta("¡Fondo Vinculado!", "Recibirás señales Diamante directamente.", "success");
-                    if(btn) { btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Activadas'; btn.disabled = true; btn.classList.replace('bg-blue-600', 'bg-green-600'); }
+                    
+                    if(!modoSilencioso) window.mostrarAlerta("¡Fondo Vinculado!", "Recibirás señales Diamante directamente.", "success");
+                    
+                    // 🚀 ANIMACIÓN: Desvanecer y eliminar el botón
+                    if(btn) { 
+                        if(!modoSilencioso) {
+                            btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Activadas'; 
+                            btn.disabled = true; 
+                            btn.classList.replace('bg-blue-600', 'bg-green-600'); 
+                        }
+                        
+                        setTimeout(() => {
+                            btn.style.transition = "opacity 0.5s ease, height 0.5s ease, margin 0.5s ease, padding 0.5s ease";
+                            btn.style.opacity = "0";
+                            setTimeout(() => {
+                                btn.style.height = "0px";
+                                btn.style.margin = "0px";
+                                btn.style.padding = "0px";
+                                btn.style.overflow = "hidden";
+                                setTimeout(() => btn.remove(), 500);
+                            }, 500);
+                        }, modoSilencioso ? 0 : 1500);
+                    }
                 }
-            } else { throw new Error("Token vacío"); }
+            } else { if(!modoSilencioso) throw new Error("Token vacío"); }
         } else {
-            window.mostrarAlerta("Permiso Denegado", "Has bloqueado las alertas. Actívalas en la Configuración de tu celular.", "warning");
-            if(btn) { btn.innerHTML = '<i class="fas fa-bell-slash text-lg mr-2"></i> Bloqueado'; }
+            if(!modoSilencioso) window.mostrarAlerta("Permiso Denegado", "Has bloqueado las alertas. Actívalas en la Configuración de tu celular.", "warning");
+            if(btn && !modoSilencioso) { btn.innerHTML = '<i class="fas fa-bell-slash text-lg mr-2"></i> Bloqueado'; }
         }
-    } catch(e) { window.mostrarAlerta("Fallo de Conexión", "Error: " + e.message, "error"); if(btn) { btn.innerHTML = '<i class="fas fa-redo text-lg mr-2"></i> Reintentar Conexión'; } }
+    } catch(e) { 
+        if(!modoSilencioso) window.mostrarAlerta("Fallo de Conexión", "Error: " + e.message, "error"); 
+        if(btn && !modoSilencioso) { btn.innerHTML = '<i class="fas fa-redo text-lg mr-2"></i> Reintentar Conexión'; } 
+    }
 };
 
 onMessage(messaging, (payload) => { 
@@ -274,16 +305,12 @@ window.iniciarApp = async function() {
     try { const session = localStorage.getItem('oracle_session'); if(session) { const data = JSON.parse(session); window.concederAcceso(data.ilimitado, data.code, data.ladderStat, true); } } catch(e) {} 
     window.ejecutarTopFutbol(); 
 
-    // LÓGICA DE DEEP LINKING
     setTimeout(() => {
         if (window.location.search) {
             window.procesarEnlaceInterno(window.location.href);
             window.history.replaceState({}, document.title, "/");
         }
-        
-        // 🚀 DISPARADOR DEL INTERCEPTOR
         window.verificarNotificacionesPendientes();
-        
     }, 1500); 
 };
 
@@ -365,6 +392,16 @@ window.renderizarLayoutAdmin = function() {
 
     const aSec = document.getElementById('adminSection'); if(!aSec) return; aSec.style.display = 'block';
     
+    // 🚀 INTELIGENCIA DE BOTÓN: Inyectar botón solo si NO tiene permiso aún
+    let btnPushAdminHTML = '';
+    if (window.Notification) {
+        if (Notification.permission === 'granted') {
+            window.registrarTokenPush('ADMIN_MASTER', true); // Actualizar fondo silencioso
+        } else if (Notification.permission !== 'denied') {
+            btnPushAdminHTML = `<button id="btnActivarPushAdmin" onclick="window.registrarTokenPush('ADMIN_MASTER')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-5 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas Master</button>`;
+        }
+    }
+
     aSec.innerHTML = `
         <div class="p-4 bg-gray-900 min-h-screen pb-20">
             <div class="flex flex-col items-center justify-center gap-2 mb-6 text-center border-b border-white/5 pb-4 relative">
@@ -383,7 +420,7 @@ window.renderizarLayoutAdmin = function() {
             </div>
 
             <div id="vistaAdm_dash" class="admin-view-content block">
-                <button id="btnActivarPushAdmin" onclick="window.registrarTokenPush('ADMIN_MASTER')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-5 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas Master</button>
+                ${btnPushAdminHTML}
                 
                 <div class="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border border-blue-500/50 p-4 rounded-xl mb-5 shadow-lg relative overflow-hidden">
                     <div class="absolute top-0 right-0 bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">LIVE</div>
@@ -488,7 +525,15 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
     if(wrapVIP) {
         wrapVIP.style.display = 'block'; 
         let oldBtn = document.getElementById('btnActivarPushVip'); if(oldBtn) oldBtn.remove();
-        wrapVIP.insertAdjacentHTML('afterbegin', `<button id="btnActivarPushVip" onclick="window.registrarTokenPush('${codeString}')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-4 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas en este Celular</button>`);
+        
+        // 🚀 INTELIGENCIA DE BOTÓN VIP
+        if (window.Notification) {
+            if (Notification.permission === 'granted') {
+                window.registrarTokenPush(codeString, true); 
+            } else if (Notification.permission !== 'denied') {
+                wrapVIP.insertAdjacentHTML('afterbegin', `<button id="btnActivarPushVip" onclick="window.registrarTokenPush('${codeString}')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-4 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas en este Celular</button>`);
+            }
+        }
     }
     if(wrapFree) wrapFree.style.display = 'none'; 
     

@@ -329,7 +329,12 @@
             }
         });
     </script>
-    <script type="module" src="app.js"></script>
+    <script type="module">
+        const version = new Date().getTime(); // Genera un número único cada milisegundo
+        import(`./app.js?v=${version}`).then(() => {
+            console.log("✅ Código base sincronizado con la nube.");
+        }).catch(err => console.error("❌ Error cargando la app:", err));
+    </script>
 
 </body>
 </html>
