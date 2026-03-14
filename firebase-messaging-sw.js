@@ -13,21 +13,39 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// 🖱️ QUÉ HACER CUANDO EL USUARIO TOCA LA NOTIFICACIÓN EN SU CELULAR
-self.addEventListener('notificationclick', function(event) {
-    event.notification.close(); // Cierra el globito de notificación
+messaging.onBackgroundMessage((payload) => {
+    const notificationTitle = payload.notification.title;
+    // Leemos la URL que viene desde el backend
+    const clickUrl = payload.data && payload.data.url ? payload.data.url : '/';
     
-    // Forzamos a que el celular abra la aplicación PWA
+    const notificationOptions = {
+        body: payload.notification.body,
+        icon: '/icon.png',
+        badge: '/icon.png',
+        vibrate: [200, 100, 200],
+        data: { url: clickUrl } // Guardamos la URL en la notificación
+    };
+    self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// 🖱️ AL HACER CLIC EN LA NOTIFICACIÓN
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close(); 
+    const urlToOpen = event.notification.data.url; // Extraemos la URL (Ej: /?view=escalera)
+    
     event.waitUntil(
-        clients.matchAll({ type: 'window' }).then( windowClients => {
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then( windowClients => {
             for (var i = 0; i < windowClients.length; i++) {
                 var client = windowClients[i];
+                // Si la app ya está abierta, la enfocamos y la enviamos a la URL
                 if (client.url.includes(self.registration.scope) && 'focus' in client) {
+                    client.navigate(urlToOpen);
                     return client.focus();
                 }
             }
+            // Si estaba cerrada, la abrimos en esa URL
             if (clients.openWindow) {
-                return clients.openWindow('/');
+                return clients.openWindow(urlToOpen);
             }
         })
     );

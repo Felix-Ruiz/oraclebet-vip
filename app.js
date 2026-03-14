@@ -63,16 +63,7 @@ window.registrarTokenPush = async function(codigoUsuario) {
 
 onMessage(messaging, (payload) => { window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success"); });
 
-// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP (Para que todos puedan leer el historial)
-window.inyectarCampanitaHeader = function() {
-    const header = document.querySelector('header');
-    if(header && !document.getElementById('btnCampanitaInApp')) {
-        let btnHTML = `<button id="btnCampanitaInApp" onclick="window.abrirBandejaNotificaciones()" class="ml-auto mr-3 bg-gray-800 text-yellow-500 w-10 h-10 rounded-full flex items-center justify-center relative shadow-md border border-white/5 active:scale-95 transition-transform"><i class="fas fa-bell text-lg"></i><span class="absolute top-0 right-0 bg-red-600 border border-gray-900 w-3 h-3 rounded-full animate-pulse"></span></button>`;
-        const btnLogin = document.getElementById('btnTopLogin');
-        if(btnLogin) { btnLogin.insertAdjacentHTML('beforebegin', btnHTML); } else { header.insertAdjacentHTML('beforeend', btnHTML); }
-    }
-};
-
+// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP
 window.abrirBandejaNotificaciones = async function() {
     let modal = document.getElementById('modalBandejaNotificaciones');
     if (!modal) {
@@ -94,7 +85,6 @@ window.abrirBandejaNotificaciones = async function() {
     modal.classList.remove('hidden'); modal.style.display = 'flex';
     setTimeout(() => { document.getElementById('bandejaContenido').classList.remove('translate-y-full'); }, 10);
 
-    // Consultar Base de Datos de Mensajes
     const lista = document.getElementById('listaBandejaNotificaciones');
     try {
         const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(10));
@@ -170,7 +160,7 @@ const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': {
 
 function obtenerInfoLiga(key, apiTitle) {
     let pais = "Mundial"; let nombreLiga = apiTitle ? String(apiTitle) : "Competición Genérica"; let bandera = "🌍"; let k = key ? String(key).toLowerCase() : "";
-    if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra"; else if(k.includes('spain')) pais = "España"; else if(k.includes('italy')) pais = "Italia"; else if(k.includes('germany')) pais = "Alemania"; else if(k.includes('france')) pais = "Francia"; else if(k.includes('colombia')) pais = "Colombia"; else if(k.includes('mexico')) pais = "México"; else if(k.includes('argentina')) pais = "Argentina"; else if(k.includes('brazil')) pais = "Brasil"; else if(k.includes('portugal')) pais = "Portugal"; else if(k.includes('netherlands')) pais = "Países Bajos"; else if(k.includes('turkey')) pais = "Turquía"; else if(k.includes('belgium')) pais = "Bélgica"; else if(k.includes('australia')) pais = "Australia"; else if(k.includes('chile')) pais = "Chile"; else if(k.includes('peru')) pais = "Perú"; else if(k.includes('ecuador')) pais = "Ecuador"; else if(k.includes('uruguay')) pais = "Uruguay"; else if(k.includes('bolivia')) pais = "Bolivia"; else if(k.includes('paraguay')) pais = "Paraguay"; else if(k.includes('venezuela')) pais = "Venezuela"; else if(k.includes('japan')) pais = "Japón"; else if(k.includes('korea')) pais = "Corea del Sur"; else if(k.includes('china')) pais = "China"; else if(k.includes('saudi_arabia') || k.includes('saudi')) pais = "Arabia Saudita"; else if(k.includes('scotland')) pais = "Escocia"; else if(k.includes('sweden')) pais = "Suecia"; else if(k.includes('switzerland')) pais = "Suiza"; else if(k.includes('denmark')) pais = "Dinamarca"; else if(k.includes('norway')) pais = "Noruega"; else if(k.includes('poland')) pais = "Polonia"; else if(k.includes('austria')) pais = "Austria"; else if(k.includes('russia')) pais = "Rusia"; else if(k.includes('greece')) pais = "Grecia"; else if(k.includes('conmebol')) pais = "Sudamérica"; else if(k.includes('uefa') || k.includes('euro')) pais = "Europa"; else if(k.includes('usa') || k.includes('mls')) pais = "USA"; else if(k.includes('fifa') || k.includes('world_cup')) pais = "Mundial";
+    if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra"; else if(k.includes('spain')) pais = "España"; else if(k.includes('italy')) pais = "Italia"; else if(k.includes('germany')) pais = "Alemania"; else if(k.includes('france')) pais = "Francia"; else if(k.includes('colombia')) pais = "Colombia"; else if(k.includes('mexico')) pais = "México"; else if(k.includes('argentina')) pais = "Argentina"; else if(k.includes('brazil')) pais = "Brasil"; else if(k.includes('portugal')) pais = "Portugal"; else if(k.includes('netherlands')) pais = "Países Bajos"; else if(k.includes('turkey')) pais = "Turquía"; else if(k.includes('belgium')) pais = "Bélgica"; else if(k.includes('australia')) pais = "Australia"; else if(k.includes('chile')) pais = "Chile"; else if(k.includes('peru')) pais = "Perú"; else if(k.includes('ecuador')) pais = "Ecuador"; else if(k.includes('uruguay')) pais = "Uruguay"; else if(k.includes('bolivia')) pais = "Bolivia"; else if(k.includes('paraguay')) pais = "Paraguay"; else if(k.includes('venezuela')) pais = "Venezuela"; else if(k.includes('japan')) pais = "Japón"; else if(k.includes('korea')) pais = "Corea del Sur"; else if(k.includes('china')) pais = "China"; else if(k.includes('saudi_arabia') || k.includes('saudi')) pais = "Arabia Saudita"; else if(k.includes('scotland')) pais = "Escocia"; else if(k.includes('sweden')) pais = "Suecia"; else if(k.includes('switzerland')) pais = "Suiza"; else if(k.includes('denmark')) pais = "Dinamarca"; else if(k.includes('norway')) fractional = "Noruega"; else if(k.includes('poland')) pais = "Polonia"; else if(k.includes('austria')) pais = "Austria"; else if(k.includes('russia')) pais = "Rusia"; else if(k.includes('greece')) pais = "Grecia"; else if(k.includes('conmebol')) pais = "Sudamérica"; else if(k.includes('uefa') || k.includes('euro')) pais = "Europa"; else if(k.includes('usa') || k.includes('mls')) pais = "USA"; else if(k.includes('fifa') || k.includes('world_cup')) pais = "Mundial";
     const banderas = { 'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'España':'🇪🇸', 'Italia':'🇮🇹', 'Alemania':'🇩🇪', 'Francia':'🇫🇷', 'Colombia':'🇨🇴', 'México':'🇲🇽', 'Argentina':'🇦🇷', 'Brasil':'🇧🇷', 'Sudamérica':'🌎', 'Europa':'🇪🇺', 'USA':'🇺🇸', 'Portugal':'🇵🇹', 'Países Bajos':'🇳🇱', 'Turquía':'🇹🇷', 'Bélgica':'🇧🇪', 'Australia':'🇦🇺', 'Chile':'🇨🇱', 'Perú':'🇵🇪', 'Ecuador':'🇪🇨', 'Uruguay':'🇺🇾', 'Bolivia':'🇧🇴', 'Paraguay':'🇵🇾', 'Venezuela':'🇻🇪', 'Japón':'🇯🇵', 'Corea del Sur':'🇰🇷', 'China':'🇨🇳', 'Arabia Saudita':'🇸🇦', 'Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Suecia':'🇸🇪', 'Suiza':'🇨🇭', 'Dinamarca':'🇩🇰', 'Noruega':'🇳🇴', 'Polonia':'🇵🇱', 'Austria':'🇦🇹', 'Rusia':'🇷🇺', 'Grecia':'🇬🇷', 'Mundial':'🌍' };
     bandera = banderas[pais] || '🌍';
     if(nombreLiga === 'EPL') nombreLiga = "Premier League"; else if(nombreLiga.includes(' - ')) nombreLiga = nombreLiga.split(' - ')[0].trim();
@@ -197,7 +187,8 @@ async function precargarBaseDeDatos() {
                 if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; } 
             } 
         });
-        competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); window.inyectarCampanitaHeader();
+        competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); 
+        // ⚠️ Eliminado: window.inyectarCampanitaHeader(); porque ya está fija en el HTML
     } catch(e) { 
         console.error("Error DB:", e); 
         const cFree = document.getElementById('containerPartidos'); 
@@ -220,9 +211,24 @@ window.iniciarApp = async function() {
     const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
     let loadHtml = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Sincronizando Cartelera...</div>`;
     if(cFree) cFree.innerHTML = loadHtml; if(cVip) cVip.innerHTML = loadHtml;
+    
     await precargarBaseDeDatos(); 
+    
     try { const session = localStorage.getItem('oracle_session'); if(session) { const data = JSON.parse(session); window.concederAcceso(data.ilimitado, data.code, data.ladderStat, true); } } catch(e) {} 
     window.ejecutarTopFutbol(); 
+
+    // 🔗 DEEP LINKING: Leer si entramos por una notificación Push
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
+    if (viewParam) {
+        setTimeout(() => {
+            window.cambiarVista(viewParam);
+            // Si intenta entrar a Escalera pero no tiene sesión, le pedimos Login
+            if(!modoVipActivo && viewParam === 'escalera') {
+                window.abrirModalLogin();
+            }
+        }, 800); 
+    }
 };
 
 if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', window.iniciarApp); } else { window.iniciarApp(); }
@@ -273,7 +279,13 @@ window.enviarNotificacionGlobal = async function() {
     if(!titulo || !cuerpo) { window.mostrarAlerta("Campos Vacíos", "Ingresa un título y un mensaje.", "warning"); return; }
     const btn = document.getElementById('btnEnviarPush'); btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ENVIANDO...`; btn.disabled = true;
     try {
-        await setDoc(doc(collection(db, "notificaciones_push")), { titulo: titulo, cuerpo: cuerpo, timestamp: Date.now(), enviadoPor: "Félix Ruiz (Gestor)" });
+        await setDoc(doc(collection(db, "notificaciones_push")), { 
+            titulo: titulo, 
+            cuerpo: cuerpo, 
+            url: "/", // Notificación general envía al inicio
+            timestamp: Date.now(), 
+            enviadoPor: "Félix Ruiz (Gestor)" 
+        });
         window.mostrarAlerta("Éxito", "La notificación ha sido enviada y guardada en la bandeja.", "success");
         document.getElementById('pushTitulo').value = ''; document.getElementById('pushCuerpo').value = '';
     } catch(e) { window.mostrarAlerta("Error", "No se pudo comunicar con el servidor.", "error"); } finally {
@@ -658,7 +670,9 @@ window.chequearEstadoEscaleraUI = function() {
 window.solicitarAccesoEscalera = async function() { const btn = document.getElementById('btnSolicitarEscalera'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true; try { await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' }); estadoEscalera = 'pending'; window.chequearEstadoEscaleraUI(); window.mostrarAlerta("Solicitud Enviada", "En revisión por el Administrador.", "success"); } catch (e) { window.mostrarAlerta("Error", "Error al enviar la solicitud.", "error"); btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; } };
 
 window.cargarRetoEscaleraNube = async function() {
-    const divTexto = document.getElementById('textoRetoAdmin'); try { const snap = await getDoc(doc(db, "global", "escalera")); if(snap.exists()) { const data = snap.data(); let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; if(data.ticket_data && data.ticket_data.picks) { html += `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${data.ticket_data.cuotaTotal}</span></div>`; data.ticket_data.picks.forEach(p => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; else if(p.mercadoKey.includes('cards')) ico = "fa-square"; else if(p.mercadoKey === 'totals') ico = "fa-futbol"; else if(p.mercadoKey === 'spreads') ico = "fa-balance-scale"; html += `<div class="bg-gray-900/50 p-3 rounded-lg mb-2 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.partido.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; }); html += `</div>`; } divTexto.innerHTML = html; } else { divTexto.innerHTML = "Sin reto oficial hoy."; } } catch(e) { divTexto.innerHTML = "Error cargando el reto del servidor."; }
+    const divTexto = document.getElementById('textoRetoAdmin'); try { const snap = await getDoc(doc(db, "global", "escalera")); if(snap.exists()) { const data = snap.data(); let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; if(data.ticket_data && data.ticket_data.picks) { html += `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${data.ticket_data.cuotaTotal}</span></div>`; data.ticket_data.picks.forEach(p => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; else if(p.mercadoKey.includes('cards')) ico = "fa-square"; else if(p.mercadoKey === 'totals') ico = "fa-futbol"; else if(p.mercadoKey === 'spreads') ico = "fa-balance-scale"; 
+    // 🛠️ FIX DE TEXTO SOLUCIONADO AQUÍ (${p.away_team} en vez de partido.away_team)
+    html += `<div class="bg-gray-900/50 p-3 rounded-lg mb-2 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; }); html += `</div>`; } divTexto.innerHTML = html; } else { divTexto.innerHTML = "Sin reto oficial hoy."; } } catch(e) { console.error(e); divTexto.innerHTML = "Error cargando el reto del servidor."; }
 };
 
 window.chequearApadrinamientoUI = function() {
@@ -811,10 +825,11 @@ window.publicarRetoEscalera = async function() {
     try { 
         await setDoc(doc(db, "global", "escalera"), { mensaje: txt, ticket_data: window.retoPendientePublicar, timestamp: Date.now() }); 
         
-        // 🤖 AUTO-NOTIFICACIÓN DE ESCALERA A LA BASE DE DATOS
+        // 🔗 AUTO-NOTIFICACIÓN DE ESCALERA CON URL PROFUNDA (DEEP LINK)
         await setDoc(doc(collection(db, "notificaciones_push")), {
             titulo: "🔥 NUEVO RETO ESCALERA DISPONIBLE",
             cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
+            url: "/?view=escalera", // Manda la orden para abrir la pestaña de Escalera
             timestamp: Date.now(),
             enviadoPor: "FR Quant (Bot)"
         });
