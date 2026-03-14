@@ -35,27 +35,38 @@ const VAPID_KEY = "BO7AkZgMGzNtUBR8ZShudo6sW0zTbS7lyOZszkVrbJ3WLL80yEBRIfgreLnFp
 window.registrarTokenPush = async function(codigoUsuario) {
     const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
     
-    // Seguro 1: Verificar si el celular es compatible con notificaciones Web
     if (!("Notification" in window)) {
         window.mostrarAlerta("iOS Incompatible", "Tu versión de iPhone no soporta notificaciones web. Necesitas actualizar a iOS 16.4+ y agregar la app a la pantalla de inicio.", "error");
-        if(btn) { btn.innerHTML = '<i class="fas fa-times text-lg mr-2"></i> Dispositivo no compatible'; }
+        if(btn) { btn.innerHTML = '<i class="fas fa-times text-lg mr-2"></i> No compatible'; }
         return;
     }
 
     try {
         if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Solicitando permiso...'; }
 
-        // Pedimos permiso a Apple INMEDIATAMENTE después del clic (Sin interrupciones)
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
+            if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Despertando SW...'; }
+            
+            // 🍎 FIX PARA iPHONE: Registramos y esperamos agresivamente a que el SW esté activo
+            const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            await navigator.serviceWorker.ready; 
+            
             if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Encriptando llave...'; }
             
-            const swRegistration = await navigator.serviceWorker.ready;
-            const token = await getToken(messaging, { 
+            // ⏱️ Seguro Anti-Cuelgue Infinito (Timeout de 15 segundos)
+            const tokenPromise = getToken(messaging, { 
                 vapidKey: VAPID_KEY,
                 serviceWorkerRegistration: swRegistration 
             });
+
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Apple bloqueó la respuesta de Firebase (Timeout).")), 15000)
+            );
+            
+            // Ponemos a "competir" la generación del token contra el cronómetro
+            const token = await Promise.race([tokenPromise, timeoutPromise]);
             
             if (token) {
                 let codigoGuardar = codigoUsuario;
@@ -65,7 +76,7 @@ window.registrarTokenPush = async function(codigoUsuario) {
                 
                 if (codigoGuardar !== "DESCONOCIDO") {
                     await setDoc(doc(db, "codigos_nube", codigoGuardar), { fcmToken: token }, { merge: true });
-                    window.mostrarAlerta("¡Fondo Vinculado!", "Tu celular ahora recibirá las señales Diamante directamente de FR Quant Capital.", "success");
+                    window.mostrarAlerta("¡Fondo Vinculado!", "Tu celular ahora recibirá las señales Diamante directamente.", "success");
                     if(btn) { 
                         btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Vinculadas'; 
                         btn.disabled = true; 
@@ -73,16 +84,16 @@ window.registrarTokenPush = async function(codigoUsuario) {
                     }
                 }
             } else {
-                window.mostrarAlerta("Fallo de Google", "No se pudo generar el token criptográfico.", "error");
-                if(btn) { btn.innerHTML = '<i class="fas fa-bell mr-2"></i> Reintentar'; }
+                throw new Error("El Token llegó vacío.");
             }
         } else {
             window.mostrarAlerta("Permiso Denegado", "Has bloqueado las alertas. Para activarlas, ve a Configuración > Safari en tu iPhone.", "warning");
             if(btn) { btn.innerHTML = '<i class="fas fa-bell-slash text-lg mr-2"></i> Bloqueado'; }
         }
     } catch(e) { 
-        window.mostrarAlerta("Fallo Crítico de iOS", "Safari detuvo el proceso: " + e.message, "error");
-        if(btn) { btn.innerHTML = '<i class="fas fa-exclamation-triangle text-lg mr-2"></i> Error de conexión'; }
+        window.mostrarAlerta("Fallo de Conexión", "El sistema tardó demasiado o Safari lo bloqueó: " + e.message, "error");
+        console.error('Push error:', e); 
+        if(btn) { btn.innerHTML = '<i class="fas fa-redo text-lg mr-2"></i> Reintentar Conexión'; }
     }
 };
 
