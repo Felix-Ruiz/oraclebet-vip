@@ -153,9 +153,6 @@ let perfilApadrinamiento = null; let unsubscribeApadrinamiento = null; let tiemp
 let filtroIAActivo = false; 
 let correoAdminTemp = ""; 
 
-// ==========================================
-// 3. DICCIONARIOS Y TRADUCTORES
-// ==========================================
 const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': { 'titulo': 'Goles Totales' }, 'spreads': { 'titulo': 'Hándicap (Spread)' }, 'alternate_totals_corners': { 'titulo': 'Líneas de Córners' }, 'team_total_corners': { 'titulo': 'Córners por Equipo' }, 'corners_handicap': { 'titulo': 'Hándicap de Córners' }, 'alternate_totals_cards': { 'titulo': 'Líneas de Tarjetas' }, 'player_shots': { 'titulo': 'Disparos del Jugador' }, 'player_shots_on_target': { 'titulo': 'Disparos a Puerta' }, 'player_cards': { 'titulo': 'Tarjeta a Jugador' } };
 
 function obtenerInfoLiga(key, apiTitle) {
@@ -171,9 +168,6 @@ function obtenerInfoLiga(key, apiTitle) {
 function formatearPickEspanol(nombre, point, mercadoKey) { let text = nombre || ""; text = text.replace(/Total Corners/ig, 'Córners').replace(/Total Cards/ig, 'Tarjetas').replace(/over/ig, 'Más de').replace(/under/ig, 'Menos de'); let textLower = text.toLowerCase(); if (textLower === '1') return `Local (1) ${point > 0 ? '+'+point : point}`; if (textLower === '2') return `Visitante (2) ${point > 0 ? '+'+point : point}`; if (textLower === 'x') return `Empate (X)`; if (point !== null && point !== undefined && point !== "") { if (!text.includes(point.toString())) { text += ` ${point > 0 && !textLower.includes('más') ? '+'+point : point}`; } } return text.trim(); }
 function formatoCOP(valor) { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor); }
 
-// ==========================================
-// 4. CACHÉ GLOBAL DE DESCARGA RÁPIDA
-// ==========================================
 async function precargarBaseDeDatos() {
     const tiempoActualISO = new Date().toISOString(); 
     try {
@@ -188,7 +182,6 @@ async function precargarBaseDeDatos() {
             } 
         });
         competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); 
-        // ⚠️ Eliminado: window.inyectarCampanitaHeader(); porque ya está fija en el HTML
     } catch(e) { 
         console.error("Error DB:", e); 
         const cFree = document.getElementById('containerPartidos'); 
@@ -217,18 +210,31 @@ window.iniciarApp = async function() {
     try { const session = localStorage.getItem('oracle_session'); if(session) { const data = JSON.parse(session); window.concederAcceso(data.ilimitado, data.code, data.ladderStat, true); } } catch(e) {} 
     window.ejecutarTopFutbol(); 
 
-    // 🔗 DEEP LINKING: Leer si entramos por una notificación Push
-    const urlParams = new URLSearchParams(window.location.search);
-    const viewParam = urlParams.get('view');
-    if (viewParam) {
-        setTimeout(() => {
+    // 🚀 LÓGICA DE DEEP LINKING (Si entramos desde la notificación)
+    setTimeout(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewParam = urlParams.get('view');
+        const inboxParam = urlParams.get('inbox');
+
+        if (inboxParam === 'true') {
+            window.abrirBandejaNotificaciones();
+        }
+
+        if (viewParam) {
             window.cambiarVista(viewParam);
-            // Si intenta entrar a Escalera pero no tiene sesión, le pedimos Login
-            if(!modoVipActivo && viewParam === 'escalera') {
+            if (!modoVipActivo && viewParam === 'escalera') {
+                window.mostrarAlerta("Acceso VIP", "Inicia sesión para ver el Reto Oficial de Escalera.", "info");
                 window.abrirModalLogin();
+            } else if (modoVipActivo && viewParam === 'escalera') {
+                window.chequearEstadoEscaleraUI(); // Forzamos que descargue y muestre el ticket
             }
-        }, 800); 
-    }
+        }
+        
+        // Limpiar la URL para que no quede estancada
+        if(viewParam || inboxParam) {
+            window.history.replaceState({}, document.title, "/");
+        }
+    }, 1500); 
 };
 
 if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', window.iniciarApp); } else { window.iniciarApp(); }
@@ -282,7 +288,7 @@ window.enviarNotificacionGlobal = async function() {
         await setDoc(doc(collection(db, "notificaciones_push")), { 
             titulo: titulo, 
             cuerpo: cuerpo, 
-            url: "/", // Notificación general envía al inicio
+            url: window.location.origin + "/?inbox=true", // Abre la bandeja In-App nativamente
             timestamp: Date.now(), 
             enviadoPor: "Félix Ruiz (Gestor)" 
         });
@@ -670,9 +676,7 @@ window.chequearEstadoEscaleraUI = function() {
 window.solicitarAccesoEscalera = async function() { const btn = document.getElementById('btnSolicitarEscalera'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true; try { await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' }); estadoEscalera = 'pending'; window.chequearEstadoEscaleraUI(); window.mostrarAlerta("Solicitud Enviada", "En revisión por el Administrador.", "success"); } catch (e) { window.mostrarAlerta("Error", "Error al enviar la solicitud.", "error"); btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; } };
 
 window.cargarRetoEscaleraNube = async function() {
-    const divTexto = document.getElementById('textoRetoAdmin'); try { const snap = await getDoc(doc(db, "global", "escalera")); if(snap.exists()) { const data = snap.data(); let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; if(data.ticket_data && data.ticket_data.picks) { html += `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${data.ticket_data.cuotaTotal}</span></div>`; data.ticket_data.picks.forEach(p => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; else if(p.mercadoKey.includes('cards')) ico = "fa-square"; else if(p.mercadoKey === 'totals') ico = "fa-futbol"; else if(p.mercadoKey === 'spreads') ico = "fa-balance-scale"; 
-    // 🛠️ FIX DE TEXTO SOLUCIONADO AQUÍ (${p.away_team} en vez de partido.away_team)
-    html += `<div class="bg-gray-900/50 p-3 rounded-lg mb-2 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; }); html += `</div>`; } divTexto.innerHTML = html; } else { divTexto.innerHTML = "Sin reto oficial hoy."; } } catch(e) { console.error(e); divTexto.innerHTML = "Error cargando el reto del servidor."; }
+    const divTexto = document.getElementById('textoRetoAdmin'); try { const snap = await getDoc(doc(db, "global", "escalera")); if(snap.exists()) { const data = snap.data(); let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; if(data.ticket_data && data.ticket_data.picks) { html += `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${data.ticket_data.cuotaTotal}</span></div>`; data.ticket_data.picks.forEach(p => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; else if(p.mercadoKey.includes('cards')) ico = "fa-square"; else if(p.mercadoKey === 'totals') ico = "fa-futbol"; else if(p.mercadoKey === 'spreads') ico = "fa-balance-scale"; html += `<div class="bg-gray-900/50 p-3 rounded-lg mb-2 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; }); html += `</div>`; } divTexto.innerHTML = html; } else { divTexto.innerHTML = "Sin reto oficial hoy."; } } catch(e) { console.error(e); divTexto.innerHTML = "Error cargando el reto del servidor."; }
 };
 
 window.chequearApadrinamientoUI = function() {
@@ -829,7 +833,7 @@ window.publicarRetoEscalera = async function() {
         await setDoc(doc(collection(db, "notificaciones_push")), {
             titulo: "🔥 NUEVO RETO ESCALERA DISPONIBLE",
             cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
-            url: "/?view=escalera", // Manda la orden para abrir la pestaña de Escalera
+            url: window.location.origin + "/?view=escalera", 
             timestamp: Date.now(),
             enviadoPor: "FR Quant (Bot)"
         });

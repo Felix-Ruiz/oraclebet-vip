@@ -148,7 +148,7 @@ async function ejecutarEscaneoGlobal() {
 exports.robotSincronizador = onSchedule({ schedule: "every 4 hours", timeoutSeconds: 1800, memory: "512MiB" }, async (event) => { await ejecutarEscaneoGlobal(); });
 exports.disparadorManual = onRequest({ timeoutSeconds: 1800, memory: "512MiB" }, async (req, res) => { const resultado = await ejecutarEscaneoGlobal(); res.json(resultado); });
 
-// 📢 NUEVO MOTOR DE NOTIFICACIONES PUSH (MEGÁFONO ADMIN CON DEEP LINKING)
+// 📢 MOTOR DE NOTIFICACIONES PUSH (MEGÁFONO ADMIN CON DEEP LINKING)
 exports.enviarPushMasivo = onDocumentCreated({
     document: "notificaciones_push/{docId}",
     timeoutSeconds: 60,
@@ -178,22 +178,26 @@ exports.enviarPushMasivo = onDocumentCreated({
         return null;
     }
 
-    // 🛡️ FIX DUPLICADOS: Filtramos el array para que no haya tokens repetidos
+    // 🛡️ FIX DUPLICADOS
     const tokensUnicos = [...new Set(tokensPush)];
 
-    // 2. Construir el paquete del mensaje con String estricto para Apple
+    // 2. Construir el paquete del mensaje (CON REDIRECCIÓN NATIVA WEBPUSH)
     const payload = {
         notification: {
             title: String(titulo),
             body: String(cuerpo)
         },
         data: {
-            url: String(urlDestino) // Esto envía la orden para abrir la pestaña de Escalera
+            url: String(urlDestino)
+        },
+        webpush: {
+            fcmOptions: {
+                link: String(urlDestino) // 🚀 Esto obliga a Apple y Android a abrir la URL correcta al tocar
+            }
         },
         tokens: tokensUnicos
     };
 
-    // 3. Disparar el mensaje a todos los celulares
     try {
         const response = await admin.messaging().sendEachForMulticast(payload);
         console.log(`✅ Push enviado. Éxitos: ${response.successCount}, Fallos: ${response.failureCount}`);
