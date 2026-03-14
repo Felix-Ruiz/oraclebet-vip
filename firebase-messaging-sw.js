@@ -13,6 +13,35 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// 🚀 Dejamos el archivo limpio. 
-// Firebase Cloud Messaging mostrará y gestionará el clic en la notificación
-// nativamente gracias a la configuración "webpush.fcmOptions.link" del servidor.
+// 🖱️ INTERCEPTOR DE CLIC EN NOTIFICACIONES PARA APPLE Y ANDROID
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    
+    // Extraemos la URL de destino del paquete de Firebase
+    let urlToOpen = '/';
+    if (event.notification.data) {
+        if (event.notification.data.FCM_MSG && event.notification.data.FCM_MSG.data && event.notification.data.FCM_MSG.data.url) {
+            urlToOpen = event.notification.data.FCM_MSG.data.url;
+        } else if (event.notification.data.url) {
+            urlToOpen = event.notification.data.url;
+        }
+    }
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+            // Si la app ya está abierta (fondo o frente), la enfocamos y le ordenamos cambiar de pestaña
+            for (var i = 0; i < windowClients.length; i++) {
+                var client = windowClients[i];
+                if (client.url && 'focus' in client) {
+                    client.focus();
+                    client.postMessage({ type: 'NAVIGATE', url: urlToOpen });
+                    return;
+                }
+            }
+            // Si la app estaba cerrada por completo, la abrimos con la URL
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
+});

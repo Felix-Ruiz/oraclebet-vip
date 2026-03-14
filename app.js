@@ -20,10 +20,34 @@ const db = getFirestore(app);
 const auth = getAuth(app); 
 const messaging = getMessaging(app);
 
+// 🛡️ ENRUTADOR INTERNO Y RECEPCIÓN DEL SERVICE WORKER
+window.procesarEnlaceInterno = function(urlStr) {
+    if(!urlStr) return;
+    if(urlStr.includes('view=escalera')) {
+        window.cerrarBandejaNotificaciones();
+        window.cambiarVista('escalera');
+        if(!modoVipActivo) {
+            window.mostrarAlerta("Acceso VIP", "Inicia sesión para ver el Reto Oficial de Escalera.", "info");
+            window.abrirModalLogin();
+        } else {
+            window.chequearEstadoEscaleraUI();
+        }
+    } else if (urlStr.includes('inbox=true')) {
+        window.abrirBandejaNotificaciones();
+    }
+};
+
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./firebase-messaging-sw.js')
     .then((registration) => { console.log('✅ SW registrado.'); })
     .catch((err) => { console.error('❌ Error SW:', err); });
+
+    // Escuchar la orden del Service Worker cuando se toca la alerta PUSH
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'NAVIGATE') {
+            window.procesarEnlaceInterno(event.data.url);
+        }
+    });
 }
 
 // ==========================================
@@ -61,7 +85,10 @@ window.registrarTokenPush = async function(codigoUsuario) {
     } catch(e) { window.mostrarAlerta("Fallo de Conexión", "Error: " + e.message, "error"); if(btn) { btn.innerHTML = '<i class="fas fa-redo text-lg mr-2"></i> Reintentar Conexión'; } }
 };
 
-onMessage(messaging, (payload) => { window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success"); });
+onMessage(messaging, (payload) => { 
+    let actionUrl = payload.data ? payload.data.url : null;
+    window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success", actionUrl); 
+});
 
 // 🛡️ BANDEJA DE NOTIFICACIONES IN-APP
 window.abrirBandejaNotificaciones = async function() {
@@ -95,11 +122,16 @@ window.abrirBandejaNotificaciones = async function() {
         snap.forEach(doc => {
             const data = doc.data(); const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400';
+            
+            // INYECTAMOS EL ONCLICK PARA QUE LA TARJETA SEA NAVEGABLE
+            let clickAction = data.url ? `onclick="window.procesarEnlaceInterno('${data.url}')" class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden cursor-pointer hover:border-blue-500/50 transition-colors active:scale-95"` : `class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden"`;
+
             lista.innerHTML += `
-            <div class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden">
+            <div ${clickAction}>
                 <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>
+                    ${data.url ? '<i class="fas fa-external-link-alt text-gray-500 text-[10px]"></i>' : ''}
                 </div>
                 <p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p>
                 <div class="flex justify-between items-center border-t border-white/5 pt-2">
@@ -126,14 +158,23 @@ window.cerrarConfirmGlobal = function() { const m = document.getElementById('mod
 window.cerrarModalAyuda = function() { const m = document.getElementById('modalAyudaApuesta'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } };
 window.cerrarAlertaGlobal = function() { const m = document.getElementById('modalAlertaGlobal'); const c = document.getElementById('modalAlertaContenido'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } if(c) c.classList.replace('scale-100', 'scale-95'); };
 
-window.mostrarAlerta = function(titulo, mensaje, tipo = 'info') {
+window.mostrarAlerta = function(titulo, mensaje, tipo = 'info', actionUrl = null) {
     const modal = document.getElementById('modalAlertaGlobal'); const icon = document.getElementById('alertaIcono'); const title = document.getElementById('alertaTitulo'); const msg = document.getElementById('alertaMensaje'); const btn = document.getElementById('btnAlertaGlobal'); const content = document.getElementById('modalAlertaContenido');
     if(!modal) { alert(`${titulo}: ${mensaje}`); return; }
     title.innerText = titulo; msg.innerHTML = mensaje; 
+    
+    // Inyectamos la acción en el botón del modal si hay URL
+    btn.onclick = function() {
+        window.cerrarAlertaGlobal();
+        if(actionUrl) { window.procesarEnlaceInterno(actionUrl); }
+    };
+
     if(tipo === 'success') { icon.innerHTML = '<i class="fas fa-check-circle text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-green-600 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"; content.className = "bg-gray-900 border border-green-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
     else if (tipo === 'error') { icon.innerHTML = '<i class="fas fa-times-circle text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"; content.className = "bg-gray-900 border border-red-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
     else if (tipo === 'warning') { icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 drop-shadow-[0_0_15px_rgba(212,175,55,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-yellow-500 text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]"; content.className = "bg-gray-900 border border-yellow-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(212,175,55,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
     else { icon.innerHTML = '<i class="fas fa-info-circle text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"; content.className = "bg-gray-900 border border-blue-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; }
+    
+    if(actionUrl) { btn.innerHTML = 'VER REPORTE'; } else { btn.innerHTML = 'ACEPTAR'; }
     modal.classList.remove('hidden'); modal.style.display = 'flex';
 };
 
@@ -210,28 +251,11 @@ window.iniciarApp = async function() {
     try { const session = localStorage.getItem('oracle_session'); if(session) { const data = JSON.parse(session); window.concederAcceso(data.ilimitado, data.code, data.ladderStat, true); } } catch(e) {} 
     window.ejecutarTopFutbol(); 
 
-    // 🚀 LÓGICA DE DEEP LINKING (Si entramos desde la notificación)
+    // LÓGICA DE DEEP LINKING Y NAVEGACIÓN
     setTimeout(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const viewParam = urlParams.get('view');
-        const inboxParam = urlParams.get('inbox');
-
-        if (inboxParam === 'true') {
-            window.abrirBandejaNotificaciones();
-        }
-
-        if (viewParam) {
-            window.cambiarVista(viewParam);
-            if (!modoVipActivo && viewParam === 'escalera') {
-                window.mostrarAlerta("Acceso VIP", "Inicia sesión para ver el Reto Oficial de Escalera.", "info");
-                window.abrirModalLogin();
-            } else if (modoVipActivo && viewParam === 'escalera') {
-                window.chequearEstadoEscaleraUI(); // Forzamos que descargue y muestre el ticket
-            }
-        }
-        
-        // Limpiar la URL para que no quede estancada
-        if(viewParam || inboxParam) {
+        if (window.location.search) {
+            window.procesarEnlaceInterno(window.location.href);
+            // Limpia la barra de direcciones para evitar bucles
             window.history.replaceState({}, document.title, "/");
         }
     }, 1500); 
@@ -288,7 +312,7 @@ window.enviarNotificacionGlobal = async function() {
         await setDoc(doc(collection(db, "notificaciones_push")), { 
             titulo: titulo, 
             cuerpo: cuerpo, 
-            url: window.location.origin + "/?inbox=true", // Abre la bandeja In-App nativamente
+            url: window.location.origin + "/?inbox=true",
             timestamp: Date.now(), 
             enviadoPor: "Félix Ruiz (Gestor)" 
         });
@@ -829,7 +853,6 @@ window.publicarRetoEscalera = async function() {
     try { 
         await setDoc(doc(db, "global", "escalera"), { mensaje: txt, ticket_data: window.retoPendientePublicar, timestamp: Date.now() }); 
         
-        // 🔗 AUTO-NOTIFICACIÓN DE ESCALERA CON URL PROFUNDA (DEEP LINK)
         await setDoc(doc(collection(db, "notificaciones_push")), {
             titulo: "🔥 NUEVO RETO ESCALERA DISPONIBLE",
             cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
