@@ -13,23 +13,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/icon.png',
-        badge: '/icon.png',
-        vibrate: [200, 100, 200],
-        data: { url: '/' } // Dato adjunto para saber a dónde ir
-    };
-    self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// 🖱️ NUEVO: QUÉ HACER CUANDO EL USUARIO TOCA LA NOTIFICACIÓN
+// 🖱️ QUÉ HACER CUANDO EL USUARIO TOCA LA NOTIFICACIÓN EN SU CELULAR
 self.addEventListener('notificationclick', function(event) {
     event.notification.close(); // Cierra el globito de notificación
     
-    // Forzamos a que se abra la aplicación y se vaya al inicio
+    // Forzamos a que el celular abra la aplicación PWA
     event.waitUntil(
         clients.matchAll({ type: 'window' }).then( windowClients => {
             for (var i = 0; i < windowClients.length; i++) {
