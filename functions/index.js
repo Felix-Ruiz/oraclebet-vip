@@ -155,3 +155,53 @@ async function ejecutarEscaneoGlobal() {
 
 exports.robotSincronizador = onSchedule({ schedule: "every 4 hours", timeoutSeconds: 1800, memory: "512MiB" }, async (event) => { await ejecutarEscaneoGlobal(); });
 exports.disparadorManual = onRequest({ timeoutSeconds: 1800, memory: "512MiB" }, async (req, res) => { const resultado = await ejecutarEscaneoGlobal(); res.json(resultado); });
+
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+
+// 📢 NUEVO MOTOR DE NOTIFICACIONES PUSH (MEGÁFONO ADMIN)
+exports.enviarPushMasivo = onDocumentCreated({
+    document: "notificaciones_push/{docId}",
+    timeoutSeconds: 60,
+    memory: "256MiB"
+}, async (event) => {
+    const data = event.data.data();
+    const titulo = data.titulo;
+    const cuerpo = data.cuerpo;
+
+    console.log(`📢 Preparando envío masivo: ${titulo}`);
+
+    // 1. Obtener todos los usuarios que tengan un celular vinculado y un token activo
+    const usuariosSnap = await db.collection("codigos_nube").get();
+    const tokensPush = [];
+
+    usuariosSnap.forEach(doc => {
+        const usuario = doc.data();
+        // Si el usuario tiene token de push guardado, lo agregamos a la lista
+        if (usuario.fcmToken) {
+            tokensPush.push(usuario.fcmToken);
+        }
+    });
+
+    if (tokensPush.length === 0) {
+        console.log("No hay dispositivos registrados para recibir Push.");
+        return null;
+    }
+
+    // 2. Construir el paquete del mensaje
+    const payload = {
+        notification: {
+            title: titulo,
+            body: cuerpo
+        },
+        tokens: tokensPush // Firebase permite hasta 500 por lote, perfecto para tu fondo
+    };
+
+    // 3. Disparar el mensaje a todos los celulares
+    try {
+        const response = await admin.messaging().sendEachForMulticast(payload);
+        console.log(`✅ Push enviado. Éxitos: ${response.successCount}, Fallos: ${response.failureCount}`);
+    } catch (error) {
+        console.error("❌ Error enviando Push Masivo:", error);
+    }
+    return null;
+});
