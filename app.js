@@ -33,25 +33,29 @@ if ('serviceWorker' in navigator) {
 const VAPID_KEY = "BO7AkZgMGzNtUBR8ZShudo6sW0zTbS7lyOZszkVrbJ3WLL80yEBRIfgreLnFpPHe4cBCLr_J8XmyckjpwMu6xTo";
 
 window.registrarTokenPush = async function(codigoUsuario) {
-    try {
-        alert("Paso 1: Iniciando conexión segura con Apple/Google...");
-        const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
-        if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Procesando...'; }
+    const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
+    
+    // Seguro 1: Verificar si el celular es compatible con notificaciones Web
+    if (!("Notification" in window)) {
+        window.mostrarAlerta("iOS Incompatible", "Tu versión de iPhone no soporta notificaciones web. Necesitas actualizar a iOS 16.4+ y agregar la app a la pantalla de inicio.", "error");
+        if(btn) { btn.innerHTML = '<i class="fas fa-times text-lg mr-2"></i> Dispositivo no compatible'; }
+        return;
+    }
 
+    try {
+        if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Solicitando permiso...'; }
+
+        // Pedimos permiso a Apple INMEDIATAMENTE después del clic (Sin interrupciones)
         const permission = await Notification.requestPermission();
-        alert("Paso 2: Permiso otorgado por el usuario -> " + permission);
         
         if (permission === 'granted') {
-            alert("Paso 3: Buscando Service Worker en tu celular...");
-            const swRegistration = await navigator.serviceWorker.ready;
+            if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Encriptando llave...'; }
             
-            alert("Paso 4: Service Worker activo. Pidiendo Token a la nube...");
+            const swRegistration = await navigator.serviceWorker.ready;
             const token = await getToken(messaging, { 
                 vapidKey: VAPID_KEY,
                 serviceWorkerRegistration: swRegistration 
             });
-            
-            alert("Paso 5: ¿Token recibido? -> " + (token ? "SÍ" : "NO"));
             
             if (token) {
                 let codigoGuardar = codigoUsuario;
@@ -61,20 +65,24 @@ window.registrarTokenPush = async function(codigoUsuario) {
                 
                 if (codigoGuardar !== "DESCONOCIDO") {
                     await setDoc(doc(db, "codigos_nube", codigoGuardar), { fcmToken: token }, { merge: true });
-                    alert("Paso 6: ¡ÉXITO TOTAL! Tu celular ya está vinculado al fondo de inversiones.");
-                    if(btn) { btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Vinculadas Exitosamente'; btn.disabled = true; btn.classList.replace('bg-blue-600', 'bg-green-600'); }
+                    window.mostrarAlerta("¡Fondo Vinculado!", "Tu celular ahora recibirá las señales Diamante directamente de FR Quant Capital.", "success");
+                    if(btn) { 
+                        btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Vinculadas'; 
+                        btn.disabled = true; 
+                        btn.classList.replace('bg-blue-600', 'bg-green-600'); 
+                    }
                 }
             } else {
-                alert("Error: El sistema devolvió un token vacío.");
+                window.mostrarAlerta("Fallo de Google", "No se pudo generar el token criptográfico.", "error");
+                if(btn) { btn.innerHTML = '<i class="fas fa-bell mr-2"></i> Reintentar'; }
             }
         } else {
-            alert("Operación cancelada: No diste permiso para recibir notificaciones.");
-            if(btn) { btn.innerHTML = '<i class="fas fa-bell-slash text-lg mr-2"></i> Permiso Denegado'; }
+            window.mostrarAlerta("Permiso Denegado", "Has bloqueado las alertas. Para activarlas, ve a Configuración > Safari en tu iPhone.", "warning");
+            if(btn) { btn.innerHTML = '<i class="fas fa-bell-slash text-lg mr-2"></i> Bloqueado'; }
         }
     } catch(e) { 
-        alert("ERROR CRÍTICO (Safari bloqueó la acción): " + e.message);
-        const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
-        if(btn) { btn.innerHTML = '<i class="fas fa-exclamation-triangle text-lg mr-2"></i> Fallo de Conexión'; }
+        window.mostrarAlerta("Fallo Crítico de iOS", "Safari detuvo el proceso: " + e.message, "error");
+        if(btn) { btn.innerHTML = '<i class="fas fa-exclamation-triangle text-lg mr-2"></i> Error de conexión'; }
     }
 };
 
