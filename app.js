@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js"; // 📢 Importación de Notificaciones
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 // ==========================================
 // 1. CONFIGURACIÓN FIREBASE
@@ -18,7 +18,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app); 
-const messaging = getMessaging(app); // 📢 Inicializamos el motor Push
+const messaging = getMessaging(app);
+
+// 🛡️ REGISTRO EXPLÍCITO DEL SERVICE WORKER (OBLIGATORIO PARA iPHONE)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    .then((registration) => { console.log('✅ Service Worker registrado con éxito.', registration); })
+    .catch((err) => { console.error('❌ Error al registrar el Service Worker:', err); });
+}
 
 // ==========================================
 // 2. FUNCIONES VITALES Y NOTIFICACIONES
@@ -27,18 +34,51 @@ const VAPID_KEY = "BO7AkZgMGzNtUBR8ZShudo6sW0zTbS7lyOZszkVrbJ3WLL80yEBRIfgreLnFp
 
 window.registrarTokenPush = async function(codigoUsuario) {
     try {
+        alert("Paso 1: Iniciando conexión segura con Apple/Google...");
+        const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
+        if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Procesando...'; }
+
         const permission = await Notification.requestPermission();
+        alert("Paso 2: Permiso otorgado por el usuario -> " + permission);
+        
         if (permission === 'granted') {
-            const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+            alert("Paso 3: Buscando Service Worker en tu celular...");
+            const swRegistration = await navigator.serviceWorker.ready;
+            
+            alert("Paso 4: Service Worker activo. Pidiendo Token a la nube...");
+            const token = await getToken(messaging, { 
+                vapidKey: VAPID_KEY,
+                serviceWorkerRegistration: swRegistration 
+            });
+            
+            alert("Paso 5: ¿Token recibido? -> " + (token ? "SÍ" : "NO"));
+            
             if (token) {
-                await updateDoc(doc(db, "codigos_nube", codigoUsuario), { fcmToken: token });
-                console.log("✅ Token Push registrado para", codigoUsuario);
+                let codigoGuardar = codigoUsuario;
+                if (!codigoGuardar || codigoGuardar === 'ADMIN_MASTER') {
+                    codigoGuardar = adminAutenticado ? "ADMIN_MASTER" : "DESCONOCIDO";
+                }
+                
+                if (codigoGuardar !== "DESCONOCIDO") {
+                    await setDoc(doc(db, "codigos_nube", codigoGuardar), { fcmToken: token }, { merge: true });
+                    alert("Paso 6: ¡ÉXITO TOTAL! Tu celular ya está vinculado al fondo de inversiones.");
+                    if(btn) { btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Vinculadas Exitosamente'; btn.disabled = true; btn.classList.replace('bg-blue-600', 'bg-green-600'); }
+                }
+            } else {
+                alert("Error: El sistema devolvió un token vacío.");
             }
+        } else {
+            alert("Operación cancelada: No diste permiso para recibir notificaciones.");
+            if(btn) { btn.innerHTML = '<i class="fas fa-bell-slash text-lg mr-2"></i> Permiso Denegado'; }
         }
-    } catch(e) { console.warn('Push no soportado o denegado por el usuario', e); }
+    } catch(e) { 
+        alert("ERROR CRÍTICO (Safari bloqueó la acción): " + e.message);
+        const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
+        if(btn) { btn.innerHTML = '<i class="fas fa-exclamation-triangle text-lg mr-2"></i> Fallo de Conexión'; }
+    }
 };
 
-// Escuchar si llega una notificación MIENTRAS la app está abierta en pantalla
+// Escuchar si llega una notificación MIENTRAS la app está abierta
 onMessage(messaging, (payload) => {
     window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success");
 });
@@ -106,6 +146,7 @@ const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': {
 
 function obtenerInfoLiga(key, apiTitle) {
     let pais = "Mundial"; let nombreLiga = apiTitle ? String(apiTitle) : "Competición Genérica"; let bandera = "🌍"; let k = key ? String(key).toLowerCase() : "";
+    
     if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra";
     else if(k.includes('spain')) pais = "España"; else if(k.includes('italy')) pais = "Italia"; else if(k.includes('germany')) pais = "Alemania";
     else if(k.includes('france')) pais = "Francia"; else if(k.includes('colombia')) pais = "Colombia"; else if(k.includes('mexico')) pais = "México";
@@ -276,8 +317,8 @@ window.renderizarLayoutAdmin = function() {
     
     aSec.innerHTML = `
         <div class="p-4 bg-gray-900 min-h-screen pb-20">
-            <div class="flex flex-col items-center justify-center gap-2 mb-6 text-center border-b border-white/5 pb-4">
-                <div class="bg-gray-800 p-4 rounded-full text-yellow-500 shadow-inner">
+            <div class="flex flex-col items-center justify-center gap-2 mb-6 text-center border-b border-white/5 pb-4 relative">
+                <div class="bg-gray-800 p-4 rounded-full text-yellow-500 shadow-inner mt-4">
                     <i class="fas fa-chart-line text-2xl"></i>
                 </div>
                 <h2 class="text-yellow-500 font-black text-2xl uppercase tracking-widest flex items-center gap-2">
@@ -299,6 +340,10 @@ window.renderizarLayoutAdmin = function() {
 
             <div id="vistaAdm_dash" class="admin-view-content block">
                 
+                <button id="btnActivarPushAdmin" onclick="window.registrarTokenPush('ADMIN_MASTER')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-5 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform">
+                    <i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas Master
+                </button>
+
                 <div class="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border border-blue-500/50 p-4 rounded-xl mb-5 shadow-lg relative overflow-hidden">
                     <div class="absolute top-0 right-0 bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">LIVE</div>
                     <h3 class="text-[11px] font-black text-blue-400 uppercase tracking-widest mb-3 flex items-center"><i class="fas fa-bullhorn mr-2 text-lg"></i> Megáfono Inversores</h3>
@@ -426,11 +471,22 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
     modoVipActivo = true; modoIlimitadoActivo = esIlimitado; codigoActivoUsuario = codeString; estadoEscalera = ladderStat;
     try { localStorage.setItem('oracle_session', JSON.stringify({ code: codeString, ilimitado: esIlimitado, ladderStat: ladderStat })); } catch(e) {}
     
-    // 📢 NUEVO: Pedir permiso de Push Notification al hacer login
-    window.registrarTokenPush(codeString);
-
     const wrapVIP = document.getElementById('wrapperVIP'); const wrapFree = document.getElementById('wrapperFree');
-    if(wrapVIP) wrapVIP.style.display = 'block'; if(wrapFree) wrapFree.style.display = 'none'; 
+    
+    if(wrapVIP) {
+        wrapVIP.style.display = 'block'; 
+        // 📢 INYECCIÓN DEL BOTÓN GIGANTE VIP PARA ALERTAS
+        let oldBtn = document.getElementById('btnActivarPushVip');
+        if(oldBtn) oldBtn.remove();
+        
+        let pushHtml = `
+            <button id="btnActivarPushVip" onclick="window.registrarTokenPush('${codeString}')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-4 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform">
+                <i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas en este Celular
+            </button>
+        `;
+        wrapVIP.insertAdjacentHTML('afterbegin', pushHtml);
+    }
+    if(wrapFree) wrapFree.style.display = 'none'; 
     
     const btnTop = document.getElementById('btnTopLogin'); 
     if(btnTop) {
@@ -459,6 +515,9 @@ window.ejecutarCierreSesion = function() {
     modoVipActivo = false; modoIlimitadoActivo = false; codigoActivoUsuario = ''; estadoEscalera = 'none'; seleccionesVIPGlobal = []; ticketDinamicoVIP = [];
     const contadorSel = document.getElementById('contadorSeleccion'); if(contadorSel) contadorSel.innerText = "0 Seleccionados";
     const resDiv = document.getElementById('resultadoVIP'); if(resDiv) resDiv.innerHTML = "";
+    
+    let btnPushVip = document.getElementById('btnActivarPushVip'); if(btnPushVip) btnPushVip.remove();
+
     if (unsubscribeApadrinamiento) unsubscribeApadrinamiento(); perfilApadrinamiento = null; clearInterval(timerInactividad); 
     try { localStorage.removeItem('oracle_session'); } catch(e){}
     const wrapVIP = document.getElementById('wrapperVIP'); const wrapFree = document.getElementById('wrapperFree');
@@ -804,6 +863,7 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
 
         let warningFaltaMercado = ''; if (modoMercadoGlobal === 'props' && !isProp(o.mercadoKey)) { warningFaltaMercado = `<div class="text-[8px] text-red-400 bg-red-900/30 p-1 rounded mt-1 border border-red-500/30 text-center"><i class="fas fa-exclamation-circle"></i> Props no publicados. Mostrando alternativa.</div>`; }
         
+        // 🛡️ BOTÓN DE ELIMINAR AÑADIDO AQUÍ
         htmlPartidos += `<div class="${bg} p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden shadow-lg"><div class="absolute top-0 right-0 ${colorConf} text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md z-10">PROB REAL: ${o.probabilidad > 96 ? 96 : o.probabilidad}%</div><div class="text-[9px] text-gray-400 font-bold uppercase mb-2"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-3">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-gray-700 shadow-inner"><div class="flex flex-col"><div class="flex items-center gap-1.5 mb-1"><span class="text-[11px] ${colorPick} font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${o.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button>${escudoMejora}</div><div class="mt-0.5 flex items-center"><span class="text-[8px] text-gray-500 uppercase font-bold"><i class="fas fa-shield-alt mr-1"></i> Quant: </span>${badgeValor}</div></div><div class="flex items-center gap-1.5"><span class="text-white font-black text-[15px] mr-1">${o.cuota.toFixed(2)}</span>${!esRadarAuto ? `<button onclick="window.rotarPickIndividual('${p.id}')" class="text-gray-400 bg-white/5 p-1.5 rounded-lg hover:text-white transition" title="Rotar Pick"><i class="fas fa-sync-alt"></i></button><button onclick="window.quitarPartidoDelTicket('${p.id}')" class="text-red-400 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-300 transition" title="Quitar Partido"><i class="fas fa-trash-alt"></i></button>` : ''}</div></div>${warningFaltaMercado}</div>`;
     });
     probPromedio = Math.floor(probPromedio / ticketDinamicoVIP.length); if(probPromedio > 96) probPromedio = 96; let c1 = modoMercadoGlobal === 'mixto' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c2 = modoMercadoGlobal === 'h2h' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c3 = modoMercadoGlobal === 'totals' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c4 = modoMercadoGlobal === 'spreads' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c5 = modoMercadoGlobal === 'props' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-yellow-500/50'; let ctrls = esRadarAuto ? '' : `<div class="grid grid-cols-5 gap-1 bg-black/60 p-1 rounded-lg mb-4"><button onclick="window.cambiarModoMercado('mixto')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c1}">Mixto</button><button onclick="window.cambiarModoMercado('h2h')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c2}">1X2</button><button onclick="window.cambiarModoMercado('totals')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c3}">Goles</button><button onclick="window.cambiarModoMercado('spreads')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c4}">Hándicap</button><button onclick="window.cambiarModoMercado('props')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c5} shadow-md"><i class="fas fa-star mr-0.5"></i>Props</button></div>`; 
