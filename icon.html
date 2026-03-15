@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generador de Logo FR</title>
+    <style>
+        body { background-color: #0f172a; color: white; text-align: center; font-family: Arial, sans-serif; padding: 40px; }
+        canvas { border: 2px solid #D4AF37; border-radius: 20px; box-shadow: 0 0 30px rgba(212,175,55,0.3); margin-top: 20px; }
+        button { background: #D4AF37; color: black; font-weight: bold; border: none; padding: 15px 30px; font-size: 16px; border-radius: 10px; cursor: pointer; margin-top: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        button:hover { background: #f1d27b; }
+    </style>
+</head>
+<body>
+    <h2>Tu ícono de Alta Resolución está listo</h2>
+    <p>Haz clic en el botón de abajo para guardarlo automáticamente como <b>icon.png</b></p>
+    
+    <canvas id="miCanvas" width="512" height="512"></canvas><br>
+    <button onclick="descargarLogo()">Descargar icon.png</button>
+
+    <script>
+        const canvas = document.getElementById('miCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 1. Fondo oscuro de tu app (#0f172a)
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 512, 512);
+
+        // 2. Gradiente dorado
+        const gradiente = ctx.createLinearGradient(0, 0, 512, 512);
+        gradiente.addColorStop(0, '#f1d27b');
+        gradiente.addColorStop(0.5, '#D4AF37');
+        gradiente.addColorStop(1, '#aa8529');
+
+        // 3. Estilo del trazo y efecto de brillo (Glow)
+        ctx.strokeStyle = gradiente;
+        ctx.lineWidth = 36;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.shadowColor = 'rgba(212, 175, 55, 0.8)';
+        ctx.shadowBlur = 20;
+
+        // 4. Escalar matemáticas al tamaño 512x512
+        ctx.scale(2.56, 2.56); 
+
+        // 5. Dibujar la "F" y la curva de la "R" (Exactamente tu logo)
+        ctx.beginPath();
+        ctx.moveTo(45, 155);
+        ctx.lineTo(45, 45);
+        ctx.lineTo(125, 45);
+        ctx.bezierCurveTo(140, 45, 150, 55, 150, 70);
+        ctx.bezierCurveTo(150, 85, 140, 95, 125, 95);
+        ctx.lineTo(80, 95);
+        ctx.lineTo(80, 155);
+        ctx.stroke();
+
+        // 6. Dibujar la pierna de la "R"
+        ctx.beginPath();
+        ctx.moveTo(115, 95);
+        ctx.lineTo(155, 155);
+        ctx.stroke();
+
+        // Función para descargar
+        function descargarLogo() {
+            const link = document.createElement('a');
+            link.download = 'icon.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>

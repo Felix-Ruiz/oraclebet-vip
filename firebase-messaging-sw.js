@@ -44,4 +44,8 @@ self.addEventListener('notificationclick', function(event) {
             }
         })
     );
+    // 🚀 TRUCO PARA ANDROID: Chrome exige un evento 'fetch' para habilitar el botón de Instalar (PWA)
+self.addEventListener('fetch', function(event) {
+    // Lo dejamos vacío, solo necesitamos que Chrome vea que existe.
+});
 });
