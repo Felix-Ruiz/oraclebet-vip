@@ -157,8 +157,9 @@ exports.enviarPushMasivo = onDocumentCreated({
     const titulo = data.titulo || "Notificación FR";
     const cuerpo = data.cuerpo || "Revisa la aplicación.";
     const urlDestino = data.url || "/";
+    const audiencia = data.audiencia || "todos"; // 🚀 Leemos la etiqueta de segmentación
 
-    console.log(`📢 Preparando envío masivo: ${titulo}`);
+    console.log(`📢 Preparando envío masivo: ${titulo} (Audiencia: ${audiencia})`);
 
     const usuariosSnap = await db.collection("codigos_nube").get();
     const tokensPush = [];
@@ -166,12 +167,16 @@ exports.enviarPushMasivo = onDocumentCreated({
     usuariosSnap.forEach(doc => {
         const usuario = doc.data();
         if (usuario.fcmToken) {
+            // 🚀 FILTRO INTELIGENTE DE AUDIENCIAS
+            if (audiencia === "escalera" && usuario.ladderStatus !== "approved") {
+                return; // Ignoramos silenciosamente a los que no están en el club Escalera
+            }
             tokensPush.push(usuario.fcmToken);
         }
     });
 
     if (tokensPush.length === 0) {
-        console.log("No hay dispositivos registrados para recibir Push.");
+        console.log("No hay dispositivos en esta audiencia registrados para recibir Push.");
         return null;
     }
 

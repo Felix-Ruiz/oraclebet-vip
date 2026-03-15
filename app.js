@@ -125,6 +125,10 @@ window.verificarNotificacionesPendientes = async function() {
         
         if (!snap.empty) {
             const data = snap.docs[0].data();
+            
+            // Si el usuario no es de escalera y la noti es de escalera, la ignoramos.
+            if(data.audiencia === "escalera" && estadoEscalera !== "approved") return;
+            
             const ultimaVista = localStorage.getItem('oracle_last_push_seen');
             
             if (!ultimaVista || data.timestamp > parseInt(ultimaVista)) {
@@ -149,7 +153,7 @@ window.iniciarSwipeNotificaciones = function() {
     cards.forEach(card => {
         let startX = 0;
         let isDragging = false;
-        let deleteBg = card.previousElementSibling; // El fondo rojo
+        let deleteBg = card.previousElementSibling; 
 
         card.addEventListener('touchstart', e => {
             startX = e.touches[0].clientX;
@@ -165,7 +169,7 @@ window.iniciarSwipeNotificaciones = function() {
             
             if (diffX > 10) {
                 window.isSwiping = true;
-                if (deleteBg) deleteBg.style.opacity = '1'; // Encendemos el rojo solo al mover
+                if (deleteBg) deleteBg.style.opacity = '1'; 
             }
             
             if (diffX > 0 && diffX < 150) { 
@@ -197,7 +201,7 @@ window.iniciarSwipeNotificaciones = function() {
                 }, 100);
             } else {
                 card.style.transform = `translateX(0)`; 
-                if (deleteBg) deleteBg.style.opacity = '0'; // Apagamos el rojo al soltar
+                if (deleteBg) deleteBg.style.opacity = '0'; 
             }
             
             setTimeout(() => window.isSwiping = false, 100);
@@ -237,10 +241,13 @@ window.abrirBandejaNotificaciones = async function() {
         let validCount = 0;
         
         snap.forEach(doc => {
+            const data = doc.data(); 
+            // 🚀 Filtrar de la bandeja si es de escalera y el usuario no está en escalera
+            if (data.audiencia === "escalera" && estadoEscalera !== "approved" && !adminAutenticado) return;
+            
             if (hiddenNotifs.includes(doc.id)) return; 
             validCount++;
             
-            const data = doc.data(); 
             const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400';
             
@@ -443,7 +450,8 @@ window.enviarNotificacionGlobal = async function() {
             cuerpo: cuerpo, 
             url: window.location.origin + "/?inbox=true",
             timestamp: Date.now(), 
-            enviadoPor: "FR (Gestor)" 
+            enviadoPor: "FR (Gestor)",
+            audiencia: "todos"
         });
         window.mostrarAlerta("Éxito", "La notificación ha sido enviada y guardada en la bandeja.", "success");
         document.getElementById('pushTitulo').value = ''; document.getElementById('pushCuerpo').value = '';
@@ -736,7 +744,7 @@ window.toggleSeleccionVIP = function(id) {
     const card = cb.closest('.bg-black\\/40'); if(cb.checked) { card.classList.add('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.remove('border-white/5'); } else { card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5'); } window.actualizarContadorVIP();
 };
 
-window.actualizarContadorVIP = function() { const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion'); if(!btn || !contador) return; const cantidad = seleccionesVIPGlobal.length; contador.innerHTML = `<i class="fas fa-list-check mr-1"></i> ${cantidad} Seleccionados`; if(!modoIlimitadoActivo) { document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); }); } if(cantidad >= 1) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); } else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); } };
+window.actualizarContadorVIP = function() { const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion'); if(!btn || !contador) return; const cantidad = seleccionesVIPGlobal.length; contador.innerHTML = `${cantidad} Seleccionados`; if(!modoIlimitadoActivo) { document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); }); } if(cantidad >= 1) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); } else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); } };
 
 window.quitarPartidoDelTicket = function(idPartido) {
     seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== idPartido); ticketDinamicoVIP = ticketDinamicoVIP.filter(item => item.partido.id !== idPartido);
@@ -794,6 +802,42 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
     let riskBanner = esRadarAuto ? '' : `<div class="mb-4 p-3 rounded-lg ${modoRiesgoGlobal ? 'bg-red-900/20 border border-red-500/50' : 'bg-green-900/20 border border-green-500/50'} transition-colors flex justify-between items-center shadow-inner"><div class="flex flex-col w-2/3"><span class="text-[10px] font-black uppercase ${modoRiesgoGlobal ? 'text-red-400' : 'text-green-400'} mb-1">${modoRiesgoGlobal ? '<i class="fas fa-exclamation-triangle"></i> ALTO RIESGO / ALTA GANANCIA' : '<i class="fas fa-shield-alt"></i> MODO SEGURO (Banca)'}</span><span class="text-[8px] text-gray-400 leading-tight">${modoRiesgoGlobal ? 'Análisis cuantitativo de alto riesgo.' : 'Análisis ajustado a alta probabilidad.'}</span></div><button onclick="window.toggleModoRiesgo()" class="py-2.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest ${modoRiesgoGlobal ? 'bg-green-600 text-white' : 'bg-red-600 text-white'} shadow-lg active:scale-95 transition-all">${modoRiesgoGlobal ? 'Ir a Seguro' : 'Arriesgar'}</button></div>`;
     resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${modoRiesgoGlobal ? 'border-red-500 bg-red-500/5' : (esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5')} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${modoRiesgoGlobal ? 'text-red-500' : (esRadarAuto?'text-purple-500':'text-yellow-500')} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Análisis de FR</span><span class="text-[10px] ${modoRiesgoGlobal ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10'} font-black px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${riskBanner} ${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final Calculada</span></div><span class="text-3xl font-black ${modoRiesgoGlobal ? 'text-red-400' : 'text-white'}">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button onclick="window.guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-yellow-600 hover:bg-yellow-500 text-black rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
 };
+
+// 🚀 MOTOR DE INSTALACIÓN PWA (MAGIA ANDROID / IPHONE)
+let deferredPrompt;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://');
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+if (!isStandalone) {
+    if (isIOS) {
+        const banner = document.getElementById('installBanner');
+        const btn = document.getElementById('btnInstalarApp');
+        if(banner) banner.classList.remove('hidden');
+        if(btn) {
+            btn.onclick = () => {
+                const m = document.getElementById('iosInstallModal');
+                if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+            };
+        }
+    } else {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const banner = document.getElementById('installBanner');
+            const btn = document.getElementById('btnInstalarApp');
+            if(banner) banner.classList.remove('hidden');
+            if(btn) {
+                btn.onclick = async () => {
+                    banner.classList.add('hidden');
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') { console.log('App instalada'); }
+                    deferredPrompt = null;
+                };
+            }
+        });
+    }
+}
 
 // ==========================================
 // 10. HISTORIAL DE TICKETS (USUARIO)
@@ -918,7 +962,7 @@ window.generarTicketApadrinamiento = async function() {
             }).join('');
             
             let container = document.createElement('div'); container.id = 'previewArriesgar'; btn.parentNode.insertBefore(container, btn);
-            container.innerHTML = `<div class="bg-red-900/20 border border-red-500/50 p-4 rounded-xl mb-3 shadow-inner transform transition-all animate-pulse"><div class="text-red-400 font-black text-[11px] uppercase mb-2"><i class="fas fa-exclamation-triangle"></i> MERCADO INESTABLE - PLAN B</div><p class="text-[9px] text-gray-300 mb-3 leading-relaxed">FR no encontró diamantes confirmados. El algoritmo matemático reducirá tu Stake al <b class="text-yellow-500 text-xs">${porcentajeStake}%</b> para proteger tu capital.</p><div class="mb-3">${picksHtml}</div><div class="text-right text-xs font-black text-white pt-2 border-t border-white/10">Cuota Final: <span class="text-yellow-500">${cuotaAlcanzada.toFixed(2)}</span></div></div>`;
+            container.innerHTML = `<div class="bg-red-900/20 border border-red-500/50 p-4 rounded-xl mb-3 shadow-inner transform transition-all animate-pulse"><div class="text-red-400 font-black text-[11px] uppercase mb-2"><i class="fas fa-exclamation-triangle"></i> MERCADO INESTABLE - PLAN B</div><p class="text-[9px] text-gray-300 mb-3 leading-relaxed">FR no encontró diamantes confirmados. El algoritmo reducirá tu Stake al <b class="text-yellow-500 text-xs">${porcentajeStake}%</b> para proteger tu capital.</p><div class="mb-3">${picksHtml}</div><div class="text-right text-xs font-black text-white pt-2 border-t border-white/10">Cuota Final: <span class="text-yellow-500">${cuotaAlcanzada.toFixed(2)}</span></div></div>`;
             window.ticketPlanBPendiente = objTicket;
             btn.removeAttribute('onclick'); btn.innerHTML = `<i class="fas fa-fire"></i> ARRIESGAR STAKE (${porcentajeStake}%)`; btn.className = "w-full py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl font-black text-[12px] uppercase shadow-[0_10px_20px_rgba(220,38,38,0.3)] transition-all active:scale-95"; btn.disabled = false;
             btn.onclick = async function() { btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> ENVIANDO ORDEN...`; btn.disabled = true; try { await setDoc(doc(db, "tickets_apadrinamiento", ticketId), window.ticketPlanBPendiente); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Riesgo Asumido", `Ticket alternativo guardado con Stake de protección (${porcentajeStake}%).`, "warning"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "Error al procesar.", "error"); window.renderizarDashboardApadrinamiento(); } };
@@ -1002,7 +1046,7 @@ window.generarRetoAdmin = async function() {
         previewHtml += `</div>`; document.getElementById('previewRetoAdmin').innerHTML = previewHtml; document.getElementById('previewRetoAdmin').classList.remove('hidden'); document.getElementById('inputAdminReto').value = `⚠️ Gestión de Banca Sugerida: Stake Fijo 10% - Exclusivo Club Escalera.`;
         document.getElementById('inputAdminReto').classList.remove('hidden'); document.getElementById('btnPublicarReto').classList.remove('hidden');
         if (cuotaAcum < meta) window.mostrarAlerta("Aviso", `Se logró una cuota de ${cuotaAcum.toFixed(2)}.`, "warning"); else window.mostrarAlerta("Generado", `Cuota lograda: ${cuotaAcum.toFixed(2)}.`, "success");
-    } catch(e) { window.mostrarAlerta("Error", "Fallo IA.", "error"); } finally { btn.innerHTML = originalBtn; btn.disabled = false; }
+    } catch(e) { window.mostrarAlerta("Error", "Fallo del motor de análisis.", "error"); } finally { btn.innerHTML = originalBtn; btn.disabled = false; }
 };
 
 window.publicarRetoEscalera = async function() {
@@ -1027,7 +1071,8 @@ window.publicarRetoEscalera = async function() {
             cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
             url: window.location.origin + "/?view=escalera", 
             timestamp: ahora,
-            enviadoPor: "FR (Bot)"
+            enviadoPor: "FR (Bot)",
+            audiencia: "escalera" 
         });
 
         window.mostrarAlerta("Publicado", "Ticket publicado, guardado en el historial y notificación enviada a los inversores.", "success"); 
@@ -1151,7 +1196,7 @@ window.cargarMonitorTickets = async function() {
                 picksHtml = arrayPicks.map(p => {
                     let mercado = p.mercadoKey || p.mercado || ''; const defMercado = definicionesApuestas[mercado] || { 'titulo': 'Mercado Especial' }; 
                     let ico = "fa-handshake"; if(mercado.includes('shots')) ico = "fa-bullseye"; else if(mercado.includes('corners')) ico = "fa-flag"; else if(mercado.includes('cards')) ico = "fa-square"; else if(mercado === 'totals') ico = "fa-futbol"; else if(mercado === 'spreads') ico = "fa-balance-scale";
-                    let badgeIA = p.verificado_ia ? `<span class="text-blue-400 text-[8px] ml-1"><i class="fas fa-robot"></i></span>` : ''; let probBadge = p.probabilidad ? `<span class="bg-gray-800 text-gray-300 px-1 rounded text-[7px] ml-1">${p.probabilidad}%</span>` : '';
+                    let badgeIA = p.verificado_ia ? `<span class="text-blue-400 text-[8px] ml-1"><i class="fas fa-gem"></i></span>` : ''; let probBadge = p.probabilidad ? `<span class="bg-gray-800 text-gray-300 px-1 rounded text-[7px] ml-1">${p.probabilidad}%</span>` : '';
                     return `<div class="bg-gray-900/80 p-2 rounded mb-1 border border-white/5 relative"><div class="text-[7px] text-gray-400 font-bold uppercase mb-0.5"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[9px] font-bold text-white leading-tight mb-1">${p.partido}</div><div class="flex justify-between items-center"><span class="text-[8px] text-yellow-500 font-black uppercase">PICK: ${p.pick} ${badgeIA} ${probBadge}</span><span class="text-white font-black text-[10px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span></div></div>`;
                 }).join('');
             } else if (arrayPicks.length > 0) { picksHtml = arrayPicks.map(p => `<li class="text-[8px] text-gray-300 border-b border-white/5 py-1 last:border-0">${p}</li>`).join(''); }
@@ -1228,7 +1273,7 @@ window.verDetalleUsuarioAdmin = function(uid) {
             picksHtml = arrayPicks.map(p => {
                 let mercado = p.mercadoKey || p.mercado || ''; const defMercado = definicionesApuestas[mercado] || { 'titulo': 'Mercado Especial' }; 
                 let ico = "fa-handshake"; if(mercado.includes('shots')) ico = "fa-bullseye"; else if(mercado.includes('corners')) ico = "fa-flag"; else if(mercado.includes('cards')) ico = "fa-square"; else if(mercado === 'totals') ico = "fa-futbol"; else if(mercado === 'spreads') ico = "fa-balance-scale";
-                let badgeIA = p.verificado_ia ? `<span class="text-blue-400 text-[8px] ml-1"><i class="fas fa-robot"></i></span>` : ''; let probBadge = p.probabilidad ? `<span class="bg-gray-800 text-gray-300 px-1 rounded text-[7px] ml-1">${p.probabilidad}%</span>` : '';
+                let badgeIA = p.verificado_ia ? `<span class="text-blue-400 text-[8px] ml-1"><i class="fas fa-gem"></i></span>` : ''; let probBadge = p.probabilidad ? `<span class="bg-gray-800 text-gray-300 px-1 rounded text-[7px] ml-1">${p.probabilidad}%</span>` : '';
                 return `<div class="bg-gray-900/80 p-2 rounded mb-1 border border-white/5 relative"><div class="text-[7px] text-gray-400 font-bold uppercase mb-0.5"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[9px] font-bold text-white leading-tight mb-1">${p.partido}</div><div class="flex justify-between items-center"><span class="text-[8px] text-yellow-500 font-black uppercase">PICK: ${p.pick} ${badgeIA} ${probBadge}</span><span class="text-white font-black text-[10px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span></div></div>`;
             }).join('');
         } else if (arrayPicks.length > 0) { picksHtml = arrayPicks.map(p => `<li class="text-[8px] text-gray-300 border-b border-white/5 py-1 last:border-0">${p}</li>`).join(''); }

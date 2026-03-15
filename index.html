@@ -19,6 +19,32 @@
 </head>
 <body class="pb-24 header-bg-sparkles">
 
+    <div id="installBanner" class="hidden bg-gradient-to-r from-blue-800 to-blue-900 text-white p-3 flex justify-between items-center shadow-lg w-full z-[100] relative border-b border-blue-500/50">
+        <div class="flex items-center gap-3">
+            <div class="bg-white/10 p-2 rounded-lg shadow-inner"><i class="fas fa-download text-lg"></i></div>
+            <div class="flex flex-col">
+                <span class="text-[11px] font-black uppercase tracking-widest">Instalar Aplicación</span>
+                <span class="text-[8px] text-blue-200 uppercase tracking-wider">Acceso ultra rápido y pantalla completa</span>
+            </div>
+        </div>
+        <button id="btnInstalarApp" class="bg-yellow-500 text-black px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(212,175,55,0.4)] active:scale-95 transition-transform">Instalar</button>
+        <button onclick="document.getElementById('installBanner').classList.add('hidden')" class="absolute top-1 right-2 text-white/50 hover:text-white"><i class="fas fa-times text-xs"></i></button>
+    </div>
+
+    <div id="iosInstallModal" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-[400] backdrop-blur-sm" style="display: none;">
+        <div class="bg-gray-900 border border-white/10 p-8 rounded-2xl shadow-2xl max-w-xs w-full text-center relative transform scale-100 transition-transform">
+            <button onclick="document.getElementById('iosInstallModal').classList.add('hidden'); document.getElementById('iosInstallModal').style.display='none';" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+            <i class="fab fa-apple text-5xl mb-4 text-gray-300 drop-shadow-md"></i>
+            <h3 class="text-lg font-black text-white uppercase tracking-widest mb-2">Instalar en iPhone</h3>
+            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-6 leading-relaxed">Apple exige instalación manual. Sigue estos 2 pasos:</p>
+            <div class="space-y-4 mb-6 text-left text-[10px] text-gray-300 font-bold uppercase tracking-wider">
+                <div class="flex items-center gap-3 bg-black/50 p-4 rounded-lg border border-white/5"><i class="fas fa-share-square text-blue-400 text-2xl"></i> <span>1. Toca el ícono de <b>Compartir</b> en Safari (abajo).</span></div>
+                <div class="flex items-center gap-3 bg-black/50 p-4 rounded-lg border border-white/5"><i class="far fa-plus-square text-blue-400 text-2xl"></i> <span>2. Selecciona <b>"Agregar a Inicio"</b>.</span></div>
+            </div>
+            <button onclick="document.getElementById('iosInstallModal').classList.add('hidden'); document.getElementById('iosInstallModal').style.display='none';" class="w-full py-4 bg-gray-800 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 border border-gray-700">ENTENDIDO</button>
+        </div>
+    </div>
+
     <div id="modalAlertaGlobal" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-[200] backdrop-blur-sm transition-opacity" style="display: none;">
         <div id="modalAlertaContenido" class="bg-gray-900 border border-gray-700 p-8 rounded-2xl shadow-2xl max-w-xs w-full text-center relative transform scale-95 transition-transform">
             <div id="alertaIcono" class="text-5xl mb-4"></div>
