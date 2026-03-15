@@ -54,7 +54,6 @@ if ('serviceWorker' in navigator) {
 // ==========================================
 const VAPID_KEY = "BO7AkZgMGzNtUBR8ZShudo6sW0zTbS7lyOZszkVrbJ3WLL80yEBRIfgreLnFpPHe4cBCLr_J8XmyckjpwMu6xTo";
 
-// 🚀 INTELIGENCIA DE BOTÓN: Oculta el botón o lo desaparece con animación
 window.registrarTokenPush = async function(codigoUsuario, modoSilencioso = false) {
     const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
     if (!("Notification" in window)) { 
@@ -83,7 +82,6 @@ window.registrarTokenPush = async function(codigoUsuario, modoSilencioso = false
                     
                     if(!modoSilencioso) window.mostrarAlerta("¡Fondo Vinculado!", "Recibirás señales Diamante directamente.", "success");
                     
-                    // 🚀 ANIMACIÓN: Desvanecer y eliminar el botón
                     if(btn) { 
                         if(!modoSilencioso) {
                             btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Activadas'; 
@@ -120,7 +118,6 @@ onMessage(messaging, (payload) => {
     window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success", actionUrl); 
 });
 
-// 🚀 INTERCEPTOR INTELIGENTE AL ABRIR LA APP
 window.verificarNotificacionesPendientes = async function() {
     try {
         const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(1));
@@ -376,6 +373,47 @@ window.enviarNotificacionGlobal = async function() {
     }
 }
 
+// 🚀 HISTORIAL ESCALERA ADMIN
+window.cargarHistorialEscaleraAdmin = async function() {
+    const lista = document.getElementById('historialEscaleraAdminList'); if(!lista) return;
+    lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500 text-xl"></i></div>';
+    try {
+        const q = query(collection(db, "historial_escalera"), orderBy("timestamp", "desc"), limit(20));
+        const snap = await getDocs(q);
+        lista.innerHTML = '';
+        if(snap.empty) { lista.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">No hay retos en el historial.</p>`; return; }
+        
+        snap.forEach(doc => {
+            let d = doc.data();
+            let picksHtml = '';
+            if(d.ticket_data && d.ticket_data.picks) {
+                picksHtml = d.ticket_data.picks.map(p => `<div class="bg-gray-900/80 p-2 rounded mt-1 border border-white/5"><div class="text-[9px] font-bold text-white">${p.home_team} vs ${p.away_team}</div><div class="text-[8px] text-yellow-500">PICK: ${p.nombre} (C: ${p.cuota})</div></div>`).join('');
+            }
+            lista.innerHTML += `
+            <div class="bg-black/40 p-3 rounded-xl border border-blue-500/20 relative shadow-md mb-3">
+                <div class="absolute top-0 right-0 flex overflow-hidden rounded-bl-xl rounded-tr-xl shadow-md z-10">
+                    <button onclick="window.eliminarHistorialEscaleraAdmin('${d.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[10px] px-3 py-1 transition-colors border-r border-red-700"><i class="fas fa-trash"></i></button>
+                    <span class="bg-blue-600 text-white text-[10px] font-black px-3 py-1">C: ${d.ticket_data ? d.ticket_data.cuotaTotal : '-'}</span>
+                </div>
+                <div class="mb-2 border-b border-white/5 pb-1 pr-14">
+                    <span class="text-[9px] text-gray-400 font-bold"><i class="far fa-calendar-alt mr-1"></i> ${d.fecha}</span>
+                </div>
+                <div class="mt-2">${picksHtml}</div>
+            </div>`;
+        });
+    } catch(e) { lista.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al leer historial.</p>`; console.error(e); }
+};
+
+window.eliminarHistorialEscaleraAdmin = async function(idDoc) {
+    window.mostrarConfirmacion("Eliminar Reto", "¿Borrar este reto del historial administrativo?", async () => {
+        try {
+            await deleteDoc(doc(db, "historial_escalera", idDoc));
+            window.mostrarAlerta("Eliminado", "Reto borrado del historial.", "success");
+            window.cargarHistorialEscaleraAdmin();
+        } catch(e) { window.mostrarAlerta("Error", "Fallo al intentar borrar.", "error"); }
+    });
+};
+
 window.renderizarLayoutAdmin = function() {
     window.cerrarModalLogin();
     document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
@@ -385,18 +423,17 @@ window.renderizarLayoutAdmin = function() {
     let btnTop = document.getElementById('btnTopLogin'); 
     if(btnTop) { 
         const nuevoBtn = btnTop.cloneNode(true); btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
-        nuevoBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>SALIR ADMIN</span>'; 
+        nuevoBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>'; 
         nuevoBtn.className = "shrink-0 bg-gray-800 text-red-500 text-[9px] px-3 py-2 rounded-full font-black border border-red-500/50 flex items-center gap-1.5 transition-all"; 
         nuevoBtn.onclick = async () => { await signOut(auth); location.reload(); }; 
     }
 
     const aSec = document.getElementById('adminSection'); if(!aSec) return; aSec.style.display = 'block';
     
-    // 🚀 INTELIGENCIA DE BOTÓN: Inyectar botón solo si NO tiene permiso aún
     let btnPushAdminHTML = '';
     if (window.Notification) {
         if (Notification.permission === 'granted') {
-            window.registrarTokenPush('ADMIN_MASTER', true); // Actualizar fondo silencioso
+            window.registrarTokenPush('ADMIN_MASTER', true); 
         } else if (Notification.permission !== 'denied') {
             btnPushAdminHTML = `<button id="btnActivarPushAdmin" onclick="window.registrarTokenPush('ADMIN_MASTER')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-5 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas Master</button>`;
         }
@@ -486,6 +523,15 @@ window.renderizarLayoutAdmin = function() {
                 <textarea id="inputAdminReto" rows="2" class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-gray-300 text-xs mt-4 outline-none focus:border-yellow-500 hidden shadow-inner" placeholder="Gestión de banca..."></textarea>
                 <button id="btnPublicarReto" onclick="window.publicarRetoEscalera()" class="w-full mt-4 py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(34,197,94,0.3)] transition active:scale-95 hidden"><i class="fas fa-broadcast-tower mr-1"></i> Publicar Escalera Oficial</button>
                 <button onclick="window.eliminarRetoEscaleraGlobal()" class="w-full mt-2 py-3 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl border border-red-500/30 font-black text-[10px] uppercase shadow-lg transition active:scale-95"><i class="fas fa-trash-alt mr-1"></i> Borrar Reto Activo</button>
+                
+                <div class="bg-black/60 p-4 rounded-2xl border border-white/5 shadow-md mt-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-[10px] text-gray-400 font-bold uppercase"><i class="fas fa-history text-blue-500 mr-1"></i> Historial de Retos</h3>
+                        <button onclick="window.cargarHistorialEscaleraAdmin()" class="text-gray-500 hover:text-white p-1"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div id="historialEscaleraAdminList" class="space-y-3"></div>
+                </div>
+
             </div>
 
             <div id="vistaAdm_access" class="admin-view-content hidden space-y-4">
@@ -505,7 +551,7 @@ window.renderizarLayoutAdmin = function() {
         </div>
     `;
 
-    window.cargarMonitorTickets(); window.cargarUsuariosAdmin(); window.cargarFondosAdmin(); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin();
+    window.cargarMonitorTickets(); window.cargarUsuariosAdmin(); window.cargarFondosAdmin(); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); window.cargarHistorialEscaleraAdmin();
     const hoy = new Date(); let mes = String(hoy.getMonth() + 1).padStart(2, '0'); let dia = String(hoy.getDate()).padStart(2, '0'); document.getElementById('inputFechaEscalera').value = `${hoy.getFullYear()}-${mes}-${dia}`;
 };
 
@@ -526,7 +572,6 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
         wrapVIP.style.display = 'block'; 
         let oldBtn = document.getElementById('btnActivarPushVip'); if(oldBtn) oldBtn.remove();
         
-        // 🚀 INTELIGENCIA DE BOTÓN VIP
         if (window.Notification) {
             if (Notification.permission === 'granted') {
                 window.registrarTokenPush(codeString, true); 
@@ -541,8 +586,8 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
     if(btnTop) {
         const nuevoBtn = btnTop.cloneNode(true); btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
         nuevoBtn.removeAttribute('onclick'); nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.cerrarSesionLocal(); };
-        if(esIlimitado) { nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR PREM</span>`; nuevoBtn.className = "shrink-0 bg-purple-900 text-purple-300 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-purple-500/50 flex items-center gap-1.5 transition-all"; } 
-        else { nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR VIP</span>`; nuevoBtn.className = "shrink-0 bg-yellow-900 text-yellow-500 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-yellow-600/50 flex items-center gap-1.5 transition-all"; }
+        if(esIlimitado) { nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>`; nuevoBtn.className = "shrink-0 bg-purple-900 text-purple-300 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-purple-500/50 flex items-center gap-1.5 transition-all"; } 
+        else { nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>`; nuevoBtn.className = "shrink-0 bg-yellow-900 text-yellow-500 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-yellow-600/50 flex items-center gap-1.5 transition-all"; }
     }
     window.iniciarMonitorInactividad(); window.renderizarPartidosVIP(); if(!esModoBackground) window.scrollTo(0,0); 
     if(window.suscribirApadrinamiento) window.suscribirApadrinamiento(); if(window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI();
@@ -922,23 +967,78 @@ window.publicarRetoEscalera = async function() {
     const txt = document.getElementById('inputAdminReto').value; if(!txt && !window.retoPendientePublicar) return window.mostrarAlerta("Error", "Nada para publicar.", "error");
     const btn = document.getElementById('btnPublicarReto'); const originalTxt = btn.innerText; btn.innerText = "Publicando..."; btn.disabled = true;
     try { 
-        await setDoc(doc(db, "global", "escalera"), { mensaje: txt, ticket_data: window.retoPendientePublicar, timestamp: Date.now() }); 
+        const ahora = Date.now();
+        await setDoc(doc(db, "global", "escalera"), { mensaje: txt, ticket_data: window.retoPendientePublicar, timestamp: ahora }); 
         
+        const idHistorial = ahora.toString();
+        const fechaStr = new Date().toLocaleDateString('es-CO', {timeZone: 'America/Bogota'}) + ' ' + new Date().toLocaleTimeString('es-CO', {timeZone: 'America/Bogota', hour: '2-digit', minute:'2-digit'});
+        await setDoc(doc(db, "historial_escalera", idHistorial), {
+            id: idHistorial,
+            mensaje: txt,
+            ticket_data: window.retoPendientePublicar,
+            fecha: fechaStr,
+            timestamp: ahora
+        });
+
         await setDoc(doc(collection(db, "notificaciones_push")), {
             titulo: "🔥 NUEVO RETO ESCALERA DISPONIBLE",
             cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
             url: window.location.origin + "/?view=escalera", 
-            timestamp: Date.now(),
+            timestamp: ahora,
             enviadoPor: "FR Quant (Bot)"
         });
 
-        window.mostrarAlerta("Publicado", "Ticket publicado y notificación automática enviada a los Inversores.", "success"); 
+        window.mostrarAlerta("Publicado", "Ticket publicado, guardado en el historial y notificación enviada a los inversores.", "success"); 
         
         document.getElementById('inputAdminReto').value=''; document.getElementById('previewRetoAdmin').innerHTML=''; document.getElementById('previewRetoAdmin').classList.add('hidden'); document.getElementById('inputAdminReto').classList.add('hidden'); document.getElementById('btnPublicarReto').classList.add('hidden'); window.retoPendientePublicar = null; 
+        
+        if(window.cargarHistorialEscaleraAdmin) window.cargarHistorialEscaleraAdmin();
+
     } catch(e){ window.mostrarAlerta("Error", "Error de red.", "error"); } finally { btn.innerText = originalTxt; btn.disabled = false; }
 };
 
-window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto", "¿Deseas borrar el Reto Escalera activo para todos los usuarios?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Sistema Limpio", "El reto escalera ha sido eliminado de la nube.", "success"); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
+window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto Activo", "¿Deseas borrar el Reto Escalera activo para que no lo vean los usuarios en la app?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Sistema Limpio", "El reto activo ha sido eliminado de la nube.", "success"); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
+
+// 🚀 HISTORIAL DE ESCALERAS PASADAS EN ADMIN
+window.cargarHistorialEscaleraAdmin = async function() {
+    const lista = document.getElementById('historialEscaleraAdminList'); if(!lista) return;
+    lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500 text-xl"></i></div>';
+    try {
+        const q = query(collection(db, "historial_escalera"), orderBy("timestamp", "desc"), limit(20));
+        const snap = await getDocs(q);
+        lista.innerHTML = '';
+        if(snap.empty) { lista.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">No hay retos en el historial.</p>`; return; }
+        
+        snap.forEach(doc => {
+            let d = doc.data();
+            let picksHtml = '';
+            if(d.ticket_data && d.ticket_data.picks) {
+                picksHtml = d.ticket_data.picks.map(p => `<div class="bg-gray-900/80 p-2 rounded mt-1 border border-white/5"><div class="text-[9px] font-bold text-white">${p.home_team} vs ${p.away_team}</div><div class="text-[8px] text-yellow-500">PICK: ${p.nombre} (C: ${p.cuota})</div></div>`).join('');
+            }
+            lista.innerHTML += `
+            <div class="bg-black/40 p-3 rounded-xl border border-blue-500/20 relative shadow-md mb-3">
+                <div class="absolute top-0 right-0 flex overflow-hidden rounded-bl-xl rounded-tr-xl shadow-md z-10">
+                    <button onclick="window.eliminarHistorialEscaleraAdmin('${d.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[10px] px-3 py-1 transition-colors border-r border-red-700"><i class="fas fa-trash"></i></button>
+                    <span class="bg-blue-600 text-white text-[10px] font-black px-3 py-1">C: ${d.ticket_data ? d.ticket_data.cuotaTotal : '-'}</span>
+                </div>
+                <div class="mb-2 border-b border-white/5 pb-1 pr-14">
+                    <span class="text-[9px] text-gray-400 font-bold"><i class="far fa-calendar-alt mr-1"></i> ${d.fecha}</span>
+                </div>
+                <div class="mt-2">${picksHtml}</div>
+            </div>`;
+        });
+    } catch(e) { lista.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al leer historial.</p>`; console.error(e); }
+};
+
+window.eliminarHistorialEscaleraAdmin = async function(idDoc) {
+    window.mostrarConfirmacion("Eliminar Reto del Historial", "¿Seguro que deseas borrar este reto del registro administrativo?", async () => {
+        try {
+            await deleteDoc(doc(db, "historial_escalera", idDoc));
+            window.mostrarAlerta("Eliminado", "Reto borrado del historial correctamente.", "success");
+            window.cargarHistorialEscaleraAdmin();
+        } catch(e) { window.mostrarAlerta("Error", "Fallo al intentar borrar.", "error"); }
+    });
+};
 
 // ==========================================
 // 13. ADMIN: GENERADOR DE CÓDIGOS Y ACCESOS
