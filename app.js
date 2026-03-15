@@ -137,7 +137,14 @@ window.verificarNotificacionesPendientes = async function() {
             
             const ultimaVista = localStorage.getItem('oracle_last_push_seen');
             
-            if (!ultimaVista || data.timestamp > parseInt(ultimaVista)) {
+            // 🛑 LA MAGIA AQUÍ: Si es usuario nuevo (memoria vacía), guardamos la hora actual en silencio y abortamos.
+            if (!ultimaVista) {
+                localStorage.setItem('oracle_last_push_seen', Date.now().toString());
+                return; 
+            }
+            
+            // Si ya tiene historial y la notificación es más nueva que su última visita, la mostramos.
+            if (data.timestamp > parseInt(ultimaVista)) {
                 localStorage.setItem('oracle_last_push_seen', data.timestamp.toString());
                 
                 let urlDestino = null;
