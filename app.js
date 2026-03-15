@@ -412,21 +412,29 @@ async function precargarBaseDeDatos() {
     const cacheKey = 'oracle_cache_cartelera';
     const cacheTimeKey = 'oracle_cache_tiempo';
     const ahoraMs = Date.now();
-    const cacheGuardado = localStorage.getItem(cacheKey);
-    const tiempoGuardado = localStorage.getItem(cacheTimeKey);
 
-    // Caché válida por 15 minutos (900,000 ms) para carga en 0.05 segundos
-    if (cacheGuardado && tiempoGuardado && (ahoraMs - parseInt(tiempoGuardado)) < 900000) {
-        CACHE_PARTIDOS_FUTUROS = JSON.parse(cacheGuardado);
-        let ligasMap = {};
-        CACHE_PARTIDOS_FUTUROS.forEach(p => {
-            if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; }
-        });
-        competicionesGlobales = Object.values(ligasMap);
-        window.construirMenuLateral();
-        return; 
+    // 1. INTENTO DE CACHÉ CON AUTODESTRUCCIÓN SI ESTÁ CORRUPTO
+    try {
+        const cacheGuardado = localStorage.getItem(cacheKey);
+        const tiempoGuardado = localStorage.getItem(cacheTimeKey);
+        
+        if (cacheGuardado && tiempoGuardado && (ahoraMs - parseInt(tiempoGuardado)) < 900000) {
+            CACHE_PARTIDOS_FUTUROS = JSON.parse(cacheGuardado);
+            let ligasMap = {};
+            CACHE_PARTIDOS_FUTUROS.forEach(p => {
+                if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; }
+            });
+            competicionesGlobales = Object.values(ligasMap);
+            window.construirMenuLateral();
+            return; 
+        }
+    } catch (errorCache) {
+        console.warn("Caché corrupto detectado. Purgando memoria local...");
+        localStorage.removeItem(cacheKey);
+        localStorage.removeItem(cacheTimeKey);
     }
 
+    // 2. DESCARGA DESDE LA NUBE
     const tiempoActualISO = new Date().toISOString(); 
     try {
         const q = query(collection(db, "eventos_sincronizados"), where("commence_time", ">=", tiempoActualISO)); 
@@ -437,7 +445,7 @@ async function precargarBaseDeDatos() {
             let p = doc.data(); p.id = doc.id; 
             if(p.sport_key && p.sport_key.includes('soccer')) { 
                 
-                // 🚀 PRE-CÁLCULO MATEMÁTICO: Filtros instantáneos
+                // PRE-CÁLCULO MATEMÁTICO
                 const d = new Date(p.commence_time);
                 const mes = String(d.getMonth() + 1).padStart(2, '0');
                 const dia = String(d.getDate()).padStart(2, '0');
@@ -457,13 +465,20 @@ async function precargarBaseDeDatos() {
         try {
             localStorage.setItem(cacheKey, JSON.stringify(CACHE_PARTIDOS_FUTUROS));
             localStorage.setItem(cacheTimeKey, ahoraMs.toString());
-        } catch(e) { console.log("Caché excedida"); }
+        } catch(e) { console.log("Memoria del celular llena, no se guardó caché."); }
 
         competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); 
+        
     } catch(e) { 
-        console.error("Error DB:", e); 
+        // 3. CAPTURA DE ERRORES EXTREMOS (API KEY O FIREBASE RULES)
+        console.error("Error Crítico de Red/Base de Datos:", e); 
+        const errMsg = `<div class="text-center p-10 text-red-500 font-bold border border-red-500/30 bg-red-900/10 rounded-xl m-4 shadow-lg"><i class="fas fa-exclamation-triangle text-4xl mb-3 animate-pulse"></i><br><span class="text-sm uppercase tracking-widest">Fallo de Conexión</span><br><span class="text-[9px] text-gray-400 mt-3 block bg-black/50 p-2 rounded">${e.message}</span></div>`;
+        
+        // Lo mostramos tanto en la vista gratuita como en la VIP para que no se quede colgado
         const cFree = document.getElementById('containerPartidos'); 
-        if(cFree) { cFree.innerHTML = `<div class="text-center p-10 text-red-500 font-bold"><i class="fas fa-exclamation-triangle text-3xl mb-2"></i><br>Fallo al conectar con la base de datos.</div>`; } 
+        const cVip = document.getElementById('containerPartidosVIP');
+        if(cFree) cFree.innerHTML = errMsg;
+        if(cVip) cVip.innerHTML = errMsg;
     }
 }
 
