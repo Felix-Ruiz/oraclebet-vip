@@ -201,7 +201,7 @@ window.iniciarSwipeNotificaciones = function() {
     });
 };
 
-// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP (CON SWIPE INCLUIDO)
+// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP (CON SWIPE INCLUIDO Y SIN "QUANT")
 window.abrirBandejaNotificaciones = async function() {
     let modal = document.getElementById('modalBandejaNotificaciones');
     if (!modal) {
@@ -209,7 +209,7 @@ window.abrirBandejaNotificaciones = async function() {
         <div id="modalBandejaNotificaciones" class="fixed inset-0 bg-black/95 hidden items-end justify-center z-[400] transition-opacity duration-300 backdrop-blur-md">
             <div class="bg-gray-900 border-t border-blue-500/50 w-full h-[85vh] rounded-t-3xl shadow-[0_-10px_40px_rgba(59,130,246,0.15)] flex flex-col relative transform translate-y-full transition-transform duration-300" id="bandejaContenido">
                 <div class="p-5 flex justify-between items-center border-b border-white/10 bg-black/50 rounded-t-3xl">
-                    <h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Centro Quant</h3>
+                    <h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Notificaciones FR</h3>
                     <button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button>
                 </div>
                 <div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
@@ -245,7 +245,7 @@ window.abrirBandejaNotificaciones = async function() {
             lista.innerHTML += `
             <div class="notif-item relative mb-3 overflow-hidden" data-id="${doc.id}">
                 <div class="absolute inset-0 bg-red-600 rounded-xl flex justify-end items-center pr-5 text-white font-black text-xs shadow-inner">
-                    <i class="fas fa-trash-alt mr-2"></i> Eliminar
+                    <i class="fas fa-trash-alt"></i>
                 </div>
                 <div ${clickAction} class="bg-black/80 p-4 rounded-xl border border-white/10 shadow-md relative transition-transform duration-200 notif-card w-full z-10 block ${data.url && data.url !== '/' ? 'cursor-pointer active:scale-[0.98]' : ''}">
                     <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
@@ -439,7 +439,7 @@ window.enviarNotificacionGlobal = async function() {
             cuerpo: cuerpo, 
             url: window.location.origin + "/?inbox=true",
             timestamp: Date.now(), 
-            enviadoPor: "Félix Ruiz (Gestor)" 
+            enviadoPor: "FR (Bot)" 
         });
         window.mostrarAlerta("Éxito", "La notificación ha sido enviada y guardada en la bandeja.", "success");
         document.getElementById('pushTitulo').value = ''; document.getElementById('pushCuerpo').value = '';
@@ -477,7 +477,7 @@ window.renderizarLayoutAdmin = function() {
         <div class="p-4 bg-gray-900 min-h-screen pb-20">
             <div class="flex flex-col items-center justify-center gap-2 mb-6 text-center border-b border-white/5 pb-4 relative">
                 <div class="bg-gray-800 p-4 rounded-full text-yellow-500 shadow-inner mt-4"><i class="fas fa-chart-line text-2xl"></i></div>
-                <h2 class="text-yellow-500 font-black text-2xl uppercase tracking-widest flex items-center gap-2">FR Quant Capital</h2>
+                <h2 class="text-yellow-500 font-black text-2xl uppercase tracking-widest flex items-center gap-2">FR</h2>
                 <h3 class="text-gray-400 text-[10px] font-bold uppercase tracking-[0.3em]">| Analytics |</h3>
                 <span class="bg-gray-700 text-white text-[8px] px-2 py-0.5 rounded-full mt-2 font-black tracking-widest">CRM ADMIN</span>
             </div>
@@ -543,7 +543,7 @@ window.renderizarLayoutAdmin = function() {
                 </div>
 
                 <div class="bg-black/60 p-5 rounded-2xl border border-yellow-500/20 shadow-lg relative overflow-hidden">
-                    <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">MOTOR QUANT</div>
+                    <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">MOTOR FR</div>
                     <h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-4"><i class="fas fa-rocket text-yellow-500 mr-1"></i> Creador de Escalera</h3>
                     <div class="space-y-4">
                         <div><label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-crosshairs mr-1"></i> Cuota Objetivo</label><input type="number" id="inputCuotaObjetivo" step="0.1" value="2.0" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner"></div>
@@ -565,7 +565,6 @@ window.renderizarLayoutAdmin = function() {
                     </div>
                     <div id="historialEscaleraAdminList" class="space-y-3"></div>
                 </div>
-
             </div>
 
             <div id="vistaAdm_access" class="admin-view-content hidden space-y-4">
@@ -635,7 +634,7 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
 window.cerrarSesionLocal = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.cerrarModalLogin(); window.mostrarConfirmacion("Cerrar Sesión", "¿Deseas salir de tu cuenta VIP?", () => { window.ejecutarCierreSesion(); setTimeout(() => { window.abrirModalLogin(); }, 300); }); };
 window.ejecutarCierreSesion = function() {
     modoVipActivo = false; modoIlimitadoActivo = false; codigoActivoUsuario = ''; estadoEscalera = 'none'; seleccionesVIPGlobal = []; ticketDinamicoVIP = [];
-    const contadorSel = document.getElementById('contadorSeleccion'); if(contadorSel) contadorSel.innerHTML = `<i class="fas fa-check-square mr-1"></i> 0 Seleccionados`;
+    const contadorSel = document.getElementById('contadorSeleccion'); if(contadorSel) contadorSel.innerHTML = `<i class="fas fa-list-check mr-1"></i> 0 Seleccionados`;
     const resDiv = document.getElementById('resultadoVIP'); if(resDiv) resDiv.innerHTML = "";
     let btnPushVip = document.getElementById('btnActivarPushVip'); if(btnPushVip) btnPushVip.remove();
     if (unsubscribeApadrinamiento) unsubscribeApadrinamiento(); perfilApadrinamiento = null; clearInterval(timerInactividad); 
@@ -669,9 +668,6 @@ window.construirMenuLateral = function() {
     let html = ''; Object.keys(arbol).sort().forEach(deporte => { const idDep = deporte.replace(/[^a-zA-Z0-9]/g, ''); let iconDep = 'fa-futbol'; if(deporte === 'Baloncesto') iconDep = 'fa-basketball-ball'; else if(deporte === 'Tenis') iconDep = 'fa-table-tennis'; else if(deporte === 'Fútbol Americano' || deporte === 'American Football') iconDep = 'fa-football-ball'; else if(deporte === 'Béisbol' || deporte === 'Baseball') iconDep = 'fa-baseball-ball'; else if(deporte === 'Hockey') iconDep = 'fa-hockey-puck'; else if(deporte === 'MMA' || deporte === 'UFC') iconDep = 'fa-hand-rock'; else if(deporte === 'Boxeo') iconDep = 'fa-mitten'; html += `<div class="mb-2"><button onclick="window.toggleAcordeon('dep_${idDep}')" class="w-full text-left p-3 flex justify-between bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md"><span><i class="fas ${iconDep} mr-2"></i>${deporte}</span><i id="icon_dep_${idDep}" class="fas fa-chevron-down transition-transform"></i></button><div id="acc_dep_${idDep}" class="hidden flex-col gap-1 mt-1 pl-2">`; Object.keys(arbol[deporte]).sort().forEach(pais => { const idPais = idDep + '_' + pais.replace(/[^a-zA-Z0-9]/g, ''); const bandera = arbol[deporte][pais][0].bandera; html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1"><button onclick="window.toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between text-white font-bold text-[10px] uppercase"><span><span class="mr-2 drop-shadow-md">${bandera}</span> ${pais}</span><i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i></button><div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`; arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { html += `<button onclick="window.ejecutarFiltroFinal('${liga.key}', '${bandera} ${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between group"><span class="truncate pr-2">${liga.name}</span><i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i></button>`; }); html += `</div></div>`; }); html += `</div></div>`; }); contenedor.innerHTML = html;
 };
 
-// ==========================================
-// 7. FILTROS Y RENDER DE PARTIDOS (PAÍS -> LIGA)
-// ==========================================
 window.toggleFiltroIA = function() { filtroIAActivo = !filtroIAActivo; const btn = document.getElementById('btnFiltroIA'); if(filtroIAActivo) { btn.classList.replace('bg-gray-900', 'bg-blue-600'); btn.classList.replace('text-blue-400', 'text-white'); } else { btn.classList.replace('bg-blue-600', 'bg-gray-900'); btn.classList.replace('text-white', 'text-blue-400'); } window.aplicarFiltrosLocales(); };
 
 window.aplicarFiltrosLocales = function() {
@@ -784,12 +780,12 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
         let escudoMejora = o.es_mejora ? `<span class="bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-md animate-bounce"><i class="fas fa-shield-alt"></i> BLINDADO</span>` : '';
         let warningFaltaMercado = ''; if (modoMercadoGlobal === 'props' && !isProp(o.mercadoKey)) { warningFaltaMercado = `<div class="text-[8px] text-red-400 bg-red-900/30 p-1 rounded mt-1 border border-red-500/30 text-center"><i class="fas fa-exclamation-circle"></i> Props no publicados. Mostrando alternativa.</div>`; }
         
-        htmlPartidos += `<div class="${bg} p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden shadow-lg"><div class="absolute top-0 right-0 ${colorConf} text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md z-10">PROB REAL: ${o.probabilidad > 96 ? 96 : o.probabilidad}%</div><div class="text-[9px] text-gray-400 font-bold uppercase mb-2"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-3">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-gray-700 shadow-inner"><div class="flex flex-col"><div class="flex items-center gap-1.5 mb-1"><span class="text-[11px] ${colorPick} font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${o.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button>${escudoMejora}</div><div class="mt-0.5 flex items-center"><span class="text-[8px] text-gray-500 uppercase font-bold"><i class="fas fa-shield-alt mr-1"></i> Quant: </span>${badgeValor}</div></div><div class="flex items-center gap-1.5"><span class="text-white font-black text-[15px] mr-1">${o.cuota.toFixed(2)}</span>${!esRadarAuto ? `<button onclick="window.rotarPickIndividual('${p.id}')" class="text-gray-400 bg-white/5 p-1.5 rounded-lg hover:text-white transition" title="Rotar Pick"><i class="fas fa-sync-alt"></i></button><button onclick="window.quitarPartidoDelTicket('${p.id}')" class="text-red-400 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-300 transition" title="Quitar Partido"><i class="fas fa-trash-alt"></i></button>` : ''}</div></div>${warningFaltaMercado}</div>`;
+        htmlPartidos += `<div class="${bg} p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden shadow-lg"><div class="absolute top-0 right-0 ${colorConf} text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md z-10">PROB REAL: ${o.probabilidad > 96 ? 96 : o.probabilidad}%</div><div class="text-[9px] text-gray-400 font-bold uppercase mb-2"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-3">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-gray-700 shadow-inner"><div class="flex flex-col"><div class="flex items-center gap-1.5 mb-1"><span class="text-[11px] ${colorPick} font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${o.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button>${escudoMejora}</div><div class="mt-0.5 flex items-center"><span class="text-[8px] text-gray-500 uppercase font-bold"><i class="fas fa-shield-alt mr-1"></i> Filtro: </span>${badgeValor}</div></div><div class="flex items-center gap-1.5"><span class="text-white font-black text-[15px] mr-1">${o.cuota.toFixed(2)}</span>${!esRadarAuto ? `<button onclick="window.rotarPickIndividual('${p.id}')" class="text-gray-400 bg-white/5 p-1.5 rounded-lg hover:text-white transition" title="Rotar Pick"><i class="fas fa-sync-alt"></i></button><button onclick="window.quitarPartidoDelTicket('${p.id}')" class="text-red-400 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-300 transition" title="Quitar Partido"><i class="fas fa-trash-alt"></i></button>` : ''}</div></div>${warningFaltaMercado}</div>`;
     });
     probPromedio = Math.floor(probPromedio / ticketDinamicoVIP.length); if(probPromedio > 96) probPromedio = 96; let c1 = modoMercadoGlobal === 'mixto' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c2 = modoMercadoGlobal === 'h2h' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c3 = modoMercadoGlobal === 'totals' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c4 = modoMercadoGlobal === 'spreads' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c5 = modoMercadoGlobal === 'props' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-yellow-500/50'; let ctrls = esRadarAuto ? '' : `<div class="grid grid-cols-5 gap-1 bg-black/60 p-1 rounded-lg mb-4"><button onclick="window.cambiarModoMercado('mixto')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c1}">Mixto</button><button onclick="window.cambiarModoMercado('h2h')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c2}">1X2</button><button onclick="window.cambiarModoMercado('totals')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c3}">Goles</button><button onclick="window.cambiarModoMercado('spreads')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c4}">Hándicap</button><button onclick="window.cambiarModoMercado('props')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c5} shadow-md"><i class="fas fa-star mr-0.5"></i>Props</button></div>`; 
     let btnBar = esRadarAuto ? '' : `<div class="flex gap-2 mt-4"><button onclick="window.mejorarProbabilidadTicket()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-[0_0_15px_rgba(59,130,246,0.3)] transition active:scale-95"><i class="fas fa-shield-alt mr-1"></i> Blindar Picks</button><button onclick="window.regenerarTicketCompleto()" class="flex-1 py-3 border border-yellow-500/30 text-yellow-500 rounded-xl text-[10px] font-black uppercase hover:bg-yellow-500/10 transition active:scale-95"><i class="fas fa-random mr-1"></i> Rotar Picks</button></div>`; 
     let riskBanner = esRadarAuto ? '' : `<div class="mb-4 p-3 rounded-lg ${modoRiesgoGlobal ? 'bg-red-900/20 border border-red-500/50' : 'bg-green-900/20 border border-green-500/50'} transition-colors flex justify-between items-center shadow-inner"><div class="flex flex-col w-2/3"><span class="text-[10px] font-black uppercase ${modoRiesgoGlobal ? 'text-red-400' : 'text-green-400'} mb-1">${modoRiesgoGlobal ? '<i class="fas fa-exclamation-triangle"></i> ALTO RIESGO / ALTA GANANCIA' : '<i class="fas fa-shield-alt"></i> MODO SEGURO (Banca)'}</span><span class="text-[8px] text-gray-400 leading-tight">${modoRiesgoGlobal ? 'Análisis cuantitativo de alto riesgo.' : 'Algoritmo ajustado a alta probabilidad.'}</span></div><button onclick="window.toggleModoRiesgo()" class="py-2.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest ${modoRiesgoGlobal ? 'bg-green-600 text-white' : 'bg-red-600 text-white'} shadow-lg active:scale-95 transition-all">${modoRiesgoGlobal ? 'Ir a Seguro' : 'Arriesgar'}</button></div>`;
-    resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${modoRiesgoGlobal ? 'border-red-500 bg-red-500/5' : (esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5')} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${modoRiesgoGlobal ? 'text-red-500' : (esRadarAuto?'text-purple-500':'text-yellow-500')} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Análisis de FR Quant</span><span class="text-[10px] ${modoRiesgoGlobal ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10'} font-black px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${riskBanner} ${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final Calculada</span></div><span class="text-3xl font-black ${modoRiesgoGlobal ? 'text-red-400' : 'text-white'}">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button onclick="window.guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-yellow-600 hover:bg-yellow-500 text-black rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
+    resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${modoRiesgoGlobal ? 'border-red-500 bg-red-500/5' : (esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5')} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${modoRiesgoGlobal ? 'text-red-500' : (esRadarAuto?'text-purple-500':'text-yellow-500')} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Análisis de FR</span><span class="text-[10px] ${modoRiesgoGlobal ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10'} font-black px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${riskBanner} ${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final Calculada</span></div><span class="text-3xl font-black ${modoRiesgoGlobal ? 'text-red-400' : 'text-white'}">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button onclick="window.guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-yellow-600 hover:bg-yellow-500 text-black rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
 };
 
 // ==========================================
@@ -878,7 +874,7 @@ window.renderizarDashboardApadrinamiento = async function() {
 };
 
 window.generarTicketApadrinamiento = async function() {
-    if(!perfilApadrinamiento) return; const btn = document.getElementById('btnGenerarApadrinamiento'); btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> ESCANEANDO FR QUANT CAPITAL...`; btn.disabled = true;
+    if(!perfilApadrinamiento) return; const btn = document.getElementById('btnGenerarApadrinamiento'); btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> ESCANEANDO MERCADO...`; btn.disabled = true;
     let previewExistente = document.getElementById('previewArriesgar'); if(previewExistente) previewExistente.remove();
 
     setTimeout(async () => {
@@ -915,7 +911,7 @@ window.generarTicketApadrinamiento = async function() {
             }).join('');
             
             let container = document.createElement('div'); container.id = 'previewArriesgar'; btn.parentNode.insertBefore(container, btn);
-            container.innerHTML = `<div class="bg-red-900/20 border border-red-500/50 p-4 rounded-xl mb-3 shadow-inner transform transition-all animate-pulse"><div class="text-red-400 font-black text-[11px] uppercase mb-2"><i class="fas fa-exclamation-triangle"></i> MERCADO INESTABLE - PLAN B</div><p class="text-[9px] text-gray-300 mb-3 leading-relaxed">FR Quant Capital no encontró diamantes confirmados. El algoritmo matemático reducirá tu Stake al <b class="text-yellow-500 text-xs">${porcentajeStake}%</b> para proteger tu capital.</p><div class="mb-3">${picksHtml}</div><div class="text-right text-xs font-black text-white pt-2 border-t border-white/10">Cuota Final: <span class="text-yellow-500">${cuotaAlcanzada.toFixed(2)}</span></div></div>`;
+            container.innerHTML = `<div class="bg-red-900/20 border border-red-500/50 p-4 rounded-xl mb-3 shadow-inner transform transition-all animate-pulse"><div class="text-red-400 font-black text-[11px] uppercase mb-2"><i class="fas fa-exclamation-triangle"></i> MERCADO INESTABLE - PLAN B</div><p class="text-[9px] text-gray-300 mb-3 leading-relaxed">FR no encontró diamantes confirmados. El algoritmo matemático reducirá tu Stake al <b class="text-yellow-500 text-xs">${porcentajeStake}%</b> para proteger tu capital.</p><div class="mb-3">${picksHtml}</div><div class="text-right text-xs font-black text-white pt-2 border-t border-white/10">Cuota Final: <span class="text-yellow-500">${cuotaAlcanzada.toFixed(2)}</span></div></div>`;
             window.ticketPlanBPendiente = objTicket;
             btn.removeAttribute('onclick'); btn.innerHTML = `<i class="fas fa-fire"></i> ARRIESGAR STAKE (${porcentajeStake}%)`; btn.className = "w-full py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl font-black text-[12px] uppercase shadow-[0_10px_20px_rgba(220,38,38,0.3)] transition-all active:scale-95"; btn.disabled = false;
             btn.onclick = async function() { btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> ENVIANDO ORDEN...`; btn.disabled = true; try { await setDoc(doc(db, "tickets_apadrinamiento", ticketId), window.ticketPlanBPendiente); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Riesgo Asumido", `Ticket alternativo guardado con Stake de protección (${porcentajeStake}%).`, "warning"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "Error al procesar.", "error"); window.renderizarDashboardApadrinamiento(); } };
@@ -1024,7 +1020,7 @@ window.publicarRetoEscalera = async function() {
             cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
             url: window.location.origin + "/?view=escalera", 
             timestamp: ahora,
-            enviadoPor: "FR Quant (Bot)"
+            enviadoPor: "FR (Bot)"
         });
 
         window.mostrarAlerta("Publicado", "Ticket publicado, guardado en el historial y notificación enviada a los inversores.", "success"); 
@@ -1113,7 +1109,6 @@ window.renderizarSolicitudesAdmin = async function() {
 };
 window.aprobarEscalera = async function(c) { try { await updateDoc(doc(db, "codigos_nube", c), { ladderStatus: 'approved' }); window.mostrarAlerta("Éxito", "Usuario aprobado.", "success"); window.renderizarSolicitudesAdmin(); } catch(e){} };
 
-// ==========================================
 // ==========================================
 // 14. ADMIN: MONITOR GLOBAL Y GESTIÓN DE USUARIOS
 // ==========================================

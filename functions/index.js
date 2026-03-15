@@ -7,7 +7,6 @@ const axios = require("axios");
 admin.initializeApp();
 const db = admin.firestore();
 
-// 🔋 LLAVES THE-ODDS-API (Tu radar mundial inagotable)
 const API_KEYS = [
     '842bc19e83e8b5a4abb21ea750934b1d', '0d6560398d3f560738ea2ec1f8d29efb',
     '59a5f051a44e3ac088ea780f0470e7d7', '514fbd0141e7c1c3ae49695076633302',
@@ -33,7 +32,6 @@ async function peticionConRotacion(urlBase) {
     return null;
 }
 
-// 🧠 EL MOTOR "ORACLE QUANT" (Ingeniería Inversa a Pinnacle)
 function inyectarOracleQuant(partido) {
     if (!partido.bookmakers) return partido;
     const pinnacle = partido.bookmakers.find(b => b.key === 'pinnacle');
@@ -91,7 +89,7 @@ function inyectarOracleQuant(partido) {
 }
 
 async function ejecutarEscaneoGlobal() {
-    console.log("🌍 INICIANDO ORACLE QUANT AI (INDEPENDIENTE Y BLINDADO)...");
+    console.log("🌍 INICIANDO ORACLE AI (INDEPENDIENTE Y BLINDADO)...");
     let totalGuardados = 0;
     let ligasActivasEncontradas = [];
     let diamantesCazados = 0;
@@ -148,7 +146,6 @@ async function ejecutarEscaneoGlobal() {
 exports.robotSincronizador = onSchedule({ schedule: "every 4 hours", timeoutSeconds: 1800, memory: "512MiB" }, async (event) => { await ejecutarEscaneoGlobal(); });
 exports.disparadorManual = onRequest({ timeoutSeconds: 1800, memory: "512MiB" }, async (req, res) => { const resultado = await ejecutarEscaneoGlobal(); res.json(resultado); });
 
-// 📢 MOTOR DE NOTIFICACIONES PUSH (MEGÁFONO ADMIN CON DEEP LINKING)
 exports.enviarPushMasivo = onDocumentCreated({
     document: "notificaciones_push/{docId}",
     timeoutSeconds: 60,
@@ -157,7 +154,7 @@ exports.enviarPushMasivo = onDocumentCreated({
     const data = event.data.data();
     if (!data) return null;
 
-    const titulo = data.titulo || "Notificación Quant";
+    const titulo = data.titulo || "Notificación FR";
     const cuerpo = data.cuerpo || "Revisa la aplicación.";
     const urlDestino = data.url || "/";
 
@@ -178,10 +175,8 @@ exports.enviarPushMasivo = onDocumentCreated({
         return null;
     }
 
-    // 🛡️ FIX DUPLICADOS
     const tokensUnicos = [...new Set(tokensPush)];
 
-    // 2. Construir el paquete del mensaje (CON REDIRECCIÓN NATIVA WEBPUSH)
     const payload = {
         notification: {
             title: String(titulo),
@@ -192,7 +187,7 @@ exports.enviarPushMasivo = onDocumentCreated({
         },
         webpush: {
             fcmOptions: {
-                link: String(urlDestino) // 🚀 Esto obliga a Apple y Android a abrir la URL correcta al tocar
+                link: String(urlDestino)
             }
         },
         tokens: tokensUnicos

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FR Quant Capital | Analytics</title>
+    <title>FR | Analytics</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -54,13 +54,13 @@
         <div class="card-glass p-8 w-full max-w-sm text-center border-yellow-500/30 relative overflow-hidden shadow-[0_0_40px_rgba(212,175,55,0.15)]">
             <button onclick="window.cerrarModalLogin()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
             <i class="fas fa-chart-line text-yellow-500 text-5xl mb-3 drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]"></i>
-            <h3 class="text-xl font-black mb-1 uppercase text-white tracking-widest">Portal <span class="text-yellow-500">Quant</span></h3>
+            <h3 class="text-xl font-black mb-1 uppercase text-white tracking-widest">Portal <span class="text-yellow-500">FR</span></h3>
             <p class="text-[10px] text-gray-400 mb-6 uppercase tracking-widest">Ingresa tu credencial.</p>
             <div class="flex flex-col gap-4">
                 <input type="text" id="vipCode" placeholder="CÓDIGO DE INVERSOR" onkeyup="if(event.key === 'Enter') window.validarCodigo()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 text-center text-white font-black tracking-widest uppercase focus:border-yellow-500 outline-none transition-colors shadow-inner">
                 <button onclick="window.validarCodigo()" id="btnValidarCodigo" class="bg-yellow-500 text-black font-black py-4 rounded-lg uppercase text-sm shadow-[0_5px_15px_rgba(212,175,55,0.3)] transition active:scale-95 flex justify-center items-center gap-2"><i class="fas fa-sign-in-alt text-lg"></i> VERIFICAR ACCESO</button>
                 <div class="flex items-center gap-2 my-1"><div class="h-[1px] bg-gray-800 w-full"></div><span class="text-[9px] text-gray-600 font-bold uppercase">¿No eres miembro?</span><div class="h-[1px] bg-gray-800 w-full"></div></div>
-                <a href="https://wa.me/573005191112?text=Hola%2C%20deseo%20solicitar%20un%20PIN%20de%20acceso%20para%20FR%20Quant%20Capital." target="_blank" class="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-700 to-blue-600 text-white p-3.5 rounded-lg text-[11px] font-black hover:brightness-110 shadow-lg transition active:scale-95 uppercase tracking-widest"><i class="fas fa-user-tie text-xl"></i> CONTACTAR AL GESTOR</a>
+                <a href="https://wa.me/573005191112?text=Hola%2C%20deseo%20solicitar%20un%20PIN%20de%20acceso%20para%20FR." target="_blank" class="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-700 to-blue-600 text-white p-3.5 rounded-lg text-[11px] font-black hover:brightness-110 shadow-lg transition active:scale-95 uppercase tracking-widest"><i class="fas fa-user-tie text-xl"></i> CONTACTAR AL GESTOR</a>
             </div>
         </div>
     </div>
@@ -121,39 +121,30 @@
             <div class="mb-5">
                 <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2 border-l-2 border-yellow-500 pl-2"><i class="fas fa-fire text-blue-500 animate-pulse"></i> Competiciones Top</h3>
                 <div class="flex overflow-x-auto gap-3 pb-6 pt-4 px-1 snap-x snap-mandatory hide-scrollbar">
-                    
                     <button id="btn_carrusel_soccer_epl" onclick="window.ejecutarFiltroFinal('soccer_epl', 'Premier League')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#38003c] to-[#00ff85]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><img src="./img/premier.png" onerror="this.src='https://media.api-sports.io/football/leagues/39.png'" alt="Premier" class="h-8 max-w-[80%] mb-1.5 object-contain relative z-10 drop-shadow-md bg-white/90 p-1 rounded"><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">Premier</span>
                     </button>
-                    
                     <button id="btn_carrusel_soccer_spain_la_liga" onclick="window.ejecutarFiltroFinal('soccer_spain_la_liga', 'La Liga')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#ea0437] to-[#ff4b4b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><img src="./img/laliga.png" onerror="this.src='https://media.api-sports.io/football/leagues/140.png'" alt="La Liga" class="h-8 max-w-[80%] mb-1.5 object-contain relative z-10 drop-shadow-md bg-white/90 p-1 rounded"><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">La Liga</span>
                     </button>
-                    
                     <button id="btn_carrusel_soccer_italy_serie_a" onclick="window.ejecutarFiltroFinal('soccer_italy_serie_a', 'Serie A')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#003cb2] to-[#0281ff]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><img src="./img/seriea.png" onerror="this.src='https://media.api-sports.io/football/leagues/135.png'" alt="Serie A" class="h-8 max-w-[80%] mb-1.5 object-contain relative z-10 drop-shadow-md bg-white/90 p-1 rounded"><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">Serie A</span>
                     </button>
-                    
                     <button id="btn_carrusel_soccer_germany_bundesliga" onclick="window.ejecutarFiltroFinal('soccer_germany_bundesliga', 'Bundesliga')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#d3010c] to-[#ff3b3b]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><img src="./img/bundesliga.png" onerror="this.src='https://media.api-sports.io/football/leagues/78.png'" alt="Bundesliga" class="h-8 max-w-[80%] mb-1.5 object-contain relative z-10 drop-shadow-md bg-white/90 p-1 rounded"><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10">Bundesliga</span>
                     </button>
-                    
                     <button id="btn_carrusel_soccer_uefa_champs_league" onclick="window.ejecutarFiltroFinal('soccer_uefa_champs_league', 'Champions League')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#001489] to-[#030b42]/80 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><img src="./img/champions.png" onerror="this.src='https://media.api-sports.io/football/leagues/2.png'" alt="Champions" class="h-8 max-w-[80%] mb-1.5 object-contain relative z-10 drop-shadow-md bg-white/90 p-1 rounded"><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Champions</span>
                     </button>
-
                     <button id="btn_carrusel_soccer_uefa_europa_league" onclick="window.ejecutarFiltroFinal('soccer_uefa_europa_league', 'Europa League')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#f68e1e] to-[#f68e1e]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><img src="./img/europa.png" onerror="this.src='https://media.api-sports.io/football/leagues/3.png'" alt="Europa League" class="h-8 max-w-[80%] mb-1.5 object-contain relative z-10 drop-shadow-md bg-white/90 p-1 rounded"><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Europa L.</span>
                     </button>
-
                     <button id="btn_carrusel_soccer_uefa_europa_conference_league" onclick="window.ejecutarFiltroFinal('soccer_uefa_europa_conference_league', 'Conference League')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#00b140] to-[#00b140]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><img src="./img/conference.png" onerror="this.src='https://media.api-sports.io/football/leagues/848.png'" alt="Conference League" class="h-8 max-w-[80%] mb-1.5 object-contain relative z-10 drop-shadow-md bg-white/90 p-1 rounded"><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Conference</span>
                     </button>
-                    
                     <button id="btn_carrusel_soccer_conmebol_copa_libertadores" onclick="window.ejecutarFiltroFinal('soccer_conmebol_copa_libertadores', 'Copa Libertadores')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#004b23] to-[#ffd700]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><i class="fas fa-trophy text-yellow-500 text-3xl mb-1.5 relative z-10 drop-shadow-md"></i><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Libertadores</span>
                     </button>
-
                     <button id="btn_carrusel_soccer_conmebol_copa_sudamericana" onclick="window.ejecutarFiltroFinal('soccer_conmebol_copa_sudamericana', 'Copa Sudamericana')" class="carrusel-btn snap-start shrink-0 w-[100px] h-[85px] bg-gradient-to-br from-[#0a1128] to-[#00b4d8]/20 rounded-xl border border-white/10 flex flex-col items-center justify-center shadow-lg relative overflow-hidden group transition-all duration-300">
                         <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div><i class="fas fa-globe-americas text-blue-400 text-3xl mb-1.5 relative z-10 drop-shadow-md"></i><span class="text-[8px] font-black text-white uppercase tracking-wider relative z-10 text-center leading-tight">Sudamericana</span>
                     </button>
@@ -190,7 +181,7 @@
 
             <div id="wrapperFree">
                 <section class="space-y-4">
-                    <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2 flex justify-between items-center">Análisis de Mercado <span class="text-[8px] bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/50 uppercase tracking-widest font-black"><i class="fas fa-cloud"></i> NUBE QUANT</span></h2>
+                    <h2 class="text-lg font-semibold border-l-4 border-yellow-500 pl-2 flex justify-between items-center">Análisis de Mercado <span class="text-[8px] bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/50 uppercase tracking-widest font-black"><i class="fas fa-cloud"></i> NUBE FR</span></h2>
                     <div id="containerPartidos" class="space-y-4"><div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Consultando a la base de datos...</div></div>
                 </section>
             </div>
@@ -200,9 +191,8 @@
                     <i class="fas fa-list-check text-lg drop-shadow-md"></i>
                     <span id="contadorSeleccion" class="text-sm font-black uppercase tracking-widest">0 Seleccionados</span>
                 </div>
-                
+                <p id="txtInstruccionVip" class="text-[10px] text-gray-400 mb-4 uppercase tracking-widest text-center font-bold">Navega por el menú global. Selecciona para armar tu ticket.</p>
                 <div id="containerPartidosVIP" class="space-y-3 mb-6 max-h-[50vh] overflow-y-auto pr-1"></div>
-                
                 <button id="btnGenerarTicket" onclick="window.procesarTicketVIP()" class="w-full p-4 btn-gold rounded-xl font-black shadow-[0_10px_20px_rgba(212,175,55,0.3)] text-sm flex flex-col items-center opacity-50 cursor-not-allowed transition-all" disabled>
                     <span>VERIFICAR PICKS</span>
                 </button>
@@ -307,7 +297,7 @@
         <section id="adminSection" style="display: none;" class="mt-4 animate-fade-in pb-10"></section>
 
         <footer id="footerApp" class="mt-8 pt-8 pb-4 border-t border-white/5 text-center px-4">
-            <h1 class="text-lg font-black text-yellow-500 uppercase tracking-widest opacity-50 mb-1">FR QUANT</h1>
+            <h1 class="text-lg font-black text-yellow-500 uppercase tracking-widest opacity-50 mb-1">FR</h1>
             <p class="text-[8px] text-blue-300 font-bold uppercase tracking-[0.4em] opacity-50 mb-4">| Analytics |</p>
             <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-4">&copy; 2026 Todos los derechos reservados.</p>
             <div class="bg-gray-900/50 rounded-lg p-3 inline-block border border-white/5 shadow-inner">
