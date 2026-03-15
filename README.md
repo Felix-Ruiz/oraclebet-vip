@@ -87,3 +87,8 @@ Integración de Datos Deportivos (API-Sports): Ya usas esta API para los logos. 
 Métricas Avanzadas (xG - Goles Esperados): En lugar de ver solo cuántos goles meten, el algoritmo evaluaría cuántas ocasiones de peligro real genera un equipo.
 
 Modelos de Distribución de Poisson: Un modelo matemático predictivo que simula el partido 10,000 veces basado en la fuerza ofensiva y defensiva de cada equipo para hallar una probabilidad pura antes de ver las cuotas.
+
+--------------------------
+Hace falta marcar acertado o fallado en escalera
+poder asignar el valor con que inicia el reto
+tener en cuenta el % de la cuota e ir calculando si se pierde o se gana

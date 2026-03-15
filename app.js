@@ -708,6 +708,7 @@ window.renderizarLayoutAdmin = function() {
                     <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">MOTOR FR</div>
                     <h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-4"><i class="fas fa-rocket text-yellow-500 mr-1"></i> Creador de Escalera</h3>
                     <div class="space-y-4">
+                        <div><label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-dollar-sign mr-1"></i> Capital Inicial (Fondo)</label><input type="number" id="inputCapitalEscalera" value="50000" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner"></div>
                         <div><label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-crosshairs mr-1"></i> Cuota Objetivo</label><input type="number" id="inputCuotaObjetivo" step="0.1" value="2.0" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner"></div>
                         <div><label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-shield-alt mr-1"></i> Seguridad Mínima (%)</label><input type="number" id="inputProbMinima" value="85" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner"></div>
                         <div><label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="far fa-calendar-alt mr-1"></i> Fecha del Reto</label><input type="date" id="inputFechaEscalera" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-xs uppercase outline-none focus:border-yellow-500 shadow-inner"></div>
@@ -720,6 +721,8 @@ window.renderizarLayoutAdmin = function() {
                 <button id="btnPublicarReto" onclick="window.publicarRetoEscalera()" class="w-full mt-4 py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(34,197,94,0.3)] transition active:scale-95 hidden"><i class="fas fa-broadcast-tower mr-1"></i> Publicar Escalera Oficial</button>
                 <button onclick="window.eliminarRetoEscaleraGlobal()" class="w-full mt-2 py-3 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl border border-red-500/30 font-black text-[10px] uppercase shadow-lg transition active:scale-95"><i class="fas fa-trash-alt mr-1"></i> Borrar Reto Activo</button>
                 
+                <div id="panelGestionRetoActivo" class="mt-4"></div>
+
                 <div class="bg-black/60 p-4 rounded-2xl border border-white/5 shadow-md mt-4">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-[10px] text-gray-400 font-bold uppercase"><i class="fas fa-history text-blue-500 mr-1"></i> Historial de Retos</h3>
@@ -746,15 +749,8 @@ window.renderizarLayoutAdmin = function() {
         </div>
     `;
 
-    // 🚀 Cargamos todas las funciones de Admin al entrar
-    window.cargarMonitorTickets(); 
-    window.cargarUsuariosAdmin(); 
-    window.cargarFondosAdmin(); 
-    window.renderizarListaAdmin(); 
-    window.renderizarSolicitudesAdmin(); 
-    window.cargarHistorialEscaleraAdmin(); 
-    window.cargarNotificacionesAdmin(); // Invocamos el nuevo historial de notificaciones
-
+    window.cargarMonitorTickets(); window.cargarUsuariosAdmin(); window.cargarFondosAdmin(); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); window.cargarHistorialEscaleraAdmin(); window.cargarNotificacionesAdmin();
+    window.cargarGestionRetoActivoAdmin(); // Invocamos el nuevo panel de control
     const hoy = new Date(); let mes = String(hoy.getMonth() + 1).padStart(2, '0'); let dia = String(hoy.getDate()).padStart(2, '0'); document.getElementById('inputFechaEscalera').value = `${hoy.getFullYear()}-${mes}-${dia}`;
 };
 
@@ -1031,7 +1027,98 @@ window.chequearEstadoEscaleraUI = function() {
 window.solicitarAccesoEscalera = async function() { const btn = document.getElementById('btnSolicitarEscalera'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true; try { await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' }); estadoEscalera = 'pending'; window.chequearEstadoEscaleraUI(); window.mostrarAlerta("Solicitud Enviada", "En revisión por el Administrador.", "success"); } catch (e) { window.mostrarAlerta("Error", "Error al enviar la solicitud.", "error"); btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; } };
 
 window.cargarRetoEscaleraNube = async function() {
-    const divTexto = document.getElementById('textoRetoAdmin'); try { const snap = await getDoc(doc(db, "global", "escalera")); if(snap.exists()) { const data = snap.data(); let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; if(data.ticket_data && data.ticket_data.picks) { html += `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${data.ticket_data.cuotaTotal}</span></div>`; data.ticket_data.picks.forEach(p => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; else if(p.mercadoKey.includes('cards')) ico = "fa-square"; else if(p.mercadoKey === 'totals') ico = "fa-futbol"; else if(p.mercadoKey === 'spreads') ico = "fa-balance-scale"; html += `<div class="bg-gray-900/50 p-3 rounded-lg mb-2 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; }); html += `</div>`; } divTexto.innerHTML = html; } else { divTexto.innerHTML = "Sin reto oficial hoy."; } } catch(e) { console.error(e); divTexto.innerHTML = "Error cargando el reto del servidor."; }
+    const divTexto = document.getElementById('textoRetoAdmin'); 
+    try { 
+        const snap = await getDoc(doc(db, "global", "escalera")); 
+        if(snap.exists()) { 
+            const data = snap.data(); 
+            const tk = data.ticket_data;
+            
+            let cuotaActual = 1.0;
+            let picksHtml = '';
+            
+            if(tk && tk.picks) { 
+                tk.picks.forEach(p => { 
+                    let estadoP = p.estado || 'pendiente';
+                    if(estadoP === 'won') cuotaActual *= p.cuota;
+                    
+                    let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; 
+                    let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); 
+                    let safePickTxt = pickTxt.replace(/'/g, "\\'"); 
+                    
+                    let iconStatus = '<i class="far fa-clock text-gray-400"></i>';
+                    let borderClass = 'border-white/5 bg-gray-900/50';
+                    let titleColor = 'text-white';
+                    
+                    if(estadoP === 'won') { iconStatus = '<i class="fas fa-check-circle text-green-500"></i>'; borderClass = 'border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)] bg-green-900/10'; titleColor = 'text-green-400'; }
+                    if(estadoP === 'lost') { iconStatus = '<i class="fas fa-times-circle text-red-500"></i>'; borderClass = 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)] bg-red-900/10'; titleColor = 'text-red-400 opacity-50'; }
+                    
+                    picksHtml += `
+                    <div class="p-3 rounded-xl mb-2 border relative transition-all duration-500 ${borderClass}">
+                        <div class="absolute top-3 right-3 text-lg">${iconStatus}</div>
+                        <div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas fa-handshake mr-1"></i> ${defMercado.titulo}</div>
+                        <div class="text-[11px] font-bold ${titleColor} mb-2 border-b border-white/5 pb-1 pr-6">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div>
+                        <div class="flex justify-between items-center bg-black/60 p-2 rounded-lg border border-gray-700">
+                            <div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div>
+                            <span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span>
+                        </div>
+                    </div>`; 
+                }); 
+            }
+            
+            let capInicial = tk.capital_inicial || 0;
+            let capActual = tk.estado_reto === 'perdido' ? 0 : capInicial * cuotaActual;
+            let capMeta = capInicial * (tk.cuotaTotal || 1);
+            
+            let progreso = tk.cuotaTotal > 1 ? ((cuotaActual - 1) / (tk.cuotaTotal - 1)) * 100 : 0;
+            if(tk.estado_reto === 'perdido') progreso = 0;
+            if(progreso < 0) progreso = 0; if(progreso > 100) progreso = 100;
+            
+            let statusRetoHtml = '';
+            if(tk.estado_reto === 'ganado') statusRetoHtml = '<div class="bg-gradient-to-r from-green-600 to-green-500 text-white text-[11px] font-black uppercase tracking-widest text-center py-3 rounded-xl mb-4 shadow-[0_0_20px_rgba(34,197,94,0.4)] animate-pulse"><i class="fas fa-trophy mr-1 text-lg"></i> ¡RETO SUPERADO!</div>';
+            if(tk.estado_reto === 'perdido') statusRetoHtml = '<div class="bg-gradient-to-r from-red-600 to-red-800 text-white text-[11px] font-black uppercase tracking-widest text-center py-3 rounded-xl mb-4 shadow-[0_0_20px_rgba(239,68,68,0.4)]"><i class="fas fa-skull mr-1 text-lg"></i> RETO FALLADO</div>';
+
+            let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; 
+            
+            if(tk && tk.picks) { 
+                html += `
+                ${statusRetoHtml}
+                <div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)] mb-4 relative overflow-hidden">
+                    
+                    <div class="flex justify-between items-center mb-3 border-b border-white/10 pb-3">
+                        <span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-rocket mr-1"></i> TICKET OFICIAL</span>
+                        <span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-1 rounded-md shadow-sm">Meta: C ${tk.cuotaTotal}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-gray-900 border border-white/5 p-3 rounded-xl text-center flex flex-col justify-center shadow-inner">
+                            <span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider mb-1">Capital Inicial</span>
+                            <span class="text-white font-black text-sm">${formatoCOP(capInicial)}</span>
+                        </div>
+                        <div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-3 rounded-xl text-center flex flex-col justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-colors">
+                            <span class="text-[8px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase font-bold tracking-wider mb-1">Capital Actual</span>
+                            <span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-lg">${formatoCOP(capActual)}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <div class="flex justify-between text-[8px] text-gray-400 font-bold uppercase mb-1 px-1">
+                            <span>Progreso</span>
+                            <span>${progreso.toFixed(0)}%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-2 border border-white/5 overflow-hidden">
+                            <div class="${tk.estado_reto === 'perdido' ? 'bg-red-600' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'} h-full rounded-full transition-all duration-1000 ease-out" style="width: ${progreso}%"></div>
+                        </div>
+                    </div>
+
+                    ${picksHtml}
+                </div>`; 
+            } 
+            divTexto.innerHTML = html; 
+        } else { 
+            divTexto.innerHTML = '<div class="text-center opacity-50 py-10"><i class="fas fa-lock text-3xl mb-3"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin reto oficial hoy.</p></div>'; 
+        } 
+    } catch(e) { console.error(e); divTexto.innerHTML = "Error cargando el reto del servidor."; }
 };
 
 window.chequearApadrinamientoUI = function() {
@@ -1181,36 +1268,86 @@ window.generarRetoAdmin = async function() {
 window.publicarRetoEscalera = async function() {
     const txt = document.getElementById('inputAdminReto').value; if(!txt && !window.retoPendientePublicar) return window.mostrarAlerta("Error", "Nada para publicar.", "error");
     const btn = document.getElementById('btnPublicarReto'); const originalTxt = btn.innerText; btn.innerText = "Publicando..."; btn.disabled = true;
+    
+    // 🚀 Inyectamos el capital inicial y el estado 'pendiente' a todos los picks
+    const capitalStr = document.getElementById('inputCapitalEscalera')?.value;
+    const capitalInicial = parseFloat(capitalStr) || 0;
+    window.retoPendientePublicar.capital_inicial = capitalInicial;
+    window.retoPendientePublicar.estado_reto = 'activo';
+    window.retoPendientePublicar.picks = window.retoPendientePublicar.picks.map(p => ({ ...p, estado: 'pendiente' }));
+
     try { 
         const ahora = Date.now();
         await setDoc(doc(db, "global", "escalera"), { mensaje: txt, ticket_data: window.retoPendientePublicar, timestamp: ahora }); 
         
         const idHistorial = ahora.toString();
         const fechaStr = new Date().toLocaleDateString('es-CO', {timeZone: 'America/Bogota'}) + ' ' + new Date().toLocaleTimeString('es-CO', {timeZone: 'America/Bogota', hour: '2-digit', minute:'2-digit'});
-        await setDoc(doc(db, "historial_escalera", idHistorial), {
-            id: idHistorial,
-            mensaje: txt,
-            ticket_data: window.retoPendientePublicar,
-            fecha: fechaStr,
-            timestamp: ahora
-        });
+        await setDoc(doc(db, "historial_escalera", idHistorial), { id: idHistorial, mensaje: txt, ticket_data: window.retoPendientePublicar, fecha: fechaStr, timestamp: ahora });
 
-        await setDoc(doc(collection(db, "notificaciones_push")), {
-            titulo: "🔥 NUEVO RETO ESCALERA DISPONIBLE",
-            cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
-            url: window.location.origin + "/?view=escalera", 
-            timestamp: ahora,
-            enviadoPor: "FR (Bot)",
-            audiencia: "escalera"
-        });
+        await setDoc(doc(collection(db, "notificaciones_push")), { titulo: "🔥 NUEVO RETO ESCALERA", cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra para revisarlo!", url: window.location.origin + "/?view=escalera", timestamp: ahora, enviadoPor: "FR (Bot)", audiencia: "escalera" });
 
-        window.mostrarAlerta("Publicado", "Ticket publicado, guardado en el historial y notificación enviada a los inversores.", "success"); 
+        window.mostrarAlerta("Publicado", "Ticket publicado y notificación enviada a los inversores.", "success"); 
         
         document.getElementById('inputAdminReto').value=''; document.getElementById('previewRetoAdmin').innerHTML=''; document.getElementById('previewRetoAdmin').classList.add('hidden'); document.getElementById('inputAdminReto').classList.add('hidden'); document.getElementById('btnPublicarReto').classList.add('hidden'); window.retoPendientePublicar = null; 
         
         if(window.cargarHistorialEscaleraAdmin) window.cargarHistorialEscaleraAdmin();
+        window.cargarGestionRetoActivoAdmin(); // Recargar el panel de control
 
     } catch(e){ window.mostrarAlerta("Error", "Error de red.", "error"); } finally { btn.innerText = originalTxt; btn.disabled = false; }
+};
+
+// 🚀 NUEVA FUNCIÓN: PANEL DE CONTROL EN VIVO PARA EL ADMIN
+window.cargarGestionRetoActivoAdmin = async function() {
+    const panel = document.getElementById('panelGestionRetoActivo'); if(!panel) return;
+    try {
+        const snap = await getDoc(doc(db, "global", "escalera"));
+        if(snap.exists()) {
+            const data = snap.data(); const tk = data.ticket_data;
+            if(!tk) { panel.innerHTML = ''; return; }
+            
+            let cuotaActual = 1.0; let perdidos = 0; let ganados = 0;
+            tk.picks.forEach(p => { 
+                if(p.estado === 'won') { cuotaActual *= p.cuota; ganados++; }
+                if(p.estado === 'lost') perdidos++;
+            });
+            
+            let capitalActual = tk.capital_inicial * cuotaActual;
+            let metaCapital = tk.capital_inicial * tk.cuotaTotal;
+
+            let html = `<div class="bg-black/60 p-4 rounded-2xl border border-yellow-500/50 shadow-lg relative"><div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">CONTROL LIVE</div><h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-3"><i class="fas fa-gamepad text-yellow-500 mr-1"></i> Tablero de Escalera</h3>`;
+            html += `<div class="grid grid-cols-2 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center"><span class="block text-[8px] text-gray-500 uppercase">Fondo Actual</span><span class="text-white font-black text-xs">${formatoCOP(capitalActual)}</span></div><div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center"><span class="block text-[8px] text-gray-500 uppercase">Meta Reto</span><span class="text-yellow-500 font-black text-xs">${formatoCOP(metaCapital)}</span></div></div>`;
+            
+            tk.picks.forEach((p, index) => {
+                let bgStatus = p.estado === 'won' ? 'bg-green-900/30 border-green-500/50' : (p.estado === 'lost' ? 'bg-red-900/30 border-red-500/50' : 'bg-gray-900/50 border-white/10');
+                html += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex justify-between items-center"><div class="flex flex-col"><span class="text-[9px] font-bold text-white">${p.home_team} vs ${p.away_team}</span><span class="text-[8px] text-yellow-500">PICK: ${p.nombre} (C: ${p.cuota})</span></div><div class="flex gap-1"><button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition"><i class="fas fa-check"></i></button><button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition"><i class="fas fa-times"></i></button><button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition"><i class="fas fa-undo"></i></button></div></div>`;
+            });
+            html += `</div>`; panel.innerHTML = html;
+        } else { panel.innerHTML = ''; }
+    } catch(e) { console.error(e); }
+};
+
+// 🚀 NUEVA FUNCIÓN: ACTUALIZAR EL ESTADO DEL PICK EN LA NUBE
+window.marcarPickEscalera = async function(index, estado) {
+    try {
+        const snap = await getDoc(doc(db, "global", "escalera"));
+        if(snap.exists()) {
+            const data = snap.data();
+            data.ticket_data.picks[index].estado = estado;
+            
+            let perdidos = 0; let ganados = 0;
+            data.ticket_data.picks.forEach(p => { if(p.estado === 'lost') perdidos++; if(p.estado === 'won') ganados++; });
+            
+            if (perdidos > 0) data.ticket_data.estado_reto = 'perdido';
+            else if (ganados === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado';
+            else data.ticket_data.estado_reto = 'activo';
+            
+            await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data });
+            window.cargarGestionRetoActivoAdmin();
+            
+            // Si el cliente está en la pantalla de escalera, se le actualiza en vivo
+            if(document.getElementById('vista_escalera').classList.contains('view-active')) { window.cargarRetoEscaleraNube(); }
+        }
+    } catch(e) { window.mostrarAlerta("Error", "No se pudo actualizar el pick", "error"); }
 };
 
 window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto Activo", "¿Deseas borrar el Reto Escalera activo para que no lo vean los usuarios en la app?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Sistema Limpio", "El reto activo ha sido eliminado de la nube.", "success"); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
