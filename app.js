@@ -118,6 +118,7 @@ onMessage(messaging, (payload) => {
     window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success", actionUrl); 
 });
 
+// 🚀 INTERCEPTOR INTELIGENTE AL ABRIR LA APP (CON FILTRO DE PRIVACIDAD)
 window.verificarNotificacionesPendientes = async function() {
     try {
         const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(1));
@@ -126,8 +127,16 @@ window.verificarNotificacionesPendientes = async function() {
         if (!snap.empty) {
             const data = snap.docs[0].data();
             
-            // Si el usuario no es de escalera y la noti es de escalera, la ignoramos.
-            if(data.audiencia === "escalera" && estadoEscalera !== "approved") return;
+            // 🛑 CANDADO ULTRA SEGURO: Bloquea por etiqueta, por URL o por título
+            const esNotificacionEscalera = data.audiencia === "escalera" || 
+                                           (data.url && data.url.includes("escalera")) || 
+                                           (data.titulo && data.titulo.toLowerCase().includes("escalera"));
+
+            if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) {
+                // Silenciamos la alerta guardando en memoria que ya pasó, para que no vuelva a molestar
+                localStorage.setItem('oracle_last_push_seen', data.timestamp.toString());
+                return; 
+            }
             
             const ultimaVista = localStorage.getItem('oracle_last_push_seen');
             
@@ -146,7 +155,6 @@ window.verificarNotificacionesPendientes = async function() {
         console.log("Error verificando bandeja oculta:", error);
     }
 };
-
 // 🚀 REPARADO: FONDO ROJO INVISIBLE POR DEFECTO PARA NO TEÑIR EL CRISTAL
 window.iniciarSwipeNotificaciones = function() {
     const cards = document.querySelectorAll('.notif-card');
@@ -242,8 +250,10 @@ window.abrirBandejaNotificaciones = async function() {
         
         snap.forEach(doc => {
             const data = doc.data(); 
-            // 🚀 Filtrar de la bandeja si es de escalera y el usuario no está en escalera
-            if (data.audiencia === "escalera" && estadoEscalera !== "approved" && !adminAutenticado) return;
+            
+            // 🛑 CANDADO BANDEJA
+            const esNotificacionEscalera = data.audiencia === "escalera" || (data.url && data.url.includes("escalera")) || (data.titulo && data.titulo.toLowerCase().includes("escalera"));
+            if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) return;
             
             if (hiddenNotifs.includes(doc.id)) return; 
             validCount++;
@@ -1066,13 +1076,14 @@ window.publicarRetoEscalera = async function() {
             timestamp: ahora
         });
 
+        // 🚀 AQUÍ AÑADIMOS LA ETIQUETA AUDIENCIA
         await setDoc(doc(collection(db, "notificaciones_push")), {
             titulo: "🔥 NUEVO RETO ESCALERA DISPONIBLE",
             cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
             url: window.location.origin + "/?view=escalera", 
             timestamp: ahora,
             enviadoPor: "FR (Bot)",
-            audiencia: "escalera" 
+            audiencia: "escalera"
         });
 
         window.mostrarAlerta("Publicado", "Ticket publicado, guardado en el historial y notificación enviada a los inversores.", "success"); 
