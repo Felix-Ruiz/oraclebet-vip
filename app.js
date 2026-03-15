@@ -139,11 +139,69 @@ window.verificarNotificacionesPendientes = async function() {
             }
         }
     } catch (error) {
-        console.log("Error verificando bandeja de entrada oculta:", error);
+        console.log("Error verificando bandeja oculta:", error);
     }
 };
 
-// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP
+// 🚀 NUEVO: FUNCIÓN MAGNÉTICA (SWIPE TO DELETE) PARA NOTIFICACIONES
+window.iniciarSwipeNotificaciones = function() {
+    const cards = document.querySelectorAll('.notif-card');
+    cards.forEach(card => {
+        let startX = 0;
+        let isDragging = false;
+
+        card.addEventListener('touchstart', e => {
+            startX = e.touches[0].clientX;
+            isDragging = true;
+            window.isSwiping = false;
+            card.style.transition = 'none';
+        }, {passive: true});
+
+        card.addEventListener('touchmove', e => {
+            if (!isDragging) return;
+            let currentX = e.touches[0].clientX;
+            let diffX = startX - currentX;
+            
+            if (diffX > 10) window.isSwiping = true; 
+            
+            if (diffX > 0 && diffX < 150) { 
+                card.style.transform = `translateX(-${diffX}px)`;
+            }
+        }, {passive: true});
+
+        card.addEventListener('touchend', e => {
+            isDragging = false;
+            let diffX = startX - e.changedTouches[0].clientX;
+            card.style.transition = 'transform 0.3s ease';
+            
+            if (diffX > 60) { // Si el usuario arrastró más de 60px a la izquierda, eliminar
+                card.style.transform = `translateX(-120%)`;
+                const parent = card.closest('.notif-item');
+                const id = parent.dataset.id;
+                
+                let hidden = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]');
+                if(!hidden.includes(id)) hidden.push(id);
+                localStorage.setItem('oracle_hidden_notifs', JSON.stringify(hidden));
+                
+                // Desvanecer el contenedor suavemente
+                setTimeout(() => {
+                    parent.style.height = parent.offsetHeight + 'px';
+                    parent.style.transition = 'all 0.3s ease';
+                    parent.style.opacity = '0';
+                    parent.style.height = '0px';
+                    parent.style.marginBottom = '0px';
+                    setTimeout(() => parent.remove(), 300);
+                }, 100);
+            } else {
+                card.style.transform = `translateX(0)`; // Devolver a su lugar
+            }
+            
+            setTimeout(() => window.isSwiping = false, 100);
+        });
+    });
+};
+
+// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP (CON SWIPE INCLUIDO)
 window.abrirBandejaNotificaciones = async function() {
     let modal = document.getElementById('modalBandejaNotificaciones');
     if (!modal) {
@@ -154,7 +212,7 @@ window.abrirBandejaNotificaciones = async function() {
                     <h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Centro Quant</h3>
                     <button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button>
                 </div>
-                <div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-gray-900 to-black">
+                <div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
                     <div class="text-center p-10"><i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i></div>
                 </div>
             </div>
@@ -167,31 +225,48 @@ window.abrirBandejaNotificaciones = async function() {
 
     const lista = document.getElementById('listaBandejaNotificaciones');
     try {
-        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(10));
+        const hiddenNotifs = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]');
+        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(15));
         const snap = await getDocs(q);
         lista.innerHTML = '';
-        if(snap.empty) { lista.innerHTML = `<div class="text-center mt-10 text-gray-500 text-xs font-bold uppercase tracking-widest"><i class="fas fa-inbox text-4xl mb-3 opacity-50 block"></i> No hay mensajes del Gestor.</div>`; return; }
+        
+        let validCount = 0;
         
         snap.forEach(doc => {
-            const data = doc.data(); const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+            if (hiddenNotifs.includes(doc.id)) return; // Ignorar si el usuario la eliminó localmente
+            validCount++;
+            
+            const data = doc.data(); 
+            const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
             let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400';
             
-            let clickAction = data.url && data.url !== "/" ? `onclick="window.procesarEnlaceInterno('${data.url}')" class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden cursor-pointer hover:border-blue-500/50 transition-colors active:scale-95"` : `class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative overflow-hidden"`;
+            let clickAction = data.url && data.url !== "/" ? `onclick="if(!window.isSwiping) window.procesarEnlaceInterno('${data.url}')"` : ``;
 
             lista.innerHTML += `
-            <div ${clickAction}>
-                <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>
-                    ${data.url && data.url !== "/" ? '<i class="fas fa-external-link-alt text-gray-500 text-[10px]"></i>' : ''}
+            <div class="notif-item relative mb-3 overflow-hidden" data-id="${doc.id}">
+                <div class="absolute inset-0 bg-red-600 rounded-xl flex justify-end items-center pr-5 text-white font-black text-xs shadow-inner">
+                    <i class="fas fa-trash-alt mr-2"></i> Eliminar
                 </div>
-                <p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p>
-                <div class="flex justify-between items-center border-t border-white/5 pt-2">
-                    <span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span>
-                    <span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span>
+                <div ${clickAction} class="bg-black/80 p-4 rounded-xl border border-white/10 shadow-md relative transition-transform duration-200 notif-card w-full z-10 block ${data.url && data.url !== '/' ? 'cursor-pointer active:scale-[0.98]' : ''}">
+                    <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>
+                        ${data.url && data.url !== "/" ? '<i class="fas fa-chevron-right text-gray-500 text-[10px]"></i>' : ''}
+                    </div>
+                    <p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p>
+                    <div class="flex justify-between items-center border-t border-white/5 pt-2">
+                        <span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span>
+                        <span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span>
+                    </div>
                 </div>
             </div>`;
         });
+        
+        if(validCount === 0) { 
+            lista.innerHTML = `<div class="text-center mt-10 text-gray-500 text-xs font-bold uppercase tracking-widest"><i class="fas fa-check-circle text-4xl mb-3 opacity-50 block"></i> Bandeja Vacía</div>`; 
+        } else {
+            setTimeout(() => window.iniciarSwipeNotificaciones(), 50); // Activar motor Swipe
+        }
     } catch(e) { lista.innerHTML = `<div class="text-center text-red-500 text-xs">Error de red.</div>`; }
 };
 
@@ -373,47 +448,6 @@ window.enviarNotificacionGlobal = async function() {
     }
 }
 
-// 🚀 HISTORIAL ESCALERA ADMIN
-window.cargarHistorialEscaleraAdmin = async function() {
-    const lista = document.getElementById('historialEscaleraAdminList'); if(!lista) return;
-    lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500 text-xl"></i></div>';
-    try {
-        const q = query(collection(db, "historial_escalera"), orderBy("timestamp", "desc"), limit(20));
-        const snap = await getDocs(q);
-        lista.innerHTML = '';
-        if(snap.empty) { lista.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">No hay retos en el historial.</p>`; return; }
-        
-        snap.forEach(doc => {
-            let d = doc.data();
-            let picksHtml = '';
-            if(d.ticket_data && d.ticket_data.picks) {
-                picksHtml = d.ticket_data.picks.map(p => `<div class="bg-gray-900/80 p-2 rounded mt-1 border border-white/5"><div class="text-[9px] font-bold text-white">${p.home_team} vs ${p.away_team}</div><div class="text-[8px] text-yellow-500">PICK: ${p.nombre} (C: ${p.cuota})</div></div>`).join('');
-            }
-            lista.innerHTML += `
-            <div class="bg-black/40 p-3 rounded-xl border border-blue-500/20 relative shadow-md mb-3">
-                <div class="absolute top-0 right-0 flex overflow-hidden rounded-bl-xl rounded-tr-xl shadow-md z-10">
-                    <button onclick="window.eliminarHistorialEscaleraAdmin('${d.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[10px] px-3 py-1 transition-colors border-r border-red-700"><i class="fas fa-trash"></i></button>
-                    <span class="bg-blue-600 text-white text-[10px] font-black px-3 py-1">C: ${d.ticket_data ? d.ticket_data.cuotaTotal : '-'}</span>
-                </div>
-                <div class="mb-2 border-b border-white/5 pb-1 pr-14">
-                    <span class="text-[9px] text-gray-400 font-bold"><i class="far fa-calendar-alt mr-1"></i> ${d.fecha}</span>
-                </div>
-                <div class="mt-2">${picksHtml}</div>
-            </div>`;
-        });
-    } catch(e) { lista.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al leer historial.</p>`; console.error(e); }
-};
-
-window.eliminarHistorialEscaleraAdmin = async function(idDoc) {
-    window.mostrarConfirmacion("Eliminar Reto", "¿Borrar este reto del historial administrativo?", async () => {
-        try {
-            await deleteDoc(doc(db, "historial_escalera", idDoc));
-            window.mostrarAlerta("Eliminado", "Reto borrado del historial.", "success");
-            window.cargarHistorialEscaleraAdmin();
-        } catch(e) { window.mostrarAlerta("Error", "Fallo al intentar borrar.", "error"); }
-    });
-};
-
 window.renderizarLayoutAdmin = function() {
     window.cerrarModalLogin();
     document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
@@ -586,8 +620,13 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
     if(btnTop) {
         const nuevoBtn = btnTop.cloneNode(true); btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
         nuevoBtn.removeAttribute('onclick'); nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.cerrarSesionLocal(); };
-        if(esIlimitado) { nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>`; nuevoBtn.className = "shrink-0 bg-purple-900 text-purple-300 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-purple-500/50 flex items-center gap-1.5 transition-all"; } 
-        else { nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>`; nuevoBtn.className = "shrink-0 bg-yellow-900 text-yellow-500 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-yellow-600/50 flex items-center gap-1.5 transition-all"; }
+        nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>`;
+        
+        if(esIlimitado) { 
+            nuevoBtn.className = "shrink-0 bg-purple-900 text-purple-300 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-purple-500/50 flex items-center gap-1.5 transition-all"; 
+        } else { 
+            nuevoBtn.className = "shrink-0 bg-yellow-900 text-yellow-500 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-yellow-600/50 flex items-center gap-1.5 transition-all"; 
+        }
     }
     window.iniciarMonitorInactividad(); window.renderizarPartidosVIP(); if(!esModoBackground) window.scrollTo(0,0); 
     if(window.suscribirApadrinamiento) window.suscribirApadrinamiento(); if(window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI();
@@ -596,7 +635,7 @@ window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBack
 window.cerrarSesionLocal = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.cerrarModalLogin(); window.mostrarConfirmacion("Cerrar Sesión", "¿Deseas salir de tu cuenta VIP?", () => { window.ejecutarCierreSesion(); setTimeout(() => { window.abrirModalLogin(); }, 300); }); };
 window.ejecutarCierreSesion = function() {
     modoVipActivo = false; modoIlimitadoActivo = false; codigoActivoUsuario = ''; estadoEscalera = 'none'; seleccionesVIPGlobal = []; ticketDinamicoVIP = [];
-    const contadorSel = document.getElementById('contadorSeleccion'); if(contadorSel) contadorSel.innerText = "0 Seleccionados";
+    const contadorSel = document.getElementById('contadorSeleccion'); if(contadorSel) contadorSel.innerHTML = `<i class="fas fa-check-square mr-1"></i> 0 Seleccionados`;
     const resDiv = document.getElementById('resultadoVIP'); if(resDiv) resDiv.innerHTML = "";
     let btnPushVip = document.getElementById('btnActivarPushVip'); if(btnPushVip) btnPushVip.remove();
     if (unsubscribeApadrinamiento) unsubscribeApadrinamiento(); perfilApadrinamiento = null; clearInterval(timerInactividad); 
@@ -694,7 +733,7 @@ window.toggleSeleccionVIP = function(id) {
     const card = cb.closest('.bg-black\\/40'); if(cb.checked) { card.classList.add('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.remove('border-white/5'); } else { card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5'); } window.actualizarContadorVIP();
 };
 
-window.actualizarContadorVIP = function() { const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion'); if(!btn || !contador) return; const cantidad = seleccionesVIPGlobal.length; contador.innerText = `${cantidad} Seleccionados`; if(!modoIlimitadoActivo) { document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); }); } if(cantidad >= 1) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); } else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); } };
+window.actualizarContadorVIP = function() { const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion'); if(!btn || !contador) return; const cantidad = seleccionesVIPGlobal.length; contador.innerHTML = `<i class="fas fa-list-check mr-1"></i> ${cantidad} Seleccionados`; if(!modoIlimitadoActivo) { document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); }); } if(cantidad >= 1) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); } else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); } };
 
 window.quitarPartidoDelTicket = function(idPartido) {
     seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== idPartido); ticketDinamicoVIP = ticketDinamicoVIP.filter(item => item.partido.id !== idPartido);
@@ -1074,6 +1113,7 @@ window.renderizarSolicitudesAdmin = async function() {
 };
 window.aprobarEscalera = async function(c) { try { await updateDoc(doc(db, "codigos_nube", c), { ladderStatus: 'approved' }); window.mostrarAlerta("Éxito", "Usuario aprobado.", "success"); window.renderizarSolicitudesAdmin(); } catch(e){} };
 
+// ==========================================
 // ==========================================
 // 14. ADMIN: MONITOR GLOBAL Y GESTIÓN DE USUARIOS
 // ==========================================
