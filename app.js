@@ -552,10 +552,54 @@ window.enviarNotificacionGlobal = async function() {
         });
         window.mostrarAlerta("Éxito", "La notificación ha sido enviada y guardada en la bandeja.", "success");
         document.getElementById('pushTitulo').value = ''; document.getElementById('pushCuerpo').value = '';
+        
+        // Refrescamos la lista del Admin automáticamente
+        if(window.cargarNotificacionesAdmin) window.cargarNotificacionesAdmin();
+        
     } catch(e) { window.mostrarAlerta("Error", "No se pudo comunicar con el servidor.", "error"); } finally {
         btn.innerHTML = `<i class="fas fa-paper-plane mr-1"></i> Notificar a Inversores`; btn.disabled = false;
     }
 }
+
+// 🚀 NUEVO: CARGAR HISTORIAL DE NOTIFICACIONES EN EL ADMIN
+window.cargarNotificacionesAdmin = async function() {
+    const lista = document.getElementById('adminNotificacionesList'); if(!lista) return;
+    lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500"></i></div>';
+    try {
+        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(10));
+        const snap = await getDocs(q);
+        lista.innerHTML = '';
+        if(snap.empty) { lista.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">No hay comunicados enviados.</p>`; return; }
+        
+        snap.forEach(doc => {
+            let data = doc.data();
+            let f = new Date(data.timestamp).toLocaleDateString('es-CO', {month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+            let audBadge = data.audiencia === "escalera" ? '<span class="bg-yellow-500/20 text-yellow-500 px-1 rounded ml-1">Escalera</span>' : '<span class="bg-blue-500/20 text-blue-400 px-1 rounded ml-1">Todos</span>';
+            
+            lista.innerHTML += `
+            <div class="bg-black/40 p-3 rounded-xl border border-white/10 relative shadow-sm mb-2 flex justify-between items-center">
+                <div class="flex flex-col w-3/4">
+                    <span class="text-[10px] font-black text-white uppercase truncate">${data.titulo}</span>
+                    <span class="text-[8px] text-gray-400 mt-0.5">${f} • Aud: ${audBadge}</span>
+                </div>
+                <button onclick="window.eliminarNotificacionAdmin('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 p-2 rounded-lg hover:bg-red-600/40 transition active:scale-95" title="Eliminar Mensaje">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>`;
+        });
+    } catch(e) { lista.innerHTML = '<p class="text-red-500 text-xs text-center">Error al cargar.</p>'; }
+};
+
+// 🚀 NUEVO: ELIMINAR NOTIFICACIÓN GLOBALMENTE
+window.eliminarNotificacionAdmin = async function(idDoc) {
+    window.mostrarConfirmacion("Eliminar Comunicado", "¿Deseas borrar este mensaje? Desaparecerá de la bandeja de todos los usuarios de forma inmediata.", async () => {
+        try {
+            await deleteDoc(doc(db, "notificaciones_push", idDoc));
+            window.mostrarAlerta("Eliminada", "La notificación ha sido borrada de la base de datos global.", "success");
+            window.cargarNotificacionesAdmin();
+        } catch(e) { window.mostrarAlerta("Error", "No se pudo borrar la notificación.", "error"); }
+    });
+};
 
 window.renderizarLayoutAdmin = function() {
     window.cerrarModalLogin();
@@ -609,6 +653,12 @@ window.renderizarLayoutAdmin = function() {
                     <textarea id="pushCuerpo" rows="2" placeholder="Escribe tu mensaje a todos los clientes..." class="w-full bg-black/50 border border-blue-500/30 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-400 mb-3 shadow-inner resize-none"></textarea>
                     <button id="btnEnviarPush" onclick="window.enviarNotificacionGlobal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-lg text-[10px] font-black uppercase transition active:scale-95 shadow-lg shadow-blue-500/30"><i class="fas fa-paper-plane mr-1"></i> Notificar a Inversores</button>
                 </div>
+
+                <div class="flex justify-between items-center mb-3 border-t border-white/5 pt-4">
+                    <h3 class="text-[11px] font-black text-white uppercase tracking-widest"><i class="fas fa-history text-blue-500 mr-1"></i> Historial de Comunicados</h3>
+                    <button onclick="window.cargarNotificacionesAdmin()" class="text-gray-500 hover:text-white p-1"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div id="adminNotificacionesList" class="space-y-2 mb-6"></div>
 
                 <div class="flex justify-between items-center mb-3 border-t border-white/5 pt-4">
                     <h3 class="text-[11px] font-black text-white uppercase tracking-widest"><i class="fas fa-globe text-yellow-500 mr-1"></i> Últimos Globales</h3>
@@ -693,7 +743,15 @@ window.renderizarLayoutAdmin = function() {
         </div>
     `;
 
-    window.cargarMonitorTickets(); window.cargarUsuariosAdmin(); window.cargarFondosAdmin(); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); window.cargarHistorialEscaleraAdmin();
+    // 🚀 Cargamos todas las funciones de Admin al entrar
+    window.cargarMonitorTickets(); 
+    window.cargarUsuariosAdmin(); 
+    window.cargarFondosAdmin(); 
+    window.renderizarListaAdmin(); 
+    window.renderizarSolicitudesAdmin(); 
+    window.cargarHistorialEscaleraAdmin(); 
+    window.cargarNotificacionesAdmin(); // Invocamos el nuevo historial de notificaciones
+
     const hoy = new Date(); let mes = String(hoy.getMonth() + 1).padStart(2, '0'); let dia = String(hoy.getDate()).padStart(2, '0'); document.getElementById('inputFechaEscalera').value = `${hoy.getFullYear()}-${mes}-${dia}`;
 };
 
