@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "fr-analytics",
     "public": ".",
     "ignore": [
       "firebase.json",

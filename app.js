@@ -118,7 +118,6 @@ onMessage(messaging, (payload) => {
     window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success", actionUrl); 
 });
 
-// 🚀 INTERCEPTOR INTELIGENTE AL ABRIR LA APP (CON FILTRO DE PRIVACIDAD)
 window.verificarNotificacionesPendientes = async function() {
     try {
         const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(1));
@@ -127,13 +126,11 @@ window.verificarNotificacionesPendientes = async function() {
         if (!snap.empty) {
             const data = snap.docs[0].data();
             
-            // 🛑 CANDADO ULTRA SEGURO: Bloquea por etiqueta, por URL o por título
             const esNotificacionEscalera = data.audiencia === "escalera" || 
                                            (data.url && data.url.includes("escalera")) || 
                                            (data.titulo && data.titulo.toLowerCase().includes("escalera"));
 
             if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) {
-                // Silenciamos la alerta guardando en memoria que ya pasó, para que no vuelva a molestar
                 localStorage.setItem('oracle_last_push_seen', data.timestamp.toString());
                 return; 
             }
@@ -155,7 +152,7 @@ window.verificarNotificacionesPendientes = async function() {
         console.log("Error verificando bandeja oculta:", error);
     }
 };
-// 🚀 REPARADO: FONDO ROJO INVISIBLE POR DEFECTO PARA NO TEÑIR EL CRISTAL
+
 window.iniciarSwipeNotificaciones = function() {
     const cards = document.querySelectorAll('.notif-card');
     cards.forEach(card => {
@@ -217,7 +214,6 @@ window.iniciarSwipeNotificaciones = function() {
     });
 };
 
-// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP
 window.abrirBandejaNotificaciones = async function() {
     let modal = document.getElementById('modalBandejaNotificaciones');
     if (!modal) {
@@ -251,7 +247,6 @@ window.abrirBandejaNotificaciones = async function() {
         snap.forEach(doc => {
             const data = doc.data(); 
             
-            // 🛑 CANDADO BANDEJA
             const esNotificacionEscalera = data.audiencia === "escalera" || (data.url && data.url.includes("escalera")) || (data.titulo && data.titulo.toLowerCase().includes("escalera"));
             if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) return;
             
@@ -334,6 +329,42 @@ window.mostrarConfirmacion = function(titulo, mensaje, callback) {
 
 function obtenerHuellaDispositivo() { try { let miHuella = localStorage.getItem('oraclebet_huella_secreta'); if (!miHuella) { miHuella = 'disp_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36); localStorage.setItem('oraclebet_huella_secreta', miHuella); } return miHuella; } catch(e) { return 'disp_temp_' + Math.random().toString(36).substring(2, 9); } }
 
+// 🚀 LÓGICA DE INSTALACIÓN PWA
+let deferredPrompt;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://');
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+if (!isStandalone) {
+    if (isIOS) {
+        const banner = document.getElementById('installBanner');
+        const btn = document.getElementById('btnInstalarApp');
+        if(banner) banner.classList.remove('hidden');
+        if(btn) {
+            btn.onclick = () => {
+                const m = document.getElementById('iosInstallModal');
+                if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+            };
+        }
+    } else {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const banner = document.getElementById('installBanner');
+            const btn = document.getElementById('btnInstalarApp');
+            if(banner) banner.classList.remove('hidden');
+            if(btn) {
+                btn.onclick = async () => {
+                    banner.classList.add('hidden');
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') { console.log('App instalada'); }
+                    deferredPrompt = null;
+                };
+            }
+        });
+    }
+}
+
 const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo(); 
 let modoVipActivo = false; let modoIlimitadoActivo = false; let codigoActivoUsuario = ''; let estadoEscalera = 'none';
 let CACHE_PARTIDOS_FUTUROS = []; let partidosGlobales = []; let partidosFiltrados = []; let competicionesGlobales = []; let seleccionesVIPGlobal = []; let ticketDinamicoVIP = []; let modoMercadoGlobal = 'mixto'; let modoRiesgoGlobal = false; 
@@ -356,19 +387,58 @@ function obtenerInfoLiga(key, apiTitle) {
 function formatearPickEspanol(nombre, point, mercadoKey) { let text = nombre || ""; text = text.replace(/Total Corners/ig, 'Córners').replace(/Total Cards/ig, 'Tarjetas').replace(/over/ig, 'Más de').replace(/under/ig, 'Menos de'); let textLower = text.toLowerCase(); if (textLower === '1') return `Local (1) ${point > 0 ? '+'+point : point}`; if (textLower === '2') return `Visitante (2) ${point > 0 ? '+'+point : point}`; if (textLower === 'x') return `Empate (X)`; if (point !== null && point !== undefined && point !== "") { if (!text.includes(point.toString())) { text += ` ${point > 0 && !textLower.includes('más') ? '+'+point : point}`; } } return text.trim(); }
 function formatoCOP(valor) { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor); }
 
+// 🚀 SISTEMA DE CACHÉ Y CARGA ULTRA RÁPIDA
 async function precargarBaseDeDatos() {
+    const cacheKey = 'oracle_cache_cartelera';
+    const cacheTimeKey = 'oracle_cache_tiempo';
+    const ahoraMs = Date.now();
+    const cacheGuardado = localStorage.getItem(cacheKey);
+    const tiempoGuardado = localStorage.getItem(cacheTimeKey);
+
+    // Caché válida por 15 minutos (900,000 ms) para carga en 0.05 segundos
+    if (cacheGuardado && tiempoGuardado && (ahoraMs - parseInt(tiempoGuardado)) < 900000) {
+        CACHE_PARTIDOS_FUTUROS = JSON.parse(cacheGuardado);
+        let ligasMap = {};
+        CACHE_PARTIDOS_FUTUROS.forEach(p => {
+            if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; }
+        });
+        competicionesGlobales = Object.values(ligasMap);
+        window.construirMenuLateral();
+        return; 
+    }
+
     const tiempoActualISO = new Date().toISOString(); 
     try {
         const q = query(collection(db, "eventos_sincronizados"), where("commence_time", ">=", tiempoActualISO)); 
         const snap = await getDocs(q); 
         CACHE_PARTIDOS_FUTUROS = []; let ligasMap = {};
+        
         snap.forEach(doc => { 
             let p = doc.data(); p.id = doc.id; 
             if(p.sport_key && p.sport_key.includes('soccer')) { 
+                
+                // 🚀 PRE-CÁLCULO MATEMÁTICO: Filtros instantáneos
+                const d = new Date(p.commence_time);
+                const mes = String(d.getMonth() + 1).padStart(2, '0');
+                const dia = String(d.getDate()).padStart(2, '0');
+                p._fechaFiltro = `${d.getFullYear()}-${mes}-${dia}`;
+                p._timestamp = d.getTime();
+                p._textoBusqueda = `${p.home_team} ${p.away_team}`.toLowerCase();
+                
+                let tieneIA = false;
+                if(p.bookmakers) { p.bookmakers.forEach(b => { b.markets?.forEach(m => { m.outcomes?.forEach(o => { if (o.verificado_ia) tieneIA = true; }); }); }); }
+                p._tieneIA = tieneIA;
+
                 CACHE_PARTIDOS_FUTUROS.push(p); 
                 if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; } 
             } 
         });
+        
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(CACHE_PARTIDOS_FUTUROS));
+            localStorage.setItem(cacheTimeKey, ahoraMs.toString());
+        } catch(e) { console.log("Caché excedida"); }
+
         competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); 
     } catch(e) { 
         console.error("Error DB:", e); 
@@ -690,23 +760,30 @@ window.construirMenuLateral = function() {
     let html = ''; Object.keys(arbol).sort().forEach(deporte => { const idDep = deporte.replace(/[^a-zA-Z0-9]/g, ''); let iconDep = 'fa-futbol'; if(deporte === 'Baloncesto') iconDep = 'fa-basketball-ball'; else if(deporte === 'Tenis') iconDep = 'fa-table-tennis'; else if(deporte === 'Fútbol Americano' || deporte === 'American Football') iconDep = 'fa-football-ball'; else if(deporte === 'Béisbol' || deporte === 'Baseball') iconDep = 'fa-baseball-ball'; else if(deporte === 'Hockey') iconDep = 'fa-hockey-puck'; else if(deporte === 'MMA' || deporte === 'UFC') iconDep = 'fa-hand-rock'; else if(deporte === 'Boxeo') iconDep = 'fa-mitten'; html += `<div class="mb-2"><button onclick="window.toggleAcordeon('dep_${idDep}')" class="w-full text-left p-3 flex justify-between bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md"><span><i class="fas ${iconDep} mr-2"></i>${deporte}</span><i id="icon_dep_${idDep}" class="fas fa-chevron-down transition-transform"></i></button><div id="acc_dep_${idDep}" class="hidden flex-col gap-1 mt-1 pl-2">`; Object.keys(arbol[deporte]).sort().forEach(pais => { const idPais = idDep + '_' + pais.replace(/[^a-zA-Z0-9]/g, ''); const bandera = arbol[deporte][pais][0].bandera; html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1"><button onclick="window.toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between text-white font-bold text-[10px] uppercase"><span><span class="mr-2 drop-shadow-md">${bandera}</span> ${pais}</span><i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i></button><div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`; arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { html += `<button onclick="window.ejecutarFiltroFinal('${liga.key}', '${bandera} ${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between group"><span class="truncate pr-2">${liga.name}</span><i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i></button>`; }); html += `</div></div>`; }); html += `</div></div>`; }); contenedor.innerHTML = html;
 };
 
-// ==========================================
-// 7. FILTROS Y RENDER DE PARTIDOS (PAÍS -> LIGA)
-// ==========================================
+// 🚀 NUEVO BOTÓN MAESTRO DE PURGADO DE FILTROS
+window.limpiarFiltrosYVerTodo = function() {
+    const b = document.getElementById('buscadorEquipos'); if(b) b.value = '';
+    const f = document.getElementById('filtroFecha'); if(f) f.value = '';
+    if(filtroIAActivo) window.toggleFiltroIA();
+    window.ejecutarTopFutbol();
+};
+
 window.toggleFiltroIA = function() { filtroIAActivo = !filtroIAActivo; const btn = document.getElementById('btnFiltroIA'); if(filtroIAActivo) { btn.classList.replace('bg-gray-900', 'bg-blue-600'); btn.classList.replace('text-blue-400', 'text-white'); } else { btn.classList.replace('bg-blue-600', 'bg-gray-900'); btn.classList.replace('text-white', 'text-blue-400'); } window.aplicarFiltrosLocales(); };
 
+// 🚀 FILTRADO INSTANTÁNEO PRE-CALCULADO
 window.aplicarFiltrosLocales = function() {
     const buscador = document.getElementById('buscadorEquipos'); const filtroF = document.getElementById('filtroFecha');
     const texto = buscador ? buscador.value.toLowerCase() : ""; const fechaFiltro = filtroF ? filtroF.value : ""; 
-    const ahora = new Date(); 
+    const ahoraTS = Date.now(); 
+    
     partidosFiltrados = partidosGlobales.filter(p => { 
-        const fechaPartido = new Date(p.commence_time); if (fechaPartido < ahora) return false; 
-        const hTeam = p.home_team ? String(p.home_team).toLowerCase() : ""; const aTeam = p.away_team ? String(p.away_team).toLowerCase() : ""; 
-        const cumpleTexto = hTeam.includes(texto) || aTeam.includes(texto); 
-        let cumpleFecha = true; if(fechaFiltro) { let mes = String(fechaPartido.getMonth() + 1).padStart(2, '0'); let dia = String(fechaPartido.getDate()).padStart(2, '0'); cumpleFecha = (`${fechaPartido.getFullYear()}-${mes}-${dia}` === fechaFiltro); } 
-        let cumpleIA = true; if (filtroIAActivo) { cumpleIA = false; if(p.bookmakers) { p.bookmakers.forEach(b => { b.markets?.forEach(m => { m.outcomes?.forEach(o => { if (o.verificado_ia) cumpleIA = true; }); }); }); } }
-        return cumpleTexto && cumpleFecha && cumpleIA; 
+        if (p._timestamp < ahoraTS) return false; 
+        if (texto && !p._textoBusqueda.includes(texto)) return false;
+        if (fechaFiltro && p._fechaFiltro !== fechaFiltro) return false;
+        if (filtroIAActivo && !p._tieneIA) return false;
+        return true; 
     });
+    
     const cont = document.getElementById('contadorPartidosActivos'); if(cont) cont.innerText = `${partidosFiltrados.length} Eventos`;
     if(modoVipActivo) { if(window.renderizarPartidosVIP) window.renderizarPartidosVIP(); } else { if(window.renderizarPartidosFree) window.renderizarPartidosFree(); }
 };
@@ -719,7 +796,7 @@ function agruparPorPaisYLiga(partidos) { const paises = {}; partidos.forEach(p =
 
 window.renderizarPartidosFree = function() {
     const container = document.getElementById('containerPartidos'); if(!container) return; container.innerHTML = '';
-    if(partidosFiltrados.length === 0) { let extraBtn = ""; const fFecha = document.getElementById('filtroFecha'); if (partidosGlobales.length > 0 && (fFecha && fFecha.value !== "" || filtroIAActivo)) { extraBtn = `<button onclick="document.getElementById('filtroFecha').value=''; if(filtroIAActivo) window.toggleFiltroIA(); window.aplicarFiltrosLocales();" class="mt-4 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-lg text-[10px] uppercase transition-all">Ver Toda la Cartelera</button>`; } container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5 shadow-inner"><i class="far fa-calendar-times text-3xl text-gray-600 mb-3"></i><p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">No hay eventos para estos filtros.</p>${extraBtn}</div>`; return; }
+    if(partidosFiltrados.length === 0) { let extraBtn = ""; const fFecha = document.getElementById('filtroFecha'); if (partidosGlobales.length > 0 && (fFecha && fFecha.value !== "" || filtroIAActivo)) { extraBtn = `<button onclick="window.limpiarFiltrosYVerTodo()" class="mt-4 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-lg text-[10px] uppercase transition-all">Ver Toda la Cartelera</button>`; } container.innerHTML = `<div class="text-center bg-black/30 p-8 rounded-xl border border-white/5 shadow-inner"><i class="far fa-calendar-times text-3xl text-gray-600 mb-3"></i><p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">No hay eventos para estos filtros.</p>${extraBtn}</div>`; return; }
     const paisesAgrupados = agruparPorPaisYLiga(partidosFiltrados); let idC = 0;
     for(const [nombrePais, dataPais] of Object.entries(paisesAgrupados)) {
         idC++; let paisId = 'free_pais_' + idC; let totalPartidosPais = Object.values(dataPais.ligas).reduce((acc, lig) => acc + lig.length, 0);
@@ -734,7 +811,7 @@ window.renderizarPartidosFree = function() {
 
 window.renderizarPartidosVIP = function() {
     const container = document.getElementById('containerPartidosVIP'); if(!container) return; container.innerHTML = '';
-    if(partidosFiltrados.length === 0) { let extraBtn = ""; const fFecha = document.getElementById('filtroFecha'); if (partidosGlobales.length > 0 && (fFecha && fFecha.value !== "" || filtroIAActivo)) { extraBtn = `<button onclick="document.getElementById('filtroFecha').value=''; if(filtroIAActivo) window.toggleFiltroIA(); window.aplicarFiltrosLocales();" class="mt-4 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-lg text-[10px] uppercase transition-all">Ver Todos</button>`; } container.innerHTML = `<div class="text-center opacity-50 py-10"><i class="far fa-calendar-times text-3xl mb-2"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin resultados para estos filtros</p>${extraBtn}</div>`; return; }
+    if(partidosFiltrados.length === 0) { let extraBtn = ""; const fFecha = document.getElementById('filtroFecha'); if (partidosGlobales.length > 0 && (fFecha && fFecha.value !== "" || filtroIAActivo)) { extraBtn = `<button onclick="window.limpiarFiltrosYVerTodo()" class="mt-4 w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-lg text-[10px] uppercase transition-all">Ver Todos</button>`; } container.innerHTML = `<div class="text-center opacity-50 py-10"><i class="far fa-calendar-times text-3xl mb-2"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin resultados para estos filtros</p>${extraBtn}</div>`; return; }
     const paisesAgrupados = agruparPorPaisYLiga(partidosFiltrados); let idC = 0;
     for(const [nombrePais, dataPais] of Object.entries(paisesAgrupados)) {
         idC++; let paisId = 'vip_pais_' + idC; let totalPartidosPais = Object.values(dataPais.ligas).reduce((acc, lig) => acc + lig.length, 0);
@@ -754,7 +831,7 @@ window.toggleSeleccionVIP = function(id) {
     const card = cb.closest('.bg-black\\/40'); if(cb.checked) { card.classList.add('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.remove('border-white/5'); } else { card.classList.remove('border-yellow-500/50', 'bg-yellow-500/5'); card.classList.add('border-white/5'); } window.actualizarContadorVIP();
 };
 
-window.actualizarContadorVIP = function() { const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion'); if(!btn || !contador) return; const cantidad = seleccionesVIPGlobal.length; contador.innerHTML = `${cantidad} Seleccionados`; if(!modoIlimitadoActivo) { document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); }); } if(cantidad >= 1) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); } else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); } };
+window.actualizarContadorVIP = function() { const btn = document.getElementById('btnGenerarTicket'); const contador = document.getElementById('contadorSeleccion'); if(!btn || !contador) return; const cantidad = seleccionesVIPGlobal.length; contador.innerHTML = `<i class="fas fa-list-check mr-1"></i> ${cantidad} Seleccionados`; if(!modoIlimitadoActivo) { document.querySelectorAll('.checkbox-vip').forEach(cb => { cb.disabled = (cantidad >= 5 && !cb.checked); }); } if(cantidad >= 1) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); } else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); } };
 
 window.quitarPartidoDelTicket = function(idPartido) {
     seleccionesVIPGlobal = seleccionesVIPGlobal.filter(p => p.id !== idPartido); ticketDinamicoVIP = ticketDinamicoVIP.filter(item => item.partido.id !== idPartido);
@@ -812,42 +889,6 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
     let riskBanner = esRadarAuto ? '' : `<div class="mb-4 p-3 rounded-lg ${modoRiesgoGlobal ? 'bg-red-900/20 border border-red-500/50' : 'bg-green-900/20 border border-green-500/50'} transition-colors flex justify-between items-center shadow-inner"><div class="flex flex-col w-2/3"><span class="text-[10px] font-black uppercase ${modoRiesgoGlobal ? 'text-red-400' : 'text-green-400'} mb-1">${modoRiesgoGlobal ? '<i class="fas fa-exclamation-triangle"></i> ALTO RIESGO / ALTA GANANCIA' : '<i class="fas fa-shield-alt"></i> MODO SEGURO (Banca)'}</span><span class="text-[8px] text-gray-400 leading-tight">${modoRiesgoGlobal ? 'Análisis cuantitativo de alto riesgo.' : 'Análisis ajustado a alta probabilidad.'}</span></div><button onclick="window.toggleModoRiesgo()" class="py-2.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest ${modoRiesgoGlobal ? 'bg-green-600 text-white' : 'bg-red-600 text-white'} shadow-lg active:scale-95 transition-all">${modoRiesgoGlobal ? 'Ir a Seguro' : 'Arriesgar'}</button></div>`;
     resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${modoRiesgoGlobal ? 'border-red-500 bg-red-500/5' : (esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5')} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${modoRiesgoGlobal ? 'text-red-500' : (esRadarAuto?'text-purple-500':'text-yellow-500')} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Análisis de FR</span><span class="text-[10px] ${modoRiesgoGlobal ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10'} font-black px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${riskBanner} ${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final Calculada</span></div><span class="text-3xl font-black ${modoRiesgoGlobal ? 'text-red-400' : 'text-white'}">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button onclick="window.guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-yellow-600 hover:bg-yellow-500 text-black rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
 };
-
-// 🚀 MOTOR DE INSTALACIÓN PWA (MAGIA ANDROID / IPHONE)
-let deferredPrompt;
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://');
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-if (!isStandalone) {
-    if (isIOS) {
-        const banner = document.getElementById('installBanner');
-        const btn = document.getElementById('btnInstalarApp');
-        if(banner) banner.classList.remove('hidden');
-        if(btn) {
-            btn.onclick = () => {
-                const m = document.getElementById('iosInstallModal');
-                if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
-            };
-        }
-    } else {
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const banner = document.getElementById('installBanner');
-            const btn = document.getElementById('btnInstalarApp');
-            if(banner) banner.classList.remove('hidden');
-            if(btn) {
-                btn.onclick = async () => {
-                    banner.classList.add('hidden');
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    if (outcome === 'accepted') { console.log('App instalada'); }
-                    deferredPrompt = null;
-                };
-            }
-        });
-    }
-}
 
 // ==========================================
 // 10. HISTORIAL DE TICKETS (USUARIO)
@@ -1056,7 +1097,7 @@ window.generarRetoAdmin = async function() {
         previewHtml += `</div>`; document.getElementById('previewRetoAdmin').innerHTML = previewHtml; document.getElementById('previewRetoAdmin').classList.remove('hidden'); document.getElementById('inputAdminReto').value = `⚠️ Gestión de Banca Sugerida: Stake Fijo 10% - Exclusivo Club Escalera.`;
         document.getElementById('inputAdminReto').classList.remove('hidden'); document.getElementById('btnPublicarReto').classList.remove('hidden');
         if (cuotaAcum < meta) window.mostrarAlerta("Aviso", `Se logró una cuota de ${cuotaAcum.toFixed(2)}.`, "warning"); else window.mostrarAlerta("Generado", `Cuota lograda: ${cuotaAcum.toFixed(2)}.`, "success");
-    } catch(e) { window.mostrarAlerta("Error", "Fallo del motor de análisis.", "error"); } finally { btn.innerHTML = originalBtn; btn.disabled = false; }
+    } catch(e) { window.mostrarAlerta("Error", "Fallo IA.", "error"); } finally { btn.innerHTML = originalBtn; btn.disabled = false; }
 };
 
 window.publicarRetoEscalera = async function() {
@@ -1076,7 +1117,6 @@ window.publicarRetoEscalera = async function() {
             timestamp: ahora
         });
 
-        // 🚀 AQUÍ AÑADIMOS LA ETIQUETA AUDIENCIA
         await setDoc(doc(collection(db, "notificaciones_push")), {
             titulo: "🔥 NUEVO RETO ESCALERA DISPONIBLE",
             cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra al Club Escalera para revisarlo!",
@@ -1097,7 +1137,6 @@ window.publicarRetoEscalera = async function() {
 
 window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto Activo", "¿Deseas borrar el Reto Escalera activo para que no lo vean los usuarios en la app?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Sistema Limpio", "El reto activo ha sido eliminado de la nube.", "success"); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
 
-// 🚀 HISTORIAL DE ESCALERAS PASADAS EN ADMIN
 window.cargarHistorialEscaleraAdmin = async function() {
     const lista = document.getElementById('historialEscaleraAdminList'); if(!lista) return;
     lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500 text-xl"></i></div>';
