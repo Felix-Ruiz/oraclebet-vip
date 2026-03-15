@@ -118,7 +118,11 @@ onMessage(messaging, (payload) => {
     window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success", actionUrl); 
 });
 
+// 🚀 INTERCEPTOR INTELIGENTE AL ABRIR LA APP (CON CANDADO GLOBAL)
 window.verificarNotificacionesPendientes = async function() {
+    // 🛑 CANDADO GLOBAL: Si no hay sesión iniciada (VIP o Admin), se aborta la búsqueda. No hay pop-ups para invitados.
+    if (!modoVipActivo && !adminAutenticado) return;
+
     try {
         const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(1));
         const snap = await getDocs(q);
@@ -137,13 +141,11 @@ window.verificarNotificacionesPendientes = async function() {
             
             const ultimaVista = localStorage.getItem('oracle_last_push_seen');
             
-            // 🛑 LA MAGIA AQUÍ: Si es usuario nuevo (memoria vacía), guardamos la hora actual en silencio y abortamos.
             if (!ultimaVista) {
                 localStorage.setItem('oracle_last_push_seen', Date.now().toString());
                 return; 
             }
             
-            // Si ya tiene historial y la notificación es más nueva que su última visita, la mostramos.
             if (data.timestamp > parseInt(ultimaVista)) {
                 localStorage.setItem('oracle_last_push_seen', data.timestamp.toString());
                 
@@ -221,7 +223,15 @@ window.iniciarSwipeNotificaciones = function() {
     });
 };
 
+// 🛡️ BANDEJA DE NOTIFICACIONES IN-APP (BLOQUEADA PARA INVITADOS)
 window.abrirBandejaNotificaciones = async function() {
+    // 🛑 CANDADO GLOBAL: Si tocan la campanita sin iniciar sesión, se les bloquea el acceso.
+    if (!modoVipActivo && !adminAutenticado) {
+        window.mostrarAlerta("Acceso Restringido", "Debes iniciar sesión con tu credencial para leer los comunicados oficiales del Gestor.", "warning");
+        window.abrirModalLogin();
+        return;
+    }
+
     let modal = document.getElementById('modalBandejaNotificaciones');
     if (!modal) {
         document.body.insertAdjacentHTML('beforeend', `
