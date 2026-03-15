@@ -114,6 +114,9 @@ window.registrarTokenPush = async function(codigoUsuario, modoSilencioso = false
 };
 
 onMessage(messaging, (payload) => { 
+    // 🛑 CANDADO GLOBAL EN TIEMPO REAL: Si es un invitado sin sesión, la app ignora el mensaje que llega.
+    if (!modoVipActivo && !adminAutenticado) return;
+
     let actionUrl = payload.data ? payload.data.url : null;
     window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success", actionUrl); 
 });

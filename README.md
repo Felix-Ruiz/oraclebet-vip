@@ -79,7 +79,11 @@ El Problema: Actualmente, cuando el administrador aprueba un ticket (Ganado/Perd
 
 La Mejora: Las operaciones matemáticas que involucran el Bankroll deben ejecutarse estrictamente en el Backend (usando Firebase Functions). El frontend solo debería decir "Ticket Ganado", y el servidor en la nube debería encargarse de calcular y asignar el dinero de forma segura e inalterable.
 
-4. Sistema de Recuperación de "Huella"
-El Problema: Tu sistema de seguridad anti-fraude es muy bueno bloqueando dispositivos ajenos. Sin embargo, si un cliente VIP legítimo compra un celular nuevo o borra el caché de su navegador, el sistema lo bloqueará pensando que es un intruso.
+2. ¿Se puede mejorar el algoritmo? Sí, para la Versión 2.0
+Tu algoritmo actual se basa 100% en el seguimiento del dinero inteligente (Market Moviments). Es genial, pero es ciego a lo que pasa en la cancha. Para ser aún más precisos, en el futuro podemos cruzar el análisis de las cuotas con análisis estadístico puro:
 
-La Mejora: Agregar un botón en la interfaz del Administrador que diga "Resetear Dispositivo" al lado del nombre de cada usuario en tu Panel Master. Así, si un cliente te escribe por WhatsApp diciendo "Cambié de celular", tú puedas liberarle el código con un solo clic sin tener que borrarlo de la base de datos.
+Integración de Datos Deportivos (API-Sports): Ya usas esta API para los logos. En un futuro, el algoritmo podría leer las alineaciones confirmadas, rachas de los equipos, lesionados clave o motivación (ej. si un equipo ya está eliminado de la Champions, su probabilidad real baja drásticamente aunque las cuotas no se muevan de inmediato).
+
+Métricas Avanzadas (xG - Goles Esperados): En lugar de ver solo cuántos goles meten, el algoritmo evaluaría cuántas ocasiones de peligro real genera un equipo.
+
+Modelos de Distribución de Poisson: Un modelo matemático predictivo que simula el partido 10,000 veces basado en la fuerza ofensiva y defensiva de cada equipo para hallar una probabilidad pura antes de ver las cuotas.
