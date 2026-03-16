@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Instalar | FR Analytics</title>
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #0f172a; /* Fondo corporativo FR */
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 70%);
+            color: #ffffff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Evitar scroll innecesario */
+        }
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .btn-gold {
+            background: linear-gradient(90deg, #D4AF37, #f1d27b, #D4AF37);
+            background-size: 200% auto;
+            color: #000;
+            transition: 0.5s;
+        }
+        .btn-gold:hover {
+            background-position: right center;
+        }
+    </style>
+</head>
+<body class="items-center justify-center p-6">
+
+    <div class="glass-panel p-8 rounded-3xl w-full max-w-sm text-center relative z-10 flex flex-col items-center">
+        
+        <div class="bg-gray-800 p-5 rounded-full text-yellow-500 shadow-inner mb-4 border border-yellow-500/20">
+            <i class="fas fa-chart-line text-4xl"></i>
+        </div>
+        <h1 class="text-yellow-500 font-black text-3xl uppercase tracking-widest mb-1">FR</h1>
+        <h2 class="text-gray-400 text-[10px] font-bold uppercase tracking-[0.3em] mb-6">| Analytics |</h2>
+        
+        <p class="text-sm text-gray-300 font-medium mb-8 leading-relaxed">
+            Instala la terminal de inversión cuantitativa en tu dispositivo para acceder a las señales del algoritmo en tiempo real.
+        </p>
+
+        <div id="dynamicContent" class="w-full">
+            <i class="fas fa-circle-notch fa-spin text-yellow-500 text-2xl mb-2"></i>
+            <p class="text-xs text-gray-500 uppercase tracking-widest">Analizando dispositivo...</p>
+        </div>
+
+    </div>
+
+    <div class="absolute bottom-6 text-center w-full text-[9px] text-gray-600 uppercase tracking-widest font-bold">
+        Acceso Exclusivo • Fondo Cuantitativo
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dynamicContent = document.getElementById('dynamicContent');
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            
+            // 1. DETECCIÓN DE iOS (iPhone / iPad)
+            if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                dynamicContent.innerHTML = `
+                    <div class="bg-blue-900/20 border border-blue-500/30 p-5 rounded-2xl relative">
+                        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                            Usuario iOS Detectado
+                        </div>
+                        <p class="text-[12px] text-gray-300 mb-4 leading-relaxed font-bold">
+                            Para instalar la app en tu iPhone, sigue estos dos pasos:
+                        </p>
+                        <ol class="text-left text-[11px] text-gray-400 space-y-3 mb-4 font-medium">
+                            <li class="flex items-center gap-3">
+                                <span class="bg-gray-800 px-2 py-1 rounded text-white"><i class="fas fa-external-link-alt text-blue-400"></i></span>
+                                Toca el ícono <b>Compartir</b> en la barra inferior de Safari.
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <span class="bg-gray-800 px-2 py-1 rounded text-white"><i class="fas fa-plus-square text-white"></i></span>
+                                Selecciona <b>"Agregar a inicio"</b>.
+                            </li>
+                        </ol>
+                        <i class="fas fa-arrow-down text-blue-400 text-2xl animate-bounce mt-2"></i>
+                    </div>
+                `;
+            } 
+            // 2. DETECCIÓN DE ANDROID (Prepara el botón nativo)
+            else {
+                // Preparamos la variable para atrapar el evento de instalación de Google Chrome
+                let promptInstalacion;
+
+                dynamicContent.innerHTML = `
+                    <button id="btnInstalarAndroid" class="w-full btn-gold py-4 rounded-xl text-[12px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2" style="display: none;">
+                        <i class="fas fa-download text-lg"></i> Instalar Aplicación
+                    </button>
+                    <p id="msgEsperando" class="text-xs text-gray-400 mt-2">Cargando instalador seguro...</p>
+                `;
+
+                const btnInstalar = document.getElementById('btnInstalarAndroid');
+                const msgEsperando = document.getElementById('msgEsperando');
+
+                // Chrome dispara este evento si la app cumple los requisitos PWA y NO está instalada
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault(); // Evita que Chrome muestre su mini-banner feo por defecto
+                    promptInstalacion = e; // Guardamos el evento
+                    
+                    // Mostramos nuestro botón dorado
+                    btnInstalar.style.display = 'flex';
+                    msgEsperando.style.display = 'none';
+
+                    btnInstalar.addEventListener('click', async () => {
+                        if (!promptInstalacion) return;
+                        promptInstalacion.prompt(); // Lanza el cuadro nativo de Android
+                        
+                        const { outcome } = await promptInstalacion.userChoice;
+                        if (outcome === 'accepted') {
+                            btnInstalar.innerHTML = '<i class="fas fa-check-circle"></i> INSTALACIÓN INICIADA';
+                            btnInstalar.classList.replace('btn-gold', 'bg-green-600 text-white');
+                        }
+                        promptInstalacion = null;
+                    });
+                });
+
+                // Si la app ya está instalada, Chrome nunca dispara el evento anterior, dispara este:
+                window.addEventListener('appinstalled', () => {
+                    dynamicContent.innerHTML = `
+                        <div class="bg-green-900/20 border border-green-500/30 p-5 rounded-2xl">
+                            <i class="fas fa-check-circle text-green-500 text-4xl mb-3"></i>
+                            <h3 class="text-green-500 font-black text-sm uppercase tracking-widest mb-1">Instalada</h3>
+                            <p class="text-[10px] text-gray-400">Busca el logo de FR en tu pantalla de inicio.</p>
+                        </div>
+                    `;
+                });
+
+                // Timeout de seguridad: Si pasan 3 segundos y Chrome no soltó el evento de instalación,
+                // asumimos que el usuario ya la tiene instalada o está en un navegador no compatible (como el de Instagram).
+                setTimeout(() => {
+                    if(btnInstalar.style.display === 'none') {
+                        msgEsperando.innerHTML = `
+                            <span class="text-yellow-500 font-bold"><i class="fas fa-info-circle"></i> Abre este enlace en Google Chrome</span><br>o verifica si ya tienes la app en tu menú.
+                        `;
+                    }
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
