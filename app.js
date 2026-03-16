@@ -519,40 +519,39 @@ if (document.readyState === 'loading') { document.addEventListener('DOMContentLo
 // ==========================================
 const promesaConTimeout = (promesa, ms) => { let timeout = new Promise((resolve, reject) => { let id = setTimeout(() => { clearTimeout(id); reject(new Error("Timeout")); }, ms); }); return Promise.race([promesa, timeout]); };
 
-window.validarCodigo = async function() {
-    const inputElement = document.getElementById('vipCode'); if(!inputElement) return;
-    let inputUsuario = inputElement.value.trim(); if(inputUsuario === "") { window.mostrarAlerta("Atención", "Por favor ingresa un código o correo válido.", "warning"); return; }
-    const btn = document.getElementById('btnValidarCodigo'); const txtOriginal = btn ? btn.innerHTML : "VERIFICAR ACCESO";
+// 🚀 INTERCEPTOR LEGAL EN LA PUERTA DE ENTRADA
+window.preValidarCodigo = function() {
+    const input = document.getElementById('vipCode');
     
-    if (correoAdminTemp !== "") {
-        btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> AUTENTICANDO...`; btn.disabled = true;
-        try {
-            await signInWithEmailAndPassword(auth, correoAdminTemp, inputUsuario);
-            window.cerrarModalLogin(); window.renderizarLayoutAdmin();
-        } catch (error) { window.mostrarAlerta("Acceso Denegado", "Credenciales incorrectas.", "error"); } finally {
-            correoAdminTemp = ""; inputElement.type = 'text'; inputElement.placeholder = 'CÓDIGO DE INVERSOR'; inputElement.value = '';
-            if(btn) { btn.innerHTML = "VERIFICAR ACCESO"; btn.disabled = false; }
-        }
-        return;
+    // Primero verificamos que no intente entrar con el cuadro vacío
+    if (!input || input.value.trim() === '') {
+        return window.mostrarAlerta("Atención", "Debes ingresar un código de acceso válido.", "error");
     }
 
-    if (inputUsuario.includes('@')) {
-        correoAdminTemp = inputUsuario; inputElement.value = ''; inputElement.type = 'password'; inputElement.placeholder = 'Ingrese Contraseña de Admin';
-        if(btn) { btn.innerHTML = '<i class="fas fa-lock"></i> INICIAR SESIÓN ADMIN'; } return;
+    // Si escribió un código, levantamos el muro legal
+    const modal = document.getElementById('modalTerminosGenerales');
+    if(modal) { 
+        modal.classList.remove('hidden'); 
+        modal.style.display = 'flex'; 
     }
+};
 
-    if(btn) { btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> VERIFICANDO...`; btn.disabled = true; }
-    inputUsuario = inputUsuario.toUpperCase();
+window.cerrarModalTerminosGenerales = function() {
+    const modal = document.getElementById('modalTerminosGenerales');
+    if(modal) { 
+        modal.classList.add('hidden'); 
+        modal.style.display = 'none'; 
+    }
+};
 
-    try {
-        const docRef = doc(db, "codigos_nube", inputUsuario); const docSnap = await promesaConTimeout(getDoc(docRef), 8000);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR, ladderStatus: 'none' }); window.concederAcceso(data.ilimitado, inputUsuario, 'none', false); } 
-            else if (data.deviceID === HUELLA_ESTE_CELULAR) { window.concederAcceso(data.ilimitado, inputUsuario, data.ladderStatus || 'none', false); } 
-            else { window.mostrarAlerta("Acceso Denegado", "Este código ya está vinculado a otro celular.", "error"); }
-        } else { window.mostrarAlerta("Código Inválido", "El código ingresado no existe en el sistema.", "error"); }
-    } catch (e) { window.mostrarAlerta("Fallo del Sistema", "La base de datos rechazó la solicitud. Revisa conexión.", "error"); } finally { if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; } }
+window.aceptarTerminosYLogin = function() {
+    // 1. Cerramos el muro legal
+    window.cerrarModalTerminosGenerales();
+    
+    // 2. Disparamos la función original que se comunica con Firebase
+    if(window.validarCodigo) {
+        window.validarCodigo();
+    }
 };
 
 window.enviarNotificacionGlobal = async function() {
