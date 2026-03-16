@@ -1192,30 +1192,44 @@ window.chequearApadrinamientoUI = function() {
 
 window.suscribirApadrinamiento = function() { if(!codigoActivoUsuario) return; if(unsubscribeApadrinamiento) unsubscribeApadrinamiento(); try { unsubscribeApadrinamiento = onSnapshot(doc(db, "codigos_nube", codigoActivoUsuario), (docSnap) => { if(docSnap.exists()) { const data = docSnap.data(); perfilApadrinamiento = data.apadrinamiento || null; estadoEscalera = data.ladderStatus || 'none'; if(document.getElementById('vista_escalera')?.classList.contains('view-active')) { window.chequearEstadoEscaleraUI(); } if(document.getElementById('vista_apadrinamiento')?.classList.contains('view-active')) { window.chequearApadrinamientoUI(); } } }); } catch(e) {} };
 window.iniciarApadrinamiento = async function() {
-    // 🚀 VALIDACIÓN LEGAL OBLIGATORIA
+    // 1. Validar Contrato SaaS
     const checkbox = document.getElementById('checkTerminosApadrinamiento');
     if (checkbox && !checkbox.checked) {
         return window.mostrarAlerta("Atención", "Debes leer y aceptar el Acuerdo de Licencia de Software para poder utilizar la terminal.", "error");
     }
 
+    // 2. Validar Monto
     const valor = document.getElementById('inputBankrollInicial').value;
     const monto = parseFloat(valor);
-    if (!monto || monto < 10000) return window.mostrarAlerta("Error", "Ingresa un bankroll válido (mínimo $10,000).", "error");
+    if (!monto || monto < 10000) {
+        return window.mostrarAlerta("Error", "Ingresa un bankroll válido (mínimo $10,000).", "error");
+    }
 
     const btn = document.querySelector('#apadrinamientoOnboarding button');
-    const txtOriginal = btn.innerText;
-    btn.innerText = "PROCESANDO..."; btn.disabled = true;
+    const txtOriginal = btn ? btn.innerText : 'ACTIVAR';
+    if(btn) { btn.innerText = "PROCESANDO..."; btn.disabled = true; }
 
     try {
-        await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { 
-            apadrinamiento: { bankroll_inicial: monto, bankroll_actual: monto, fecha_inicio: Date.now() } 
-        });
+        // 3. BLINDAJE FIREBASE: Usamos setDoc con merge: true (Es 100% a prueba de fallos)
+        await setDoc(doc(db, "codigos_nube", codigoActivoUsuario), { 
+            apadrinamiento: { 
+                bankroll_inicial: monto, 
+                bankroll_actual: monto, 
+                fecha_inicio: Date.now() 
+            } 
+        }, { merge: true }); // El merge asegura que no borre tus otros datos (como el deviceID)
+
         window.mostrarAlerta("Éxito", "Software configurado. Ya puedes acceder al radar de operaciones.", "success");
-        window.cargarDatosApadrinamiento();
+        
+        // Refrescar la vista
+        if(window.cargarDatosApadrinamiento) window.cargarDatosApadrinamiento();
+
     } catch(e) {
-        window.mostrarAlerta("Error", "No se pudo guardar la configuración.", "error");
+        console.error("Fallo crítico en activación:", e);
+        // 4. RASTREADOR VISUAL: Si falla, te mostrará el error exacto de Google en la pantalla
+        window.mostrarAlerta("Fallo de Servidor", e.message, "error");
     } finally {
-        btn.innerText = txtOriginal; btn.disabled = false;
+        if(btn) { btn.innerText = txtOriginal; btn.disabled = false; }
     }
 };
 
