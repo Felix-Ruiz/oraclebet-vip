@@ -752,8 +752,6 @@ onAuthStateChanged(auth, (user) => {
 });
 
 window.iniciarApp = async function() { 
-    if(adminAutenticado) return; 
-    
     const fFecha = document.getElementById('filtroFecha'); 
     if(fFecha) { 
         const hoy = new Date(); 
@@ -774,7 +772,13 @@ window.iniciarApp = async function() {
     if(cFree) cFree.innerHTML = loadHtml; 
     if(cVip) cVip.innerHTML = loadHtml;
     
+    // 🚀 FIX: Obligamos a cargar la Base de Datos SIEMPRE, sea cliente o Admin
     await precargarBaseDeDatos(); 
+    
+    if(adminAutenticado) {
+        // Si es admin, detenemos el proceso aquí para que no cargue las vistas de usuario
+        return;
+    }
     
     try { 
         const session = localStorage.getItem('oracle_session'); 
@@ -886,16 +890,31 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
     if (codigoIngresado.startsWith("MASTER_")) {
         try {
             if (!correoAdminTemp) {
-                correoAdminTemp = prompt("Introduce el correo del Administrador:");
-                if (!correoAdminTemp) throw new Error("Correo requerido.");
+                let ingreso = prompt("Introduce el correo del Administrador:");
+                if (!ingreso) throw new Error("Correo requerido.");
+                correoAdminTemp = ingreso.trim(); // 🚀 FIX: Elimina espacios en blanco accidentales
             }
             const p = codigoIngresado.split("MASTER_")[1];
             await promesaConTimeout(signInWithEmailAndPassword(auth, correoAdminTemp, p), 8000);
+            
             window.cerrarModalLogin();
+            
+            // 🚀 FIX: Seguro adicional, si la BD no cargó, la obligamos a cargar
+            if(CACHE_PARTIDOS_FUTUROS.length === 0) {
+                await precargarBaseDeDatos();
+            }
+            
             window.renderizarLayoutAdmin();
         } catch(e) {
             correoAdminTemp = "";
-            window.mostrarAlerta("Acceso Denegado", "Credenciales de Master incorrectas.", "error");
+            
+            // 🚀 FIX: Traducción de errores de Firebase para ti
+            let msgError = "Credenciales incorrectas.";
+            if(e.code === 'auth/user-not-found') msgError = "El correo ingresado no existe en Firebase.";
+            if(e.code === 'auth/wrong-password') msgError = "La contraseña de tu código MASTER es incorrecta.";
+            if(e.code === 'auth/invalid-email') msgError = "El formato del correo es inválido.";
+            
+            window.mostrarAlerta("Acceso Denegado", msgError, "error");
         } finally {
             if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; }
         }
