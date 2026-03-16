@@ -624,7 +624,7 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
                 window.mostrarAlerta("Licencia en Uso", "Este código ya está vinculado a otro celular. Contacta al gestor.", "error");
             } else {
                 if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR }); }
-                window.mostrarAlerta("Acceso Concedido", `Bienvenido Inversor.`, "success");
+                window.mostrarAlerta("Acceso Concedido", `Bienvenido.`, "success");
                 window.concederAcceso(data.ilimitado, codigoIngresado, data.ladderStatus || 'none', false);
             }
         } else {
