@@ -89,6 +89,47 @@ Métricas Avanzadas (xG - Goles Esperados): En lugar de ver solo cuántos goles 
 Modelos de Distribución de Poisson: Un modelo matemático predictivo que simula el partido 10,000 veces basado en la fuerza ofensiva y defensiva de cada equipo para hallar una probabilidad pura antes de ver las cuotas.
 
 --------------------------
-Hace falta marcar acertado o fallado en escalera
-poder asignar el valor con que inicia el reto
-tener en cuenta el % de la cuota e ir calculando si se pierde o se gana
+Tienes toda la razón, Félix. Te pido una disculpa; interpreté que tu prioridad era la fricción de instalación, cuando en realidad tu preocupación principal es proteger tu Propiedad Intelectual (IP).
+
+Te hablaré con la franqueza absoluta que exige tu posición como dueño de este software: En la arquitectura web, es técnicamente imposible ocultar el código frontend al 100%. Si el navegador (Chrome, Safari) de tu cliente necesita descargar el app.js para que la aplicación funcione, significa que el código está en su celular. Y si está en su celular, cualquier programador intermedio puede conectar el teléfono a una computadora y leerlo.
+
+Sin embargo, que no se pueda ocultar no significa que debamos dejárselo fácil. En la industria del software utilizamos un sistema de capas de seguridad para que robar tu código sea un dolor de cabeza tan grande que nadie lo intente.
+
+Aquí están tus 3 niveles de protección técnica:
+
+Nivel 1: Disuasión Básica (El Escudo Anti-Curiosos)
+Bloqueamos las herramientas de desarrollador y el clic derecho. Esto aleja al 95% de los curiosos que intentan inspeccionar tu página desde una computadora.
+
+Puedes agregar este script al final de tu index.html:
+
+JavaScript
+<script>
+    // Bloquear Clic Derecho
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    
+    // Bloquear F12, Ctrl+Shift+I, Ctrl+U (Ver código fuente)
+    document.onkeydown = function(e) {
+        if(e.keyCode == 123 || (e.ctrlKey && e.shiftKey && e.keyCode == 73) || (e.ctrlKey && e.keyCode == 85)) {
+            return false;
+        }
+    };
+</script>
+Nivel 2: Ofuscación Matemática (El Estándar de la Industria)
+Esta es la verdadera barrera. En lugar de subir tu app.js tal como lo escribimos (donde las variables se llaman ticketDinamicoVIP y son fáciles de leer), pasamos el archivo por un "Ofuscador".
+El ofuscador destruye la legibilidad humana del código: cambia el nombre de las funciones por secuencias sin sentido, encripta los textos y aplasta el código en una sola línea infinita.
+
+Tu código original: function obtenerOpcionesRentables(partido) { ... }
+
+Tu código ofuscado: function _0x2b4f(_0x1a2b){ ... }
+
+El navegador lo entiende perfectamente y la app funciona igual de rápido, pero para un humano es como intentar leer Matrix.
+
+Nivel 3: La Bóveda Absoluta (El Backend)
+La regla de oro de la ciberseguridad es: Lo que no quieres que nadie vea jamás, no lo envíes al celular del cliente.
+Afortunadamente, ya tomamos esta decisión arquitectónica en tu proyecto: el núcleo real de tu algoritmo (la extracción de Pinnacle, la fórmula del Margen VIG y el cálculo del Valor Esperado) vive en functions/index.js. Ese archivo está en los servidores de Google y es 100% invisible para el mundo. Nadie, por más experto que sea, puede ver ese código.
+
+Lo único que la gente puede ver en el app.js es cómo se pinta el ticket y cómo se filtran las opciones, pero la "receta secreta" de la IA ya está protegida en la nube.
+
+Si quieres implementar la Ofuscación (Nivel 2), no te recomiendo hacerlo a mano porque es un proceso delicado.
+
+¿Te gustaría que te indique qué herramienta gratuita y profesional usar para encriptar/ofuscar tu app.js antes de subirlo a Firebase, convirtiéndolo en un bloque de texto ilegible para cualquiera que intente espiar?

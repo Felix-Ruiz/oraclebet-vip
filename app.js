@@ -1030,13 +1030,61 @@ window.limpiarHistorialSeguro = function() { window.mostrarConfirmacion("Limpiar
 // ==========================================
 // 11. ESCALERA VIP Y APADRINAMIENTO 
 // ==========================================
+// 🚀 SEMÁFORO VISUAL DEL CLUB ESCALERA
 window.chequearEstadoEscaleraUI = function() {
-    let btn = document.getElementById('btnSolicitarEscalera'); const divBloqueada = document.getElementById('escaleraBloqueada'); const divAprobada = document.getElementById('escaleraAprobada'); if(!btn || !divBloqueada || !divAprobada) return;
+    let btn = document.getElementById('btnSolicitarEscalera'); const divBloqueada = document.getElementById('escaleraBloqueada'); const divAprobada = document.getElementById('escaleraAprobada');
+    if(!btn) return;
     let nuevoBtn = btn.cloneNode(true); btn.parentNode.replaceChild(nuevoBtn, btn); nuevoBtn.removeAttribute('onclick');
-    if(!codigoActivoUsuario) { nuevoBtn.disabled = false; nuevoBtn.innerText = "INICIAR SESIÓN"; nuevoBtn.className = "w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(220,38,38,0.3)] transition active:scale-95"; nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.abrirModalLogin(); }; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; return; }
-    if(estadoEscalera === 'none') { nuevoBtn.disabled = false; nuevoBtn.innerText = "SOLICITAR INVITACIÓN"; nuevoBtn.className = "w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[11px] uppercase tracking-widest shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition active:scale-95"; nuevoBtn.onclick = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } window.solicitarAccesoEscalera(); }; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; } 
-    else if (estadoEscalera === 'pending') { nuevoBtn.disabled = true; nuevoBtn.innerText = "REVISIÓN PENDIENTE..."; nuevoBtn.className = "w-full py-4 bg-gray-600 text-white rounded-lg font-black text-[11px] uppercase tracking-widest transition"; nuevoBtn.onclick = null; divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; } 
-    else if (estadoEscalera === 'approved') { divBloqueada.style.display = 'none'; divAprobada.style.display = 'block'; window.cargarRetoEscaleraNube(); }
+    
+    if(!codigoActivoUsuario) { 
+        nuevoBtn.innerText = "INICIAR SESIÓN PARA ACCEDER"; 
+        nuevoBtn.className = "w-full py-4 bg-gray-800 border border-white/10 text-white rounded-lg font-black text-[12px] uppercase tracking-widest"; 
+        nuevoBtn.onclick = function(e) { window.abrirModalLogin(); }; 
+        divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; 
+        return; 
+    }
+    
+    if(estadoEscalera === 'none') { 
+        nuevoBtn.innerText = "SOLICITAR INVITACIÓN"; 
+        nuevoBtn.className = "w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] transition active:scale-95"; 
+        // 🛑 CAMBIO CRÍTICO: Ahora abre el modal obligatorio en lugar de enviar la solicitud
+        nuevoBtn.onclick = function(e) { window.abrirModalTerminosEscalera(); }; 
+        divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; 
+    } 
+    else if (estadoEscalera === 'pending') { 
+        nuevoBtn.disabled = true; nuevoBtn.innerText = "REVISIÓN PENDIENTE..."; 
+        nuevoBtn.className = "w-full py-4 bg-gray-600 text-gray-300 rounded-lg font-black text-[12px] uppercase tracking-widest cursor-not-allowed opacity-70"; 
+        divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; 
+    } 
+    else if (estadoEscalera === 'approved') { 
+        divBloqueada.style.display = 'none'; divAprobada.style.display = 'block'; 
+        window.cargarRetoEscaleraNube(); 
+    }
+};
+
+// 🚀 CONTROLADORES DEL MODAL DE TÉRMINOS Y CONDICIONES
+window.abrirModalTerminosEscalera = function() {
+    const modal = document.getElementById('modalTerminosEscalera');
+    if(modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+};
+
+window.cerrarModalTerminosEscalera = function() {
+    const modal = document.getElementById('modalTerminosEscalera');
+    if(modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+};
+
+window.aceptarTerminosYsolicitar = function() {
+    // El usuario aceptó las reglas, cerramos el modal y disparamos la función original
+    window.cerrarModalTerminosEscalera();
+    if(window.solicitarAccesoEscalera) {
+        window.solicitarAccesoEscalera();
+    }
 };
 
 window.solicitarAccesoEscalera = async function() { const btn = document.getElementById('btnSolicitarEscalera'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true; try { await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { ladderStatus: 'pending' }); estadoEscalera = 'pending'; window.chequearEstadoEscaleraUI(); window.mostrarAlerta("Solicitud Enviada", "En revisión por el Administrador.", "success"); } catch (e) { window.mostrarAlerta("Error", "Error al enviar la solicitud.", "error"); btn.innerText = "SOLICITAR INVITACIÓN"; btn.disabled = false; } };
