@@ -528,15 +528,32 @@ window.editarMiCapitalEscalera = function() {
 };
 
 window.confirmarPickEscalera = async function(idx) {
+    const btn = event.currentTarget; 
+    const textoOriginal = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Confirmando...`;
+    btn.disabled = true;
+
     try {
-        const ref = doc(db, "global", "escalera"); const snap = await getDoc(ref);
+        const ref = doc(db, "global", "escalera"); 
+        const snap = await getDoc(ref);
+        
         if(snap.exists()) {
-            let data = snap.data(); if(!data.ticket_data.picks[idx].confirmados) data.ticket_data.picks[idx].confirmados = [];
+            let data = snap.data(); 
+            if(!data.ticket_data.picks[idx].confirmados) data.ticket_data.picks[idx].confirmados = [];
+            
             if(!data.ticket_data.picks[idx].confirmados.includes(codigoActivoUsuario)) {
-                data.ticket_data.picks[idx].confirmados.push(codigoActivoUsuario); await updateDoc(ref, { ticket_data: data.ticket_data }); window.cargarRetoEscaleraNube(); window.mostrarAlerta("¡Inversión Confirmada!", "Has marcado este pick como realizado.", "success");
+                data.ticket_data.picks[idx].confirmados.push(codigoActivoUsuario); 
+                await updateDoc(ref, { ticket_data: data.ticket_data }); 
+                window.cargarRetoEscaleraNube(); 
+                window.mostrarAlerta("¡Inversión Confirmada!", "Has marcado este pick como realizado.", "success");
             }
         }
-    } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión al confirmar.", "error"); }
+    } catch(e) { 
+        console.error("Error de Firebase:", e);
+        window.mostrarAlerta("Acceso Denegado por Firebase", "Error: " + e.message, "error"); 
+        btn.innerHTML = textoOriginal;
+        btn.disabled = false;
+    }
 };
 
 window.cargarRetoEscaleraNube = async function() {
