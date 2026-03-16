@@ -624,7 +624,10 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
                 window.mostrarAlerta("Licencia en Uso", "Este código ya está vinculado a otro celular. Contacta al gestor.", "error");
             } else {
                 if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR }); }
+                
+                // 🚀 AQUÍ ELIMINAMOS LA PALABRA INVERSOR
                 window.mostrarAlerta("Acceso Concedido", `Bienvenido.`, "success");
+                
                 window.concederAcceso(data.ilimitado, codigoIngresado, data.ladderStatus || 'none', false);
             }
         } else {
@@ -1129,7 +1132,6 @@ window.chequearEstadoEscaleraUI = function() {
     if(estadoEscalera === 'none') { 
         nuevoBtn.innerText = "SOLICITAR INVITACIÓN"; 
         nuevoBtn.className = "w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] transition active:scale-95"; 
-        // 🛑 CAMBIO CRÍTICO: Ahora abre el modal obligatorio en lugar de enviar la solicitud
         nuevoBtn.onclick = function(e) { window.abrirModalTerminosEscalera(); }; 
         divBloqueada.style.display = 'block'; divAprobada.style.display = 'none'; 
     } 
@@ -1144,7 +1146,6 @@ window.chequearEstadoEscaleraUI = function() {
     }
 };
 
-// 🚀 CONTROLADORES DEL MODAL DE TÉRMINOS Y CONDICIONES
 window.abrirModalTerminosEscalera = function() {
     const modal = document.getElementById('modalTerminosEscalera');
     if(modal) {
@@ -1162,7 +1163,6 @@ window.cerrarModalTerminosEscalera = function() {
 };
 
 window.aceptarTerminosYsolicitar = function() {
-    // El usuario aceptó las reglas, cerramos el modal y disparamos la función original
     window.cerrarModalTerminosEscalera();
     if(window.solicitarAccesoEscalera) {
         window.solicitarAccesoEscalera();
@@ -1181,11 +1181,22 @@ window.cargarRetoEscaleraNube = async function() {
             
             let cuotaActual = 1.0;
             let picksHtml = '';
+            let runningMulti = 1.0; // Rastreador de interés compuesto
             
             if(tk && tk.picks) { 
-                tk.picks.forEach(p => { 
+                tk.picks.forEach((p, index) => { 
                     let estadoP = p.estado || 'pendiente';
-                    if(estadoP === 'won') cuotaActual *= p.cuota;
+                    
+                    // 🚀 MATEMÁTICA DE PORCENTAJES (CLIENTE)
+                    let startPct = runningMulti * 100;
+                    let endPct = (runningMulti * p.cuota) * 100;
+
+                    if(estadoP === 'won') {
+                        cuotaActual *= p.cuota;
+                        runningMulti *= p.cuota;
+                    } else if (estadoP === 'lost') {
+                        endPct = 0;
+                    }
                     
                     let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; 
                     let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); 
@@ -1198,14 +1209,31 @@ window.cargarRetoEscaleraNube = async function() {
                     if(estadoP === 'won') { iconStatus = '<i class="fas fa-check-circle text-green-500"></i>'; borderClass = 'border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)] bg-green-900/10'; titleColor = 'text-green-400'; }
                     if(estadoP === 'lost') { iconStatus = '<i class="fas fa-times-circle text-red-500"></i>'; borderClass = 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)] bg-red-900/10'; titleColor = 'text-red-400 opacity-50'; }
                     
+                    let badgeProgreso = '';
+                    if (estadoP === 'won') {
+                        badgeProgreso = `<div class="bg-green-900/40 border border-green-500/50 text-green-400 text-[9px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-inner"><i class="fas fa-level-up-alt"></i> ${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[7px] text-gray-500 mx-0.5"></i> ${endPct.toFixed(1)}%</div>`;
+                    } else if (estadoP === 'lost') {
+                        badgeProgreso = `<div class="bg-red-900/40 border border-red-500/50 text-red-400 text-[9px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-inner"><i class="fas fa-level-down-alt"></i> ${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[7px] text-gray-500 mx-0.5"></i> 0%</div>`;
+                    } else {
+                        badgeProgreso = `<div class="bg-gray-800 border border-gray-600 text-gray-400 text-[9px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-inner" title="Proyección"><i class="fas fa-chart-line"></i> ${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[7px] text-gray-500 mx-0.5"></i> ${endPct.toFixed(1)}%</div>`;
+                    }
+
                     picksHtml += `
                     <div class="p-3 rounded-xl mb-2 border relative transition-all duration-500 ${borderClass}">
                         <div class="absolute top-3 right-3 text-lg">${iconStatus}</div>
-                        <div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas fa-handshake mr-1"></i> ${defMercado.titulo}</div>
-                        <div class="text-[11px] font-bold ${titleColor} mb-2 border-b border-white/5 pb-1 pr-6">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div>
-                        <div class="flex justify-between items-center bg-black/60 p-2 rounded-lg border border-gray-700">
-                            <div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div>
-                            <span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span>
+                        <div class="text-[8px] text-gray-400 font-bold uppercase mb-1 flex justify-between items-center pr-6">
+                            <span><i class="fas fa-handshake mr-1"></i> ${defMercado.titulo}</span>
+                        </div>
+                        <div class="text-[11px] font-bold ${titleColor} mb-2 border-b border-white/5 pb-2 pr-6">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div>
+                        
+                        <div class="flex flex-col gap-2 mt-2">
+                            <div class="flex justify-between items-center bg-black/60 p-2 rounded-lg border border-gray-700">
+                                <div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div>
+                                <span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span>
+                            </div>
+                            <div class="flex justify-end">
+                                ${badgeProgreso}
+                            </div>
                         </div>
                     </div>`; 
                 }); 
@@ -1274,21 +1302,17 @@ window.chequearApadrinamientoUI = function() {
 
 window.suscribirApadrinamiento = function() { if(!codigoActivoUsuario) return; if(unsubscribeApadrinamiento) unsubscribeApadrinamiento(); try { unsubscribeApadrinamiento = onSnapshot(doc(db, "codigos_nube", codigoActivoUsuario), (docSnap) => { if(docSnap.exists()) { const data = docSnap.data(); perfilApadrinamiento = data.apadrinamiento || null; estadoEscalera = data.ladderStatus || 'none'; if(document.getElementById('vista_escalera')?.classList.contains('view-active')) { window.chequearEstadoEscaleraUI(); } if(document.getElementById('vista_apadrinamiento')?.classList.contains('view-active')) { window.chequearApadrinamientoUI(); } } }); } catch(e) {} };
 window.iniciarApadrinamiento = async function() {
-    // 1. Validar Contrato SaaS
     const checkbox = document.getElementById('checkTerminosApadrinamiento');
     if (checkbox && !checkbox.checked) {
         return window.mostrarAlerta("Atención", "Debes leer y aceptar el Acuerdo de Licencia de Software para poder utilizar la terminal.", "error");
     }
 
-    // 2. Validar Monto
     const valor = document.getElementById('inputBankrollInicial').value;
     const monto = parseFloat(valor);
     if (!monto || monto < 10000) {
         return window.mostrarAlerta("Error", "Ingresa un bankroll válido (mínimo $10,000).", "error");
     }
 
-    // 🚀 3. EL FIX: EXTRACCIÓN SEGURA DE IDENTIDAD
-    // Buscamos el código en la memoria del celular directamente
     let usuarioActual = null;
     if (typeof codigoActivoUsuario !== 'undefined' && codigoActivoUsuario) {
         usuarioActual = codigoActivoUsuario;
@@ -1296,7 +1320,6 @@ window.iniciarApadrinamiento = async function() {
         usuarioActual = localStorage.getItem('oracle_vip_code');
     }
 
-    // Si por algún milagro sigue vacío, bloqueamos el proceso antes de estrellar Firebase
     if (!usuarioActual) {
         return window.mostrarAlerta("Sesión Expirada", "Por favor inicia sesión nuevamente con tu código VIP.", "error");
     }
@@ -1306,7 +1329,6 @@ window.iniciarApadrinamiento = async function() {
     if(btn) { btn.innerText = "PROCESANDO..."; btn.disabled = true; }
 
     try {
-        // 4. BLINDAJE FIREBASE: Usamos el ID seguro y setDoc con merge
         await setDoc(doc(db, "codigos_nube", usuarioActual), { 
             apadrinamiento: { 
                 bankroll_inicial: monto, 
@@ -1317,7 +1339,6 @@ window.iniciarApadrinamiento = async function() {
 
         window.mostrarAlerta("Éxito", "Software configurado. Ya puedes acceder al radar de operaciones.", "success");
         
-        // Ocultar Onboarding y Mostrar Dashboard
         const onboarding = document.getElementById('apadrinamientoOnboarding');
         const dash = document.getElementById('apadrinamientoDashboard');
         if(onboarding) onboarding.style.display = 'none';
@@ -1326,7 +1347,6 @@ window.iniciarApadrinamiento = async function() {
             dash.classList.remove('hidden');
         }
         
-        // Refrescar los números en pantalla
         if(window.cargarDatosApadrinamiento) window.cargarDatosApadrinamiento();
 
     } catch(e) {
@@ -1337,7 +1357,6 @@ window.iniciarApadrinamiento = async function() {
     }
 };
 
-// 🚀 CONTROLADORES DEL MODAL LEGAL
 window.abrirModalTerminosApadrinamiento = function() {
     const modal = document.getElementById('modalTerminosApadrinamiento');
     if(modal) { modal.classList.remove('hidden'); modal.style.display = 'flex'; }
@@ -1486,7 +1505,6 @@ window.publicarRetoEscalera = async function() {
     const txt = document.getElementById('inputAdminReto').value; if(!txt && !window.retoPendientePublicar) return window.mostrarAlerta("Error", "Nada para publicar.", "error");
     const btn = document.getElementById('btnPublicarReto'); const originalTxt = btn.innerText; btn.innerText = "Publicando..."; btn.disabled = true;
     
-    // 🚀 Inyectamos el capital inicial y el estado 'pendiente' a todos los picks
     const capitalStr = document.getElementById('inputCapitalEscalera')?.value;
     const capitalInicial = parseFloat(capitalStr) || 0;
     window.retoPendientePublicar.capital_inicial = capitalInicial;
@@ -1508,7 +1526,7 @@ window.publicarRetoEscalera = async function() {
         document.getElementById('inputAdminReto').value=''; document.getElementById('previewRetoAdmin').innerHTML=''; document.getElementById('previewRetoAdmin').classList.add('hidden'); document.getElementById('inputAdminReto').classList.add('hidden'); document.getElementById('btnPublicarReto').classList.add('hidden'); window.retoPendientePublicar = null; 
         
         if(window.cargarHistorialEscaleraAdmin) window.cargarHistorialEscaleraAdmin();
-        window.cargarGestionRetoActivoAdmin(); // Recargar el panel de control
+        window.cargarGestionRetoActivoAdmin();
 
     } catch(e){ window.mostrarAlerta("Error", "Error de red.", "error"); } finally { btn.innerText = originalTxt; btn.disabled = false; }
 };
@@ -1523,6 +1541,8 @@ window.cargarGestionRetoActivoAdmin = async function() {
             if(!tk) { panel.innerHTML = ''; return; }
             
             let cuotaActual = 1.0; let perdidos = 0; let ganados = 0;
+            let runningMulti = 1.0; // 🚀 Rastreador de porcentajes para el Admin
+
             tk.picks.forEach(p => { 
                 if(p.estado === 'won') { cuotaActual *= p.cuota; ganados++; }
                 if(p.estado === 'lost') perdidos++;
@@ -1536,14 +1556,62 @@ window.cargarGestionRetoActivoAdmin = async function() {
             
             tk.picks.forEach((p, index) => {
                 let bgStatus = p.estado === 'won' ? 'bg-green-900/30 border-green-500/50' : (p.estado === 'lost' ? 'bg-red-900/30 border-red-500/50' : 'bg-gray-900/50 border-white/10');
-                html += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex justify-between items-center"><div class="flex flex-col"><span class="text-[9px] font-bold text-white">${p.home_team} vs ${p.away_team}</span><span class="text-[8px] text-yellow-500">PICK: ${p.nombre} (C: ${p.cuota})</span></div><div class="flex gap-1"><button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition"><i class="fas fa-check"></i></button><button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition"><i class="fas fa-times"></i></button><button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition"><i class="fas fa-undo"></i></button></div></div>`;
+                
+                // 🚀 MATEMÁTICA DE PORCENTAJES (ADMIN)
+                let startPct = runningMulti * 100;
+                let endPct = (runningMulti * p.cuota) * 100;
+
+                if (p.estado === 'won') runningMulti *= p.cuota;
+                else if (p.estado === 'lost') endPct = 0;
+
+                let colorPct = p.estado === 'won' ? 'text-green-400' : (p.estado === 'lost' ? 'text-red-400' : 'text-gray-400');
+
+                html += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex justify-between items-center">
+                    <div class="flex flex-col w-1/2">
+                        <span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span>
+                        <span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span>
+                        <span class="text-[8px] font-black ${colorPct} mt-1">${startPct.toFixed(1)}% ➔ ${endPct.toFixed(1)}%</span>
+                    </div>
+                    <div class="flex gap-1 items-center justify-end w-1/2">
+                        <button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition" title="Marcar Ganado"><i class="fas fa-check"></i></button>
+                        <button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition" title="Marcar Perdido"><i class="fas fa-times"></i></button>
+                        <button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition" title="Devolver a Pendiente"><i class="fas fa-undo"></i></button>
+                        <button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 ml-1 transition" title="Borrar Pick"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>`;
             });
             html += `</div>`; panel.innerHTML = html;
         } else { panel.innerHTML = ''; }
     } catch(e) { console.error(e); }
 };
 
-// 🚀 NUEVA FUNCIÓN: ACTUALIZAR EL ESTADO DEL PICK EN LA NUBE
+// 🚀 NUEVA FUNCIÓN: ELIMINAR PICK ESPECÍFICO DE LA ESCALERA EN VIVO
+window.eliminarPickEscalera = async function(index) {
+    window.mostrarConfirmacion("Borrar Pick", "¿Eliminar esta selección de la Escalera? Los porcentajes se recalcularán automáticamente.", async () => {
+        try {
+            const snap = await getDoc(doc(db, "global", "escalera"));
+            if(snap.exists()) {
+                const data = snap.data();
+                data.ticket_data.picks.splice(index, 1); // Extraemos el pick del array
+                
+                let perdidos = 0; let ganados = 0;
+                data.ticket_data.picks.forEach(p => { if(p.estado === 'lost') perdidos++; if(p.estado === 'won') ganados++; });
+                
+                if (data.ticket_data.picks.length === 0) data.ticket_data.estado_reto = 'activo';
+                else if (perdidos > 0) data.ticket_data.estado_reto = 'perdido';
+                else if (ganados === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado';
+                else data.ticket_data.estado_reto = 'activo';
+                
+                await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data });
+                window.cargarGestionRetoActivoAdmin();
+                
+                if(document.getElementById('vista_escalera').classList.contains('view-active')) { window.cargarRetoEscaleraNube(); }
+                window.mostrarAlerta("Actualizado", "Pick eliminado y porcentajes ajustados.", "success");
+            }
+        } catch(e) { window.mostrarAlerta("Error", "Fallo al eliminar.", "error"); }
+    });
+};
+
 window.marcarPickEscalera = async function(index, estado) {
     try {
         const snap = await getDoc(doc(db, "global", "escalera"));
@@ -1561,7 +1629,6 @@ window.marcarPickEscalera = async function(index, estado) {
             await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data });
             window.cargarGestionRetoActivoAdmin();
             
-            // Si el cliente está en la pantalla de escalera, se le actualiza en vivo
             if(document.getElementById('vista_escalera').classList.contains('view-active')) { window.cargarRetoEscaleraNube(); }
         }
     } catch(e) { window.mostrarAlerta("Error", "No se pudo actualizar el pick", "error"); }
