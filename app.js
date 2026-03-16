@@ -20,7 +20,6 @@ const db = getFirestore(app);
 const auth = getAuth(app); 
 const messaging = getMessaging(app);
 
-// 🛡️ ENRUTADOR INTERNO Y RECEPCIÓN DEL SERVICE WORKER
 window.procesarEnlaceInterno = function(urlStr) {
     if(!urlStr) return;
     if(urlStr.includes('view=escalera')) {
@@ -49,9 +48,6 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// ==========================================
-// 2. FUNCIONES VITALES Y NOTIFICACIONES IN-APP
-// ==========================================
 const VAPID_KEY = "BO7AkZgMGzNtUBR8ZShudo6sW0zTbS7lyOZszkVrbJ3WLL80yEBRIfgreLnFpPHe4cBCLr_J8XmyckjpwMu6xTo";
 
 window.registrarTokenPush = async function(codigoUsuario, modoSilencioso = false) {
@@ -64,7 +60,6 @@ window.registrarTokenPush = async function(codigoUsuario, modoSilencioso = false
 
     try {
         if(btn && !modoSilencioso) { btn.innerHTML = '<i class="fas fa-spinner fa-spin text-lg mr-2"></i> Solicitando permiso...'; }
-        
         const permission = modoSilencioso ? Notification.permission : await Notification.requestPermission();
         
         if (permission === 'granted') {
@@ -72,34 +67,16 @@ window.registrarTokenPush = async function(codigoUsuario, modoSilencioso = false
             const swRegistration = await navigator.serviceWorker.ready;
             const tokenPromise = getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
-            
             const token = await Promise.race([tokenPromise, timeoutPromise]);
             
             if (token) {
                 let codigoGuardar = codigoUsuario || (adminAutenticado ? "ADMIN_MASTER" : "DESCONOCIDO");
                 if (codigoGuardar !== "DESCONOCIDO") {
                     await setDoc(doc(db, "codigos_nube", codigoGuardar), { fcmToken: token }, { merge: true });
-                    
                     if(!modoSilencioso) window.mostrarAlerta("¡Fondo Vinculado!", "Recibirás señales Diamante directamente.", "success");
-                    
                     if(btn) { 
-                        if(!modoSilencioso) {
-                            btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Activadas'; 
-                            btn.disabled = true; 
-                            btn.classList.replace('bg-blue-600', 'bg-green-600'); 
-                        }
-                        
-                        setTimeout(() => {
-                            btn.style.transition = "opacity 0.5s ease, height 0.5s ease, margin 0.5s ease, padding 0.5s ease";
-                            btn.style.opacity = "0";
-                            setTimeout(() => {
-                                btn.style.height = "0px";
-                                btn.style.margin = "0px";
-                                btn.style.padding = "0px";
-                                btn.style.overflow = "hidden";
-                                setTimeout(() => btn.remove(), 500);
-                            }, 500);
-                        }, modoSilencioso ? 0 : 1500);
+                        if(!modoSilencioso) { btn.innerHTML = '<i class="fas fa-check-circle text-lg mr-2"></i> Alertas Activadas'; btn.disabled = true; btn.classList.replace('bg-blue-600', 'bg-green-600'); }
+                        setTimeout(() => { btn.style.transition = "opacity 0.5s ease, height 0.5s ease, margin 0.5s ease, padding 0.5s ease"; btn.style.opacity = "0"; setTimeout(() => { btn.style.height = "0px"; btn.style.margin = "0px"; btn.style.padding = "0px"; btn.style.overflow = "hidden"; setTimeout(() => btn.remove(), 500); }, 500); }, modoSilencioso ? 0 : 1500);
                     }
                 }
             } else { if(!modoSilencioso) throw new Error("Token vacío"); }
@@ -162,9 +139,7 @@ window.iniciarSwipeNotificaciones = function() {
                 let hidden = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]');
                 if(!hidden.includes(id)) hidden.push(id);
                 localStorage.setItem('oracle_hidden_notifs', JSON.stringify(hidden));
-                setTimeout(() => {
-                    parent.style.height = parent.offsetHeight + 'px'; parent.style.transition = 'all 0.3s ease'; parent.style.opacity = '0'; parent.style.height = '0px'; parent.style.marginBottom = '0px'; setTimeout(() => parent.remove(), 300);
-                }, 100);
+                setTimeout(() => { parent.style.height = parent.offsetHeight + 'px'; parent.style.transition = 'all 0.3s ease'; parent.style.opacity = '0'; parent.style.height = '0px'; parent.style.marginBottom = '0px'; setTimeout(() => parent.remove(), 300); }, 100);
             } else { card.style.transform = `translateX(0)`; if (deleteBg) deleteBg.style.opacity = '0'; }
             setTimeout(() => window.isSwiping = false, 100);
         });
@@ -172,68 +147,31 @@ window.iniciarSwipeNotificaciones = function() {
 };
 
 window.abrirBandejaNotificaciones = async function() {
-    if (!modoVipActivo && !adminAutenticado) {
-        window.mostrarAlerta("Acceso Restringido", "Debes iniciar sesión con tu credencial para leer los comunicados oficiales del Gestor.", "warning");
-        window.abrirModalLogin(); return;
-    }
+    if (!modoVipActivo && !adminAutenticado) { window.mostrarAlerta("Acceso Restringido", "Debes iniciar sesión con tu credencial para leer los comunicados oficiales del Gestor.", "warning"); window.abrirModalLogin(); return; }
     let modal = document.getElementById('modalBandejaNotificaciones');
     if (!modal) {
-        document.body.insertAdjacentHTML('beforeend', `
-        <div id="modalBandejaNotificaciones" class="fixed inset-0 bg-black/95 hidden items-end justify-center z-[400] transition-opacity duration-300 backdrop-blur-md">
-            <div class="bg-gray-900 border-t border-blue-500/50 w-full h-[85vh] rounded-t-3xl shadow-[0_-10px_40px_rgba(59,130,246,0.15)] flex flex-col relative transform translate-y-full transition-transform duration-300" id="bandejaContenido">
-                <div class="p-5 flex justify-between items-center border-b border-white/10 bg-black/50 rounded-t-3xl">
-                    <h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Notificaciones FR</h3>
-                    <button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button>
-                </div>
-                <div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
-                    <div class="text-center p-10"><i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i></div>
-                </div>
-            </div>
-        </div>`);
+        document.body.insertAdjacentHTML('beforeend', `<div id="modalBandejaNotificaciones" class="fixed inset-0 bg-black/95 hidden items-end justify-center z-[400] transition-opacity duration-300 backdrop-blur-md"><div class="bg-gray-900 border-t border-blue-500/50 w-full h-[85vh] rounded-t-3xl shadow-[0_-10px_40px_rgba(59,130,246,0.15)] flex flex-col relative transform translate-y-full transition-transform duration-300" id="bandejaContenido"><div class="p-5 flex justify-between items-center border-b border-white/10 bg-black/50 rounded-t-3xl"><h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Notificaciones FR</h3><button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button></div><div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-900 to-black overflow-x-hidden"><div class="text-center p-10"><i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i></div></div></div></div>`);
         modal = document.getElementById('modalBandejaNotificaciones');
     }
     modal.classList.remove('hidden'); modal.style.display = 'flex';
     setTimeout(() => { document.getElementById('bandejaContenido').classList.remove('translate-y-full'); }, 10);
-
     const lista = document.getElementById('listaBandejaNotificaciones');
     try {
-        const hiddenNotifs = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]');
-        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(15));
-        const snap = await getDocs(q);
-        lista.innerHTML = ''; let validCount = 0;
+        const hiddenNotifs = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]'); const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(15)); const snap = await getDocs(q); lista.innerHTML = ''; let validCount = 0;
         snap.forEach(doc => {
-            const data = doc.data(); 
-            const esNotificacionEscalera = data.audiencia === "escalera" || (data.url && data.url.includes("escalera")) || (data.titulo && data.titulo.toLowerCase().includes("escalera"));
+            const data = doc.data(); const esNotificacionEscalera = data.audiencia === "escalera" || (data.url && data.url.includes("escalera")) || (data.titulo && data.titulo.toLowerCase().includes("escalera"));
             if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) return;
-            if (hiddenNotifs.includes(doc.id)) return; 
-            validCount++;
-            const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-            let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400';
-            let clickAction = data.url && data.url !== "/" ? `onclick="if(!window.isSwiping) window.procesarEnlaceInterno('${data.url}')"` : ``;
-            lista.innerHTML += `
-            <div class="notif-item relative mb-3 overflow-hidden" data-id="${doc.id}">
-                <div class="absolute inset-0 bg-red-600 rounded-xl flex justify-end items-center pr-5 text-white font-black text-xs shadow-inner opacity-0 transition-opacity duration-300"><i class="fas fa-trash-alt"></i></div>
-                <div ${clickAction} class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative transition-transform duration-200 notif-card w-full z-10 block ${data.url && data.url !== '/' ? 'cursor-pointer active:scale-[0.98]' : ''}">
-                    <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
-                    <div class="flex justify-between items-start mb-2"><span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>${data.url && data.url !== "/" ? '<i class="fas fa-chevron-right text-gray-500 text-[10px]"></i>' : ''}</div>
-                    <p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p>
-                    <div class="flex justify-between items-center border-t border-white/5 pt-2"><span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span><span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span></div>
-                </div>
-            </div>`;
+            if (hiddenNotifs.includes(doc.id)) return; validCount++;
+            const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400'; let clickAction = data.url && data.url !== "/" ? `onclick="if(!window.isSwiping) window.procesarEnlaceInterno('${data.url}')"` : ``;
+            lista.innerHTML += `<div class="notif-item relative mb-3 overflow-hidden" data-id="${doc.id}"><div class="absolute inset-0 bg-red-600 rounded-xl flex justify-end items-center pr-5 text-white font-black text-xs shadow-inner opacity-0 transition-opacity duration-300"><i class="fas fa-trash-alt"></i></div><div ${clickAction} class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative transition-transform duration-200 notif-card w-full z-10 block ${data.url && data.url !== '/' ? 'cursor-pointer active:scale-[0.98]' : ''}"><div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div><div class="flex justify-between items-start mb-2"><span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>${data.url && data.url !== "/" ? '<i class="fas fa-chevron-right text-gray-500 text-[10px]"></i>' : ''}</div><p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p><div class="flex justify-between items-center border-t border-white/5 pt-2"><span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span><span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span></div></div></div>`;
         });
         if(validCount === 0) { lista.innerHTML = `<div class="text-center mt-10 text-gray-500 text-xs font-bold uppercase tracking-widest"><i class="fas fa-check-circle text-4xl mb-3 opacity-50 block"></i> Bandeja Vacía</div>`; } else { setTimeout(() => window.iniciarSwipeNotificaciones(), 50); }
     } catch(e) { lista.innerHTML = `<div class="text-center text-red-500 text-xs">Error de red.</div>`; }
 };
 
-window.cerrarBandejaNotificaciones = function() {
-    const modal = document.getElementById('modalBandejaNotificaciones'); const contenido = document.getElementById('bandejaContenido');
-    if(contenido) { contenido.classList.add('translate-y-full'); }
-    setTimeout(() => { if(modal) { modal.classList.add('hidden'); modal.style.display = 'none'; } }, 300);
-};
-
+window.cerrarBandejaNotificaciones = function() { const modal = document.getElementById('modalBandejaNotificaciones'); const contenido = document.getElementById('bandejaContenido'); if(contenido) { contenido.classList.add('translate-y-full'); } setTimeout(() => { if(modal) { modal.classList.add('hidden'); modal.style.display = 'none'; } }, 300); };
 const desplegarCalendarioForzado = (e) => { if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'date') { try { e.target.showPicker(); } catch (ex) { } } };
 document.addEventListener('click', desplegarCalendarioForzado); document.addEventListener('focusin', desplegarCalendarioForzado); 
-
 window.abrirModalLogin = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } if(modoVipActivo) return; const m = document.getElementById('modalLogin'); if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; } };
 window.cerrarModalLogin = function() { const m = document.getElementById('modalLogin'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } correoAdminTemp = ""; const inputElement = document.getElementById('vipCode'); const btn = document.getElementById('btnValidarCodigo'); if(inputElement) { inputElement.type = 'text'; inputElement.placeholder = 'CÓDIGO DE INVERSOR'; inputElement.value = ''; } if(btn) { btn.innerHTML = 'VERIFICAR ACCESO'; } };
 window.cerrarConfirmGlobal = function() { const m = document.getElementById('modalConfirmGlobal'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } };
@@ -244,14 +182,11 @@ window.mostrarAlerta = function(titulo, mensaje, tipo = 'info', actionUrl = null
     const modal = document.getElementById('modalAlertaGlobal'); const icon = document.getElementById('alertaIcono'); const title = document.getElementById('alertaTitulo'); const msg = document.getElementById('alertaMensaje'); const btn = document.getElementById('btnAlertaGlobal'); const content = document.getElementById('modalAlertaContenido');
     if(!modal) { alert(`${titulo}: ${mensaje}`); return; }
     title.innerText = titulo; msg.innerHTML = mensaje; 
-    
     btn.onclick = function() { window.cerrarAlertaGlobal(); if(actionUrl) { window.procesarEnlaceInterno(actionUrl); } };
-
     if(tipo === 'success') { icon.innerHTML = '<i class="fas fa-check-circle text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-green-600 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"; content.className = "bg-gray-900 border border-green-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
     else if (tipo === 'error') { icon.innerHTML = '<i class="fas fa-times-circle text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"; content.className = "bg-gray-900 border border-red-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
     else if (tipo === 'warning') { icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 drop-shadow-[0_0_15px_rgba(212,175,55,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-yellow-500 text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]"; content.className = "bg-gray-900 border border-yellow-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(212,175,55,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
     else { icon.innerHTML = '<i class="fas fa-info-circle text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"; content.className = "bg-gray-900 border border-blue-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; }
-    
     if(actionUrl) { btn.innerHTML = '<i class="fas fa-rocket mr-1"></i> IR A LA SEÑAL'; } else { btn.innerHTML = 'ACEPTAR'; }
     modal.classList.remove('hidden'); modal.style.display = 'flex';
 };
@@ -265,29 +200,20 @@ window.mostrarConfirmacion = function(titulo, mensaje, callback) {
 
 function obtenerHuellaDispositivo() { try { let miHuella = localStorage.getItem('oraclebet_huella_secreta'); if (!miHuella) { miHuella = 'disp_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36); localStorage.setItem('oraclebet_huella_secreta', miHuella); } return miHuella; } catch(e) { return 'disp_temp_' + Math.random().toString(36).substring(2, 9); } }
 
-let deferredPrompt;
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://');
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
+let deferredPrompt; const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://'); const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 if (!isStandalone) {
     if (isIOS) {
         const banner = document.getElementById('installBanner'); const btn = document.getElementById('btnInstalarApp');
-        if(banner) banner.classList.remove('hidden');
-        if(btn) { btn.onclick = () => { const m = document.getElementById('iosInstallModal'); if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; } }; }
+        if(banner) banner.classList.remove('hidden'); if(btn) { btn.onclick = () => { const m = document.getElementById('iosInstallModal'); if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; } }; }
     } else {
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); deferredPrompt = e; const banner = document.getElementById('installBanner'); const btn = document.getElementById('btnInstalarApp');
-            if(banner) banner.classList.remove('hidden');
-            if(btn) { btn.onclick = async () => { banner.classList.add('hidden'); deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') { console.log('App instalada'); } deferredPrompt = null; }; }
-        });
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const banner = document.getElementById('installBanner'); const btn = document.getElementById('btnInstalarApp'); if(banner) banner.classList.remove('hidden'); if(btn) { btn.onclick = async () => { banner.classList.add('hidden'); deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; deferredPrompt = null; }; } });
     }
 }
 
 const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo(); 
 let modoVipActivo = false; let modoIlimitadoActivo = false; let codigoActivoUsuario = ''; let estadoEscalera = 'none';
 let CACHE_PARTIDOS_FUTUROS = []; let partidosGlobales = []; let partidosFiltrados = []; let competicionesGlobales = []; let seleccionesVIPGlobal = []; let ticketDinamicoVIP = []; let modoMercadoGlobal = 'mixto'; let modoRiesgoGlobal = false; 
-let perfilApadrinamiento = null; let unsubscribeApadrinamiento = null; let tiempoInactividad = 0; const TIEMPO_MAXIMO_SEGUNDOS = 180; let timerInactividad;
-let filtroIAActivo = false; let correoAdminTemp = ""; 
+let perfilApadrinamiento = null; let unsubscribeApadrinamiento = null; let tiempoInactividad = 0; const TIEMPO_MAXIMO_SEGUNDOS = 180; let timerInactividad; let filtroIAActivo = false; let correoAdminTemp = ""; 
 
 const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': { 'titulo': 'Goles Totales' }, 'spreads': { 'titulo': 'Hándicap (Spread)' }, 'alternate_totals_corners': { 'titulo': 'Líneas de Córners' }, 'team_total_corners': { 'titulo': 'Córners por Equipo' }, 'corners_handicap': { 'titulo': 'Hándicap de Córners' }, 'alternate_totals_cards': { 'titulo': 'Líneas de Tarjetas' }, 'player_shots': { 'titulo': 'Disparos del Jugador' }, 'player_shots_on_target': { 'titulo': 'Disparos a Puerta' }, 'player_cards': { 'titulo': 'Tarjeta a Jugador' } };
 
@@ -306,27 +232,16 @@ function formatoCOP(valor) { return new Intl.NumberFormat('es-CO', { style: 'cur
 
 async function precargarBaseDeDatos() {
     const cacheKey = 'oracle_cache_cartelera'; const cacheTimeKey = 'oracle_cache_tiempo'; const ahoraMs = Date.now();
-    try {
-        const cacheGuardado = localStorage.getItem(cacheKey); const tiempoGuardado = localStorage.getItem(cacheTimeKey);
-        if (cacheGuardado && tiempoGuardado && (ahoraMs - parseInt(tiempoGuardado)) < 900000) {
-            CACHE_PARTIDOS_FUTUROS = JSON.parse(cacheGuardado); let ligasMap = {};
-            CACHE_PARTIDOS_FUTUROS.forEach(p => { if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; } });
-            competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); return; 
-        }
-    } catch (errorCache) { localStorage.removeItem(cacheKey); localStorage.removeItem(cacheTimeKey); }
-
+    try { const cacheGuardado = localStorage.getItem(cacheKey); const tiempoGuardado = localStorage.getItem(cacheTimeKey); if (cacheGuardado && tiempoGuardado && (ahoraMs - parseInt(tiempoGuardado)) < 900000) { CACHE_PARTIDOS_FUTUROS = JSON.parse(cacheGuardado); let ligasMap = {}; CACHE_PARTIDOS_FUTUROS.forEach(p => { if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; } }); competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); return; } } catch (errorCache) { localStorage.removeItem(cacheKey); localStorage.removeItem(cacheTimeKey); }
     const tiempoActualISO = new Date().toISOString(); 
     try {
-        const q = query(collection(db, "eventos_sincronizados"), where("commence_time", ">=", tiempoActualISO)); const snap = await getDocs(q); 
-        CACHE_PARTIDOS_FUTUROS = []; let ligasMap = {};
+        const q = query(collection(db, "eventos_sincronizados"), where("commence_time", ">=", tiempoActualISO)); const snap = await getDocs(q); CACHE_PARTIDOS_FUTUROS = []; let ligasMap = {};
         snap.forEach(doc => { 
             let p = doc.data(); p.id = doc.id; 
             if(p.sport_key && p.sport_key.includes('soccer')) { 
-                const d = new Date(p.commence_time); const mes = String(d.getMonth() + 1).padStart(2, '0'); const dia = String(d.getDate()).padStart(2, '0');
-                p._fechaFiltro = `${d.getFullYear()}-${mes}-${dia}`; p._timestamp = d.getTime(); p._textoBusqueda = `${p.home_team} ${p.away_team}`.toLowerCase();
+                const d = new Date(p.commence_time); const mes = String(d.getMonth() + 1).padStart(2, '0'); const dia = String(d.getDate()).padStart(2, '0'); p._fechaFiltro = `${d.getFullYear()}-${mes}-${dia}`; p._timestamp = d.getTime(); p._textoBusqueda = `${p.home_team} ${p.away_team}`.toLowerCase();
                 let tieneIA = false; if(p.bookmakers) { p.bookmakers.forEach(b => { b.markets?.forEach(m => { m.outcomes?.forEach(o => { if (o.verificado_ia) tieneIA = true; }); }); }); } p._tieneIA = tieneIA;
-                CACHE_PARTIDOS_FUTUROS.push(p); 
-                if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; } 
+                CACHE_PARTIDOS_FUTUROS.push(p); if(!ligasMap[p.sport_key]) { ligasMap[p.sport_key] = { key: p.sport_key, title: p.sport_title, group: p.sport_group || 'Soccer' }; } 
             } 
         });
         try { localStorage.setItem(cacheKey, JSON.stringify(CACHE_PARTIDOS_FUTUROS)); localStorage.setItem(cacheTimeKey, ahoraMs.toString()); } catch(e) {}
@@ -340,9 +255,7 @@ async function precargarBaseDeDatos() {
 }
 
 let adminAutenticado = false;
-onAuthStateChanged(auth, (user) => {
-    if (user) { adminAutenticado = true; if(document.readyState === 'complete' || document.readyState === 'interactive') { window.renderizarLayoutAdmin(); } else { document.addEventListener('DOMContentLoaded', () => { window.renderizarLayoutAdmin(); }); } } else { adminAutenticado = false; }
-});
+onAuthStateChanged(auth, (user) => { if (user) { adminAutenticado = true; if(document.readyState === 'complete' || document.readyState === 'interactive') { window.renderizarLayoutAdmin(); } else { document.addEventListener('DOMContentLoaded', () => { window.renderizarLayoutAdmin(); }); } } else { adminAutenticado = false; } });
 
 window.iniciarApp = async function() { 
     if(adminAutenticado) return; 
@@ -354,15 +267,10 @@ window.iniciarApp = async function() {
     await precargarBaseDeDatos(); 
     try { const session = localStorage.getItem('oracle_session'); if(session) { const data = JSON.parse(session); window.concederAcceso(data.ilimitado, data.code, data.ladderStat, true); } } catch(e) {} 
     window.ejecutarTopFutbol(); 
-
     setTimeout(() => { if (window.location.search) { window.procesarEnlaceInterno(window.location.href); window.history.replaceState({}, document.title, "/"); } window.verificarNotificacionesPendientes(); }, 1500); 
 };
-
 if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', window.iniciarApp); } else { window.iniciarApp(); }
 
-// ==========================================
-// 5. MOTOR DE LOGIN Y PANEL DE ADMIN (CRM)
-// ==========================================
 const promesaConTimeout = (promesa, ms) => { let timeout = new Promise((resolve, reject) => { let id = setTimeout(() => { clearTimeout(id); reject(new Error("Timeout")); }, ms); }); return Promise.race([promesa, timeout]); };
 
 window.preValidarCodigo = function() {
@@ -390,27 +298,14 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
     if(!codigoIngresado) return;
     const btn = btnObj || document.getElementById('btnValidarCodigo'); 
     if(!btnObj && btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; }
-    
     if (codigoIngresado.startsWith("MASTER_")) {
-        try {
-            if (!correoAdminTemp) { correoAdminTemp = prompt("Introduce el correo del Administrador:"); if (!correoAdminTemp) throw new Error("Correo requerido."); }
-            const p = codigoIngresado.split("MASTER_")[1];
-            await promesaConTimeout(signInWithEmailAndPassword(auth, correoAdminTemp, p), 8000);
-            window.cerrarModalLogin(); window.renderizarLayoutAdmin();
-        } catch(e) { correoAdminTemp = ""; window.mostrarAlerta("Acceso Denegado", "Credenciales de Master incorrectas.", "error"); } finally { if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; } } return;
+        try { if (!correoAdminTemp) { correoAdminTemp = prompt("Introduce el correo del Administrador:"); if (!correoAdminTemp) throw new Error("Correo requerido."); } const p = codigoIngresado.split("MASTER_")[1]; await promesaConTimeout(signInWithEmailAndPassword(auth, correoAdminTemp, p), 8000); window.cerrarModalLogin(); window.renderizarLayoutAdmin(); } catch(e) { correoAdminTemp = ""; window.mostrarAlerta("Acceso Denegado", "Credenciales de Master incorrectas.", "error"); } finally { if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; } } return;
     }
-    
     try {
         const docRef = doc(db, "codigos_nube", codigoIngresado); const docSnap = await promesaConTimeout(getDoc(docRef), 8000);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.deviceID && data.deviceID !== HUELLA_ESTE_CELULAR) {
-                window.mostrarAlerta("Licencia en Uso", "Este código ya está vinculado a otro celular. Contacta al gestor.", "error");
-            } else {
-                if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR }); }
-                window.mostrarAlerta("Acceso Concedido", `Bienvenido.`, "success");
-                window.concederAcceso(data.ilimitado, codigoIngresado, data.ladderStatus || 'none', false);
-            }
+            if (data.deviceID && data.deviceID !== HUELLA_ESTE_CELULAR) { window.mostrarAlerta("Licencia en Uso", "Este código ya está vinculado a otro celular. Contacta al gestor.", "error"); } else { if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR }); } window.mostrarAlerta("Acceso Concedido", `Bienvenido.`, "success"); window.concederAcceso(data.ilimitado, codigoIngresado, data.ladderStatus || 'none', false); }
         } else { window.mostrarAlerta("Acceso Denegado", "Código no existe en la base de datos.", "error"); }
     } catch(e) { window.mostrarAlerta("Error de Red", "Tiempo de espera agotado. Revisa tu conexión a internet.", "error"); } finally { if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; } }
 };
@@ -861,13 +756,12 @@ window.cargarRetoEscaleraNube = async function() {
 
                     let startPctGlobal = (currentCap / capInicial) * 100;
                     let endPctGlobal = (winCap / capInicial) * 100;
-                    let lostPctGlobal = (loseCap / capInicial) * 100;
 
                     if(estadoP === 'won') {
                         currentCap = winCap;
                     } else if (estadoP === 'lost') {
                         currentCap = loseCap;
-                        endPctGlobal = lostPctGlobal;
+                        endPctGlobal = (loseCap / capInicial) * 100;
                     }
                     
                     let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; 
@@ -1027,7 +921,9 @@ window.generarTicketApadrinamiento = async function() {
 
         if (ticketFinal.length === 0) { window.mostrarAlerta("Mercado Inestable (72H)", "El mercado está seco. No hay opciones viables para hoy ni para los próximos 2 días.", "error"); btn.innerHTML = `<i class="fas fa-shield-alt text-lg"></i> SIN OPCIONES (72H)`; return; }
         
-        let porcentajeStake = 10; if (esPlanB) { porcentajeStake = Math.max(1, Math.min(5, Math.floor((probPromedio - 50) / 9))); }
+        let porcentajeStake = 10; 
+        if (esPlanB) { porcentajeStake = Math.max(1, Math.min(5, Math.floor((probPromedio - 50) / 9))); }
+
         const montoApostar = Math.floor(perfilApadrinamiento.bankroll_actual * (porcentajeStake / 100)); const hoyStr = new Date().toLocaleDateString('es-CO', {timeZone: 'America/Bogota'}); const ticketId = Date.now().toString();
         let objTicket = { id: ticketId, codigo_usuario: codigoActivoUsuario, fecha: hoyStr, cuota_sistema: parseFloat(cuotaAlcanzada.toFixed(2)), cuota_usuario: parseFloat(cuotaAlcanzada.toFixed(2)), stake_porcentaje: porcentajeStake, monto_apostar: montoApostar, estado: 'pendiente', timestamp: Date.now(), picks: ticketFinal.map(t => {
             const d = new Date(t.partido.commence_time); const fStr = d.toLocaleDateString('es-ES', {day: '2-digit', month: 'short', timeZone: 'America/Bogota'});
@@ -1041,6 +937,7 @@ window.generarTicketApadrinamiento = async function() {
                 let ico = "fa-handshake"; if(t.opcion.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(t.opcion.mercadoKey.includes('corners')) ico = "fa-flag"; else if(t.opcion.mercadoKey.includes('cards')) ico = "fa-square"; else if(t.opcion.mercadoKey === 'totals') ico = "fa-futbol"; else if(t.opcion.mercadoKey === 'spreads') ico = "fa-balance-scale";
                 return `<div class="bg-gray-900/50 p-3 rounded-xl mb-2 border border-white/5 relative overflow-hidden shadow-md"><div class="absolute top-0 right-0 bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">PROB: ${t.opcion.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo} • <span class="text-yellow-500">${fStr}</span></div><div class="text-[10px] font-bold text-white mb-2 border-b border-white/5 pb-2">${t.partido.home_team} vs ${t.partido.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded-lg border border-gray-700"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${formatearPickEspanol(t.opcion.nombre, t.opcion.point, t.opcion.mercadoKey)}</span><span class="text-white font-black text-sm">${t.opcion.cuota.toFixed(2)}</span></div></div>`;
             }).join('');
+            
             let container = document.createElement('div'); container.id = 'previewArriesgar'; btn.parentNode.insertBefore(container, btn);
             container.innerHTML = `<div class="bg-red-900/20 border border-red-500/50 p-4 rounded-xl mb-3 shadow-inner transform transition-all animate-pulse"><div class="text-red-400 font-black text-[11px] uppercase mb-2"><i class="fas fa-exclamation-triangle"></i> MERCADO INESTABLE - PLAN B</div><p class="text-[9px] text-gray-300 mb-3 leading-relaxed">FR no encontró diamantes confirmados. El algoritmo reducirá tu Stake al <b class="text-yellow-500 text-xs">${porcentajeStake}%</b> para proteger tu capital.</p><div class="mb-3">${picksHtml}</div><div class="text-right text-xs font-black text-white pt-2 border-t border-white/10">Cuota Final: <span class="text-yellow-500">${cuotaAlcanzada.toFixed(2)}</span></div></div>`;
             window.ticketPlanBPendiente = objTicket;
@@ -1063,6 +960,7 @@ window.cargarHistorialApadrinamiento = async function() {
             let bgStatus = 'bg-gray-800/50 border-gray-600'; let badgeStatus = '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm"><i class="far fa-clock"></i> Abierta</span>';
             if(t.estado === 'won') { bgStatus = 'bg-green-900/20 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)]'; badgeStatus = '<span class="bg-green-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-md"><i class="fas fa-check-circle"></i> Ganada</span>'; }
             if(t.estado === 'lost') { bgStatus = 'bg-red-900/20 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]'; badgeStatus = '<span class="bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-md"><i class="fas fa-times-circle"></i> Perdida</span>'; }
+            
             let picksHtml = t.picks.map(p => { 
                 const defMercado = definicionesApuestas[p.mercado] || { 'titulo': 'Mercado Especial' }; 
                 let ico = "fa-handshake"; if(p.mercado.includes('shots')) ico = "fa-bullseye"; else if(p.mercado.includes('corners')) ico = "fa-flag"; else if(p.mercado.includes('cards')) ico = "fa-square"; else if(p.mercado === 'totals') ico = "fa-futbol"; else if(p.mercado === 'spreads') ico = "fa-balance-scale"; 
@@ -1070,12 +968,13 @@ window.cargarHistorialApadrinamiento = async function() {
                 let probBadge = p.probabilidad ? `<div class="absolute top-0 right-0 bg-gray-700 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">PROB: ${p.probabilidad}%</div>` : '';
                 return `<div class="bg-gray-900/60 p-3 rounded-lg mb-2 border border-white/5 relative overflow-hidden shadow-inner">${probBadge}<div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[10px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido}</div><div class="flex justify-between items-center bg-black/40 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[9px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${p.pick}</span>${badgeIA}<button onclick="window.abrirModalAyuda('${p.mercado}', '${p.pick.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-[11px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span></div></div>`; 
             }).join('');
+            
             cont.innerHTML += `<div class="${bgStatus} p-4 rounded-xl border relative mb-4 transition-all"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-[9px] font-bold text-gray-400"><i class="far fa-calendar-alt"></i> Generado: ${t.fecha}</span>${badgeStatus}</div><div class="mb-4">${picksHtml}</div><div class="flex justify-between items-end bg-black/60 p-3 rounded-lg border border-black shadow-inner"><div class="flex flex-col gap-1 w-1/2 border-r border-white/10 pr-3"><span class="text-[8px] text-gray-500 uppercase font-bold">Inversión (${t.stake_porcentaje}%)</span><span class="text-sm font-black text-white">${formatoCOP(t.monto_apostar)}</span></div><div class="flex flex-col gap-1 w-1/2 pl-3"><span class="text-[8px] text-gray-500 uppercase font-bold flex justify-between items-center">Cuota Real ${t.estado === 'pendiente' ? `<button onclick="window.editarCuotaUsuario('${t.id}', ${t.cuota_usuario})" class="text-blue-400 hover:text-blue-300 p-1"><i class="fas fa-edit"></i></button>` : ''}</span><span class="text-sm font-black text-yellow-500">${t.cuota_usuario.toFixed(2)}</span></div></div></div>`;
         });
     } catch(e) { cont.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al cargar historial.</p>`; }
 };
 
-window.editarCuotaUsuario = async function(id, cuotaActual) { const nueva = prompt("Ingresa la cuota exacta que te dio tu casa de apuestas:", cuotaActual); if (nueva && !isNaN(parseFloat(nueva))) { try { await updateDoc(doc(db, "tickets_apadrinamiento", id), { cuota_usuario: parseFloat(nueva) }); window.cargarHistorialApadrinamiento(); window.mostrarAlerta("Guardado", "Estadística actualizada.", "success"); } catch(e) {} } };
+window.editarCuotaUsuario = async function(id, cuotaActual) { const nueva = prompt("Ingresa la cuota exacta que te dio tu casa de apuestas (usa punto para decimales, ej: 1.45):", cuotaActual); if (nueva && !isNaN(parseFloat(nueva))) { try { await updateDoc(doc(db, "tickets_apadrinamiento", id), { cuota_usuario: parseFloat(nueva) }); window.cargarHistorialApadrinamiento(); window.mostrarAlerta("Guardado", "Estadística actualizada.", "success"); } catch(e) {} } };
 
 // ==========================================
 // 12. ADMIN: GENERADOR RETO ESCALERA
@@ -1099,6 +998,7 @@ window.generarRetoAdmin = async function() {
         
         let ops = []; 
         partidosDelDia.forEach(p => { let valiosas = obtenerOpcionesRentables(p); valiosas.forEach(v => { if(v.probabilidad >= probMin && v.cuota >= 1.15 && v.cuota <= 2.50) { ops.push({ partido: p, ...v }); } }); }); 
+        
         ops.sort((a,b) => {
             if(a.verificado_ia && !b.verificado_ia) return -1;
             if(!a.verificado_ia && b.verificado_ia) return 1;
@@ -1183,7 +1083,7 @@ window.cargarGestionRetoActivoAdmin = async function() {
         const snap = await getDoc(doc(db, "global", "escalera"));
         if(snap.exists()) {
             const data = snap.data(); const tk = data.ticket_data;
-            if(!tk) { panel.innerHTML = ''; return; }
+            if(!tk || !tk.picks) { panel.innerHTML = ''; return; }
             
             let capitalInicial = tk.capital_inicial || 50000;
             let currentCap = capitalInicial;
@@ -1213,8 +1113,8 @@ window.cargarGestionRetoActivoAdmin = async function() {
                 let colorPct = p.estado === 'won' ? 'text-green-400' : (p.estado === 'lost' ? 'text-red-400' : 'text-gray-400');
 
                 htmlPicks += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex flex-col relative">
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex flex-col w-1/2">
+                    <div class="flex justify-between items-center mb-2 border-b border-white/5 pb-2">
+                        <div class="flex flex-col w-1/2 pr-2">
                             <span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span>
                             <span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span>
                         </div>
@@ -1227,7 +1127,7 @@ window.cargarGestionRetoActivoAdmin = async function() {
                             <button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 ml-1 transition" title="Borrar Pick"><i class="fas fa-trash-alt"></i></button>
                         </div>
                     </div>
-                    <div class="flex justify-between items-center border-t border-white/5 pt-2 mt-1">
+                    <div class="flex justify-between items-center pt-1">
                         <span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">Fondo Acumulado Total</span>
                         <span class="text-[10px] font-black ${colorPct}">${startPctGlobal.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] mx-1"></i> ${endPctGlobal.toFixed(1)}%</span>
                     </div>
@@ -1250,13 +1150,14 @@ window.cargarGestionRetoActivoAdmin = async function() {
     } catch(e) { console.error(e); }
 };
 
+// 🚀 NUEVA FUNCIÓN: ELIMINAR PICK ESPECÍFICO DE LA ESCALERA EN VIVO
 window.eliminarPickEscalera = async function(index) {
     window.mostrarConfirmacion("Borrar Pick", "¿Eliminar esta selección de la Escalera? Los porcentajes se recalcularán automáticamente.", async () => {
         try {
             const snap = await getDoc(doc(db, "global", "escalera"));
             if(snap.exists()) {
                 const data = snap.data();
-                data.ticket_data.picks.splice(index, 1);
+                data.ticket_data.picks.splice(index, 1); // Extraemos el pick del array
                 
                 let perdidos = 0; let ganados = 0;
                 data.ticket_data.picks.forEach(p => { if(p.estado === 'lost') perdidos++; if(p.estado === 'won') ganados++; });
