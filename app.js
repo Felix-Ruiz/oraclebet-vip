@@ -19,15 +19,26 @@ window.verificarNotificacionesPendientes = async function() { if (!modoVipActivo
 window.iniciarSwipeNotificaciones = function() { const cards = document.querySelectorAll('.notif-card'); cards.forEach(card => { let startX = 0; let isDragging = false; let deleteBg = card.previousElementSibling; card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; isDragging = true; window.isSwiping = false; card.style.transition = 'none'; }, {passive: true}); card.addEventListener('touchmove', e => { if (!isDragging) return; let currentX = e.touches[0].clientX; let diffX = startX - currentX; if (diffX > 10) { window.isSwiping = true; if (deleteBg) deleteBg.style.opacity = '1'; } if (diffX > 0 && diffX < 150) { card.style.transform = `translateX(-${diffX}px)`; } }, {passive: true}); card.addEventListener('touchend', e => { isDragging = false; let diffX = startX - e.changedTouches[0].clientX; card.style.transition = 'transform 0.3s ease'; if (diffX > 60) { card.style.transform = `translateX(-120%)`; const parent = card.closest('.notif-item'); const id = parent.dataset.id; let hidden = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]'); if(!hidden.includes(id)) hidden.push(id); localStorage.setItem('oracle_hidden_notifs', JSON.stringify(hidden)); setTimeout(() => { parent.style.height = parent.offsetHeight + 'px'; parent.style.transition = 'all 0.3s ease'; parent.style.opacity = '0'; parent.style.height = '0px'; parent.style.marginBottom = '0px'; setTimeout(() => parent.remove(), 300); }, 100); } else { card.style.transform = `translateX(0)`; if (deleteBg) deleteBg.style.opacity = '0'; } setTimeout(() => window.isSwiping = false, 100); }); }); };
 window.abrirBandejaNotificaciones = async function() { if (!modoVipActivo && !adminAutenticado) { window.mostrarAlerta("Acceso Restringido", "Debes iniciar sesión con tu credencial para leer los comunicados oficiales del Gestor.", "warning"); window.abrirModalLogin(); return; } let modal = document.getElementById('modalBandejaNotificaciones'); if (!modal) { document.body.insertAdjacentHTML('beforeend', `<div id="modalBandejaNotificaciones" class="fixed inset-0 bg-black/95 hidden items-end justify-center z-[400] transition-opacity duration-300 backdrop-blur-md"><div class="bg-gray-900 border-t border-blue-500/50 w-full h-[85vh] rounded-t-3xl shadow-[0_-10px_40px_rgba(59,130,246,0.15)] flex flex-col relative transform translate-y-full transition-transform duration-300" id="bandejaContenido"><div class="p-5 flex justify-between items-center border-b border-white/10 bg-black/50 rounded-t-3xl"><h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Notificaciones FR</h3><button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button></div><div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-900 to-black overflow-x-hidden"><div class="text-center p-10"><i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i></div></div></div></div>`); modal = document.getElementById('modalBandejaNotificaciones'); } modal.classList.remove('hidden'); modal.style.display = 'flex'; setTimeout(() => { document.getElementById('bandejaContenido').classList.remove('translate-y-full'); }, 10); const lista = document.getElementById('listaBandejaNotificaciones'); try { const hiddenNotifs = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]'); const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(15)); const snap = await getDocs(q); lista.innerHTML = ''; let validCount = 0; snap.forEach(doc => { const data = doc.data(); const esNotificacionEscalera = data.audiencia === "escalera" || (data.url && data.url.includes("escalera")) || (data.titulo && data.titulo.toLowerCase().includes("escalera")); if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) return; if (hiddenNotifs.includes(doc.id)) return; validCount++; const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400'; let clickAction = data.url && data.url !== "/" ? `onclick="if(!window.isSwiping) window.procesarEnlaceInterno('${data.url}')"` : ``; lista.innerHTML += `<div class="notif-item relative mb-3 overflow-hidden" data-id="${doc.id}"><div class="absolute inset-0 bg-red-600 rounded-xl flex justify-end items-center pr-5 text-white font-black text-xs shadow-inner opacity-0 transition-opacity duration-300"><i class="fas fa-trash-alt"></i></div><div ${clickAction} class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative transition-transform duration-200 notif-card w-full z-10 block ${data.url && data.url !== '/' ? 'cursor-pointer active:scale-[0.98]' : ''}"><div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div><div class="flex justify-between items-start mb-2"><span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>${data.url && data.url !== "/" ? '<i class="fas fa-chevron-right text-gray-500 text-[10px]"></i>' : ''}</div><p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p><div class="flex justify-between items-center border-t border-white/5 pt-2"><span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span><span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span></div></div></div>`; }); if(validCount === 0) { lista.innerHTML = `<div class="text-center mt-10 text-gray-500 text-xs font-bold uppercase tracking-widest"><i class="fas fa-check-circle text-4xl mb-3 opacity-50 block"></i> Bandeja Vacía</div>`; } else { setTimeout(() => window.iniciarSwipeNotificaciones(), 50); } } catch(e) { lista.innerHTML = `<div class="text-center text-red-500 text-xs">Error de red.</div>`; } };
 window.cerrarBandejaNotificaciones = function() { const modal = document.getElementById('modalBandejaNotificaciones'); const contenido = document.getElementById('bandejaContenido'); if(contenido) { contenido.classList.add('translate-y-full'); } setTimeout(() => { if(modal) { modal.classList.add('hidden'); modal.style.display = 'none'; } }, 300); };
-
 const desplegarCalendarioForzado = (e) => { if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'date') { try { e.target.showPicker(); } catch (ex) { } } }; document.addEventListener('click', desplegarCalendarioForzado); document.addEventListener('focusin', desplegarCalendarioForzado); 
 window.abrirModalLogin = function(e) { if(e) { e.preventDefault(); e.stopPropagation(); } if(modoVipActivo) return; const m = document.getElementById('modalLogin'); if(m) { m.classList.remove('hidden'); m.style.display = 'flex'; } };
+window.cerrarModalLogin = function() { const m = document.getElementById('modalLogin'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } correoAdminTemp = ""; const inputElement = document.getElementById('vipCode'); const btn = document.getElementById('btnValidarCodigo'); if(inputElement) { inputElement.type = 'text'; inputElement.placeholder = 'CÓDIGO DE INVERSOR'; inputElement.value = ''; } if(btn) { btn.innerHTML = 'VERIFICAR ACCESO'; } };
 window.cerrarConfirmGlobal = function() { const m = document.getElementById('modalConfirmGlobal'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } };
 window.cerrarModalAyuda = function() { const m = document.getElementById('modalAyudaApuesta'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } };
 window.cerrarAlertaGlobal = function() { const m = document.getElementById('modalAlertaGlobal'); const c = document.getElementById('modalAlertaContenido'); if(m) { m.classList.add('hidden'); m.style.display = 'none'; } if(c) c.classList.replace('scale-100', 'scale-95'); };
 
-window.mostrarAlerta = function(titulo, mensaje, tipo = 'info', actionUrl = null) { const modal = document.getElementById('modalAlertaGlobal'); const icon = document.getElementById('alertaIcono'); const title = document.getElementById('alertaTitulo'); const msg = document.getElementById('alertaMensaje'); const btn = document.getElementById('btnAlertaGlobal'); const content = document.getElementById('modalAlertaContenido'); if(!modal) { alert(`${titulo}: ${mensaje}`); return; } title.innerText = titulo; msg.innerHTML = mensaje; btn.onclick = function() { window.cerrarAlertaGlobal(); if(actionUrl) { window.procesarEnlaceInterno(actionUrl); } }; if(tipo === 'success') { icon.innerHTML = '<i class="fas fa-check-circle text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-green-600 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"; content.className = "bg-gray-900 border border-green-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } else if (tipo === 'error') { icon.innerHTML = '<i class="fas fa-times-circle text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"; content.className = "bg-gray-900 border border-red-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } else if (tipo === 'warning') { icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 drop-shadow-[0_0_15px_rgba(212,175,55,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-yellow-500 text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]"; content.className = "bg-gray-900 border border-yellow-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(212,175,55,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } else { icon.innerHTML = '<i class="fas fa-info-circle text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"; content.className = "bg-gray-900 border border-blue-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } if(actionUrl) { btn.innerHTML = '<i class="fas fa-rocket mr-1"></i> IR A LA SEÑAL'; } else { btn.innerHTML = 'ACEPTAR'; } modal.classList.remove('hidden'); modal.style.display = 'flex'; };
+window.mostrarAlerta = function(titulo, mensaje, tipo = 'info', actionUrl = null) {
+    const modal = document.getElementById('modalAlertaGlobal'); const icon = document.getElementById('alertaIcono'); const title = document.getElementById('alertaTitulo'); const msg = document.getElementById('alertaMensaje'); const btn = document.getElementById('btnAlertaGlobal'); const content = document.getElementById('modalAlertaContenido');
+    if(!modal) { alert(`${titulo}: ${mensaje}`); return; } title.innerText = titulo; msg.innerHTML = mensaje; 
+    btn.onclick = function() { window.cerrarAlertaGlobal(); if(actionUrl) { window.procesarEnlaceInterno(actionUrl); } };
+    if(tipo === 'success') { icon.innerHTML = '<i class="fas fa-check-circle text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-green-600 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"; content.className = "bg-gray-900 border border-green-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
+    else if (tipo === 'error') { icon.innerHTML = '<i class="fas fa-times-circle text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"; content.className = "bg-gray-900 border border-red-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
+    else if (tipo === 'warning') { icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 drop-shadow-[0_0_15px_rgba(212,175,55,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-yellow-500 text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]"; content.className = "bg-gray-900 border border-yellow-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(212,175,55,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; } 
+    else { icon.innerHTML = '<i class="fas fa-info-circle text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]"></i>'; btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"; content.className = "bg-gray-900 border border-blue-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; }
+    if(actionUrl) { btn.innerHTML = '<i class="fas fa-rocket mr-1"></i> IR A LA SEÑAL'; } else { btn.innerHTML = 'ACEPTAR'; }
+    modal.classList.remove('hidden'); modal.style.display = 'flex';
+};
 window.mostrarConfirmacion = function(titulo, mensaje, callback) { const modal = document.getElementById('modalConfirmGlobal'); if(!modal) { if(confirm(`${titulo}\n${mensaje}`)) callback(); return; } document.getElementById('confirmTitulo').innerText = titulo; document.getElementById('confirmMensaje').innerText = mensaje; const btnAceptar = document.getElementById('btnConfirmAceptar'); const nuevoBtn = btnAceptar.cloneNode(true); btnAceptar.parentNode.replaceChild(nuevoBtn, btnAceptar); nuevoBtn.addEventListener('click', () => { window.cerrarConfirmGlobal(); callback(); }); modal.classList.remove('hidden'); modal.style.display = 'flex'; };
+
 function obtenerHuellaDispositivo() { try { let miHuella = localStorage.getItem('oraclebet_huella_secreta'); if (!miHuella) { miHuella = 'disp_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36); localStorage.setItem('oraclebet_huella_secreta', miHuella); } return miHuella; } catch(e) { return 'disp_temp_' + Math.random().toString(36).substring(2, 9); } }
 
 let deferredPrompt; const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://'); const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -37,8 +48,8 @@ const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo();
 let modoVipActivo = false; let modoIlimitadoActivo = false; let codigoActivoUsuario = ''; let estadoEscalera = 'none';
 let CACHE_PARTIDOS_FUTUROS = []; let partidosGlobales = []; let partidosFiltrados = []; let competicionesGlobales = []; let seleccionesVIPGlobal = []; let ticketDinamicoVIP = []; let modoMercadoGlobal = 'mixto'; let modoRiesgoGlobal = false; 
 let perfilApadrinamiento = null; let unsubscribeApadrinamiento = null; let tiempoInactividad = 0; const TIEMPO_MAXIMO_SEGUNDOS = 180; let timerInactividad; let filtroIAActivo = false; let correoAdminTemp = ""; 
-const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': { 'titulo': 'Goles Totales' }, 'spreads': { 'titulo': 'Hándicap (Spread)' }, 'alternate_totals_corners': { 'titulo': 'Líneas de Córners' }, 'team_total_corners': { 'titulo': 'Córners por Equipo' }, 'corners_handicap': { 'titulo': 'Hándicap de Córners' }, 'alternate_totals_cards': { 'titulo': 'Líneas de Tarjetas' }, 'player_shots': { 'titulo': 'Disparos del Jugador' }, 'player_shots_on_target': { 'titulo': 'Disparos a Puerta' }, 'player_cards': { 'titulo': 'Tarjeta a Jugador' } };
 
+const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': { 'titulo': 'Goles Totales' }, 'spreads': { 'titulo': 'Hándicap (Spread)' }, 'alternate_totals_corners': { 'titulo': 'Líneas de Córners' }, 'team_total_corners': { 'titulo': 'Córners por Equipo' }, 'corners_handicap': { 'titulo': 'Hándicap de Córners' }, 'alternate_totals_cards': { 'titulo': 'Líneas de Tarjetas' }, 'player_shots': { 'titulo': 'Disparos del Jugador' }, 'player_shots_on_target': { 'titulo': 'Disparos a Puerta' }, 'player_cards': { 'titulo': 'Tarjeta a Jugador' } };
 function obtenerInfoLiga(key, apiTitle) { let pais = "Mundial"; let nombreLiga = apiTitle ? String(apiTitle) : "Competición Genérica"; let bandera = "🌍"; let k = key ? String(key).toLowerCase() : ""; if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra"; else if(k.includes('spain')) pais = "España"; else if(k.includes('italy')) pais = "Italia"; else if(k.includes('germany')) pais = "Alemania"; else if(k.includes('france')) pais = "Francia"; else if(k.includes('colombia')) pais = "Colombia"; else if(k.includes('mexico')) pais = "México"; else if(k.includes('argentina')) pais = "Argentina"; else if(k.includes('brazil')) pais = "Brasil"; else if(k.includes('portugal')) pais = "Portugal"; else if(k.includes('netherlands')) pais = "Países Bajos"; else if(k.includes('turkey')) pais = "Turquía"; else if(k.includes('belgium')) pais = "Bélgica"; else if(k.includes('australia')) pais = "Australia"; else if(k.includes('chile')) pais = "Chile"; else if(k.includes('peru')) pais = "Perú"; else if(k.includes('ecuador')) pais = "Ecuador"; else if(k.includes('uruguay')) pais = "Uruguay"; else if(k.includes('bolivia')) pais = "Bolivia"; else if(k.includes('paraguay')) pais = "Paraguay"; else if(k.includes('venezuela')) pais = "Venezuela"; else if(k.includes('japan')) pais = "Japón"; else if(k.includes('korea')) pais = "Corea del Sur"; else if(k.includes('china')) pais = "China"; else if(k.includes('saudi_arabia') || k.includes('saudi')) pais = "Arabia Saudita"; else if(k.includes('scotland')) pais = "Escocia"; else if(k.includes('sweden')) pais = "Suecia"; else if(k.includes('switzerland')) pais = "Suiza"; else if(k.includes('denmark')) pais = "Dinamarca"; else if(k.includes('norway')) pais = "Noruega"; else if(k.includes('poland')) pais = "Polonia"; else if(k.includes('austria')) pais = "Austria"; else if(k.includes('russia')) pais = "Rusia"; else if(k.includes('greece')) pais = "Grecia"; else if(k.includes('conmebol')) pais = "Sudamérica"; else if(k.includes('uefa') || k.includes('euro')) pais = "Europa"; else if(k.includes('usa') || k.includes('mls')) pais = "USA"; else if(k.includes('fifa') || k.includes('world_cup')) pais = "Mundial"; const banderas = { 'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'España':'🇪🇸', 'Italia':'🇮🇹', 'Alemania':'🇩🇪', 'Francia':'🇫🇷', 'Colombia':'🇨🇴', 'México':'🇲🇽', 'Argentina':'🇦🇷', 'Brasil':'🇧🇷', 'Sudamérica':'🌎', 'Europa':'🇪🇺', 'USA':'🇺🇸', 'Portugal':'🇵🇹', 'Países Bajos':'🇳🇱', 'Turquía':'🇹🇷', 'Bélgica':'🇧🇪', 'Australia':'🇦🇺', 'Chile':'🇨🇱', 'Perú':'🇵🇪', 'Ecuador':'🇪🇨', 'Uruguay':'🇺🇾', 'Bolivia':'🇧🇴', 'Paraguay':'🇵🇾', 'Venezuela':'🇻🇪', 'Japón':'🇯🇵', 'Corea del Sur':'🇰🇷', 'China':'🇨🇳', 'Arabia Saudita':'🇸🇦', 'Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Suecia':'🇸🇪', 'Suiza':'🇨🇭', 'Dinamarca':'🇩🇰', 'Noruega':'🇳🇴', 'Polonia':'🇵🇱', 'Austria':'🇦🇹', 'Rusia':'🇷🇺', 'Grecia':'🇬🇷', 'Mundial':'🌍' }; bandera = banderas[pais] || '🌍'; if(nombreLiga === 'EPL') nombreLiga = "Premier League"; else if(nombreLiga.includes(' - ')) nombreLiga = nombreLiga.split(' - ')[0].trim(); if(k === 'soccer_conmebol_copa_libertadores') nombreLiga = "Copa Libertadores"; if(k === 'soccer_conmebol_copa_sudamericana') nombreLiga = "Copa Sudamericana"; if(k === 'soccer_uefa_europa_league') nombreLiga = "Europa League"; if(k === 'soccer_uefa_europa_conference_league') nombreLiga = "Conference League"; if(k === 'soccer_uefa_champs_league') nombreLiga = "Champions League"; return { pais, nombreLiga, bandera }; }
 function formatearPickEspanol(nombre, point, mercadoKey) { let text = nombre || ""; text = text.replace(/Total Corners/ig, 'Córners').replace(/Total Cards/ig, 'Tarjetas').replace(/over/ig, 'Más de').replace(/under/ig, 'Menos de'); let textLower = text.toLowerCase(); if (textLower === '1') return `Local (1) ${point > 0 ? '+'+point : point}`; if (textLower === '2') return `Visitante (2) ${point > 0 ? '+'+point : point}`; if (textLower === 'x') return `Empate (X)`; if (point !== null && point !== undefined && point !== "") { if (!text.includes(point.toString())) { text += ` ${point > 0 && !textLower.includes('más') ? '+'+point : point}`; } } return text.trim(); }
 function formatoCOP(valor) { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor); }
@@ -86,28 +97,31 @@ if (document.readyState === 'loading') { document.addEventListener('DOMContentLo
 
 const promesaConTimeout = (promesa, ms) => { let timeout = new Promise((resolve, reject) => { let id = setTimeout(() => { clearTimeout(id); reject(new Error("Timeout")); }, ms); }); return Promise.race([promesa, timeout]); };
 
+// ==========================================
+// 🚀 LOGIN ADMIN SILENCIOSO Y VIP
+// ==========================================
 window.preValidarCodigo = function() {
     const input = document.getElementById('vipCode');
     if (!input || input.value.trim() === '') { return window.mostrarAlerta("Atención", "Debes ingresar un código de acceso válido.", "error"); }
+    
     const valRaw = input.value.trim();
+
     if (valRaw.includes('@')) {
         if (!correoAdminTemp) {
             correoAdminTemp = valRaw.toLowerCase();
             input.value = '';
             input.type = 'password';
             input.placeholder = 'CONTRASEÑA MASTER';
-            const btn = document.getElementById('btnValidarCodigo');
-            if(btn) btn.innerHTML = '<i class="fas fa-lock"></i> INGRESAR ADMIN';
+            document.getElementById('btnValidarCodigo').innerHTML = '<i class="fas fa-lock"></i> INGRESAR ADMIN';
             return; 
         }
     }
+
     if (correoAdminTemp) {
-        const btn = document.getElementById('btnValidarCodigo');
-        const txtOriginal = btn ? btn.innerHTML : 'VERIFICAR ACCESO';
-        if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONECTANDO...'; btn.disabled = true; }
-        window.validarCodigo(txtOriginal, btn);
+        window.validarCodigo('INGRESAR ADMIN', document.getElementById('btnValidarCodigo'));
         return;
     }
+
     const modalLogin = document.getElementById('modalLogin'); if(modalLogin) { modalLogin.classList.add('hidden'); modalLogin.style.display = 'none'; }
     const modalTerminos = document.getElementById('modalTerminosGenerales'); if(modalTerminos) { modalTerminos.classList.remove('hidden'); modalTerminos.style.display = 'flex'; }
 };
@@ -136,8 +150,10 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
     const inputEl = document.getElementById('vipCode');
     const rawVal = inputEl ? inputEl.value.trim() : '';
     if(!rawVal) return;
+    
     const btn = btnObj || document.getElementById('btnValidarCodigo'); 
     if(!btnObj && btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; }
+    
     if (correoAdminTemp) {
         try {
             await promesaConTimeout(signInWithEmailAndPassword(auth, correoAdminTemp, rawVal), 8000);
@@ -153,6 +169,7 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
         } 
         return;
     }
+
     const codigoIngresado = rawVal.toUpperCase();
     if (codigoIngresado.startsWith("MASTER_")) {
         try {
@@ -162,6 +179,7 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
             window.cerrarModalLogin(); if(CACHE_PARTIDOS_FUTUROS.length === 0) await precargarBaseDeDatos(); window.renderizarLayoutAdmin();
         } catch(e) { correoAdminTemp = ""; window.mostrarAlerta("Acceso Denegado", "Credenciales de Master incorrectas.", "error"); } finally { if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; } } return;
     }
+    
     try {
         const docRef = doc(db, "codigos_nube", codigoIngresado); const docSnap = await promesaConTimeout(getDoc(docRef), 8000);
         if (docSnap.exists()) {
@@ -186,7 +204,6 @@ window.cargarNotificacionesAdmin = async function() {
         snap.forEach(doc => { let data = doc.data(); let f = new Date(data.timestamp).toLocaleDateString('es-CO', {month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'}); let audBadge = data.audiencia === "escalera" ? '<span class="bg-yellow-500/20 text-yellow-500 px-1 rounded ml-1">Escalera</span>' : '<span class="bg-blue-500/20 text-blue-400 px-1 rounded ml-1">Todos</span>'; lista.innerHTML += `<div class="bg-black/40 p-3 rounded-xl border border-white/10 relative shadow-sm mb-2 flex justify-between items-center"><div class="flex flex-col w-3/4"><span class="text-[10px] font-black text-white uppercase truncate">${data.titulo}</span><span class="text-[8px] text-gray-400 mt-0.5">${f} • Aud: ${audBadge}</span></div><button onclick="window.eliminarNotificacionAdmin('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 p-2 rounded-lg hover:bg-red-600/40 transition active:scale-95" title="Eliminar Mensaje"><i class="fas fa-trash-alt"></i></button></div>`; });
     } catch(e) { lista.innerHTML = '<p class="text-red-500 text-xs text-center">Error al cargar.</p>'; }
 };
-
 window.eliminarNotificacionAdmin = async function(idDoc) { window.mostrarConfirmacion("Eliminar Comunicado", "¿Deseas borrar este mensaje?", async () => { try { await deleteDoc(doc(db, "notificaciones_push", idDoc)); window.mostrarAlerta("Eliminada", "La notificación ha sido borrada.", "success"); window.cargarNotificacionesAdmin(); } catch(e) { window.mostrarAlerta("Error", "No se pudo borrar.", "error"); } }); };
 
 window.renderizarLayoutAdmin = function() {
@@ -341,7 +358,6 @@ window.aplicarFiltrosLocales = function() {
     const buscador = document.getElementById('buscadorEquipos'); const filtroF = document.getElementById('filtroFecha');
     const texto = buscador ? buscador.value.toLowerCase() : ""; const fechaFiltro = filtroF ? filtroF.value : ""; 
     const ahoraTS = Date.now(); 
-    
     partidosFiltrados = partidosGlobales.filter(p => { 
         if (p._timestamp < ahoraTS) return false; 
         if (texto && !p._textoBusqueda.includes(texto)) return false;
@@ -349,13 +365,11 @@ window.aplicarFiltrosLocales = function() {
         if (filtroIAActivo && !p._tieneIA) return false;
         return true; 
     });
-    
     const cont = document.getElementById('contadorPartidosActivos'); if(cont) cont.innerText = `${partidosFiltrados.length} Eventos`;
     if(modoVipActivo) { if(window.renderizarPartidosVIP) window.renderizarPartidosVIP(); } else { if(window.renderizarPartidosFree) window.renderizarPartidosFree(); }
 };
 
 window.ejecutarTopFutbol = function() { window.cerrarMenuLateral(); window.resaltarBotonCarrusel(null); const title = document.getElementById('nombreLigaActiva'); if(title) title.innerText = "Cartelera Global"; let soccerLigas = competicionesGlobales.map(l => l.key); if(soccerLigas.length === 0) { soccerLigas = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_uefa_champs_league', 'soccer_italy_serie_a', 'soccer_conmebol_copa_libertadores', 'soccer_conmebol_copa_sudamericana', 'soccer_uefa_europa_league', 'soccer_uefa_europa_conference_league']; } partidosGlobales = CACHE_PARTIDOS_FUTUROS.filter(p => soccerLigas.includes(p.sport_key)); partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time)); window.aplicarFiltrosLocales(); };
-
 window.ejecutarFiltroFinal = function(keyLiga, nombreMostrar) { window.cerrarMenuLateral(); const title = document.getElementById('nombreLigaActiva'); if(title) title.innerText = nombreMostrar; window.resaltarBotonCarrusel(keyLiga); const fFecha = document.getElementById('filtroFecha'); if(fFecha) fFecha.value = ""; partidosGlobales = CACHE_PARTIDOS_FUTUROS.filter(p => p.sport_key === keyLiga); partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time)); window.aplicarFiltrosLocales(); };
 
 function agruparPorPaisYLiga(partidos) { const paises = {}; partidos.forEach(p => { let info = obtenerInfoLiga(p.sport_key, p.sport_title); if (!paises[info.pais]) paises[info.pais] = { bandera: info.bandera, ligas: {} }; if (!paises[info.pais].ligas[info.nombreLiga]) paises[info.pais].ligas[info.nombreLiga] = []; paises[info.pais].ligas[info.nombreLiga].push(p); }); return paises; }
@@ -443,11 +457,9 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
         let pickTxt = formatearPickEspanol(o.nombre, o.point, o.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let bg = idx % 2 === 0 ? 'bg-black/40' : 'bg-gray-900/50'; 
         let colorConf = o.verificado_ia ? 'bg-blue-600' : (o.es_valor ? 'bg-green-600' : (modoRiesgoGlobal ? 'bg-red-600' : 'bg-yellow-600'));
         let colorPick = o.verificado_ia ? 'text-blue-400' : (o.es_valor ? 'text-green-400' : (modoRiesgoGlobal ? 'text-red-400' : (esRadarAuto ? 'text-purple-400' : 'text-yellow-500')));
-        
         let badgeValor = ''; if (o.verificado_ia) { badgeValor = `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/50 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm animate-pulse"><i class="fas fa-gem"></i> Top Pick</span>`; } else if (o.edgeValor > 0) { badgeValor = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm"><i class="fas fa-bolt text-yellow-400"></i> +${o.edgeValor}% EV</span>`; } else { badgeValor = `<span class="bg-gray-700/50 text-gray-400 border border-gray-600 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-sm">Estándar</span>`; }
         let escudoMejora = o.es_mejora ? `<span class="bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ml-2 shadow-md animate-bounce"><i class="fas fa-shield-alt"></i> BLINDADO</span>` : '';
         let warningFaltaMercado = ''; if (modoMercadoGlobal === 'props' && !isProp(o.mercadoKey)) { warningFaltaMercado = `<div class="text-[8px] text-red-400 bg-red-900/30 p-1 rounded mt-1 border border-red-500/30 text-center"><i class="fas fa-exclamation-circle"></i> Props no publicados. Mostrando alternativa.</div>`; }
-        
         htmlPartidos += `<div class="${bg} p-4 rounded-xl mb-3 border border-white/5 relative overflow-hidden shadow-lg"><div class="absolute top-0 right-0 ${colorConf} text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-md z-10">PROB REAL: ${o.probabilidad > 96 ? 96 : o.probabilidad}%</div><div class="text-[9px] text-gray-400 font-bold uppercase mb-2"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-xs font-bold text-white mb-3 border-b border-white/5 pb-3">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-gray-700 shadow-inner"><div class="flex flex-col"><div class="flex items-center gap-1.5 mb-1"><span class="text-[11px] ${colorPick} font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${o.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button>${escudoMejora}</div><div class="mt-0.5 flex items-center"><span class="text-[8px] text-gray-500 uppercase font-bold"><i class="fas fa-shield-alt mr-1"></i> FR: </span>${badgeValor}</div></div><div class="flex items-center gap-1.5"><span class="text-white font-black text-[15px] mr-1">${o.cuota.toFixed(2)}</span>${!esRadarAuto ? `<button onclick="window.rotarPickIndividual('${p.id}')" class="text-gray-400 bg-white/5 p-1.5 rounded-lg hover:text-white transition" title="Rotar Pick"><i class="fas fa-sync-alt"></i></button><button onclick="window.quitarPartidoDelTicket('${p.id}')" class="text-red-400 bg-red-500/10 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-300 transition" title="Quitar Partido"><i class="fas fa-trash-alt"></i></button>` : ''}</div></div>${warningFaltaMercado}</div>`;
     });
     probPromedio = Math.floor(probPromedio / ticketDinamicoVIP.length); if(probPromedio > 96) probPromedio = 96; let c1 = modoMercadoGlobal === 'mixto' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c2 = modoMercadoGlobal === 'h2h' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c3 = modoMercadoGlobal === 'totals' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c4 = modoMercadoGlobal === 'spreads' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-gray-700'; let c5 = modoMercadoGlobal === 'props' ? 'bg-yellow-500 text-black' : 'text-gray-400 border border-yellow-500/50'; let ctrls = esRadarAuto ? '' : `<div class="grid grid-cols-5 gap-1 bg-black/60 p-1 rounded-lg mb-4"><button onclick="window.cambiarModoMercado('mixto')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c1}">Mixto</button><button onclick="window.cambiarModoMercado('h2h')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c2}">1X2</button><button onclick="window.cambiarModoMercado('totals')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c3}">Goles</button><button onclick="window.cambiarModoMercado('spreads')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c4}">Hándicap</button><button onclick="window.cambiarModoMercado('props')" class="py-2 text-[7px] sm:text-[8px] font-black uppercase rounded ${c5} shadow-md"><i class="fas fa-star mr-0.5"></i>Props</button></div>`; 
@@ -456,9 +468,6 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
     resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${modoRiesgoGlobal ? 'border-red-500 bg-red-500/5' : (esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5')} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${modoRiesgoGlobal ? 'text-red-500' : (esRadarAuto?'text-purple-500':'text-yellow-500')} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Análisis de FR</span><span class="text-[10px] ${modoRiesgoGlobal ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10'} font-black px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${riskBanner} ${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final Calculada</span></div><span class="text-3xl font-black ${modoRiesgoGlobal ? 'text-red-400' : 'text-white'}">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button onclick="window.guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-yellow-600 hover:bg-yellow-500 text-black rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
 };
 
-// ==========================================
-// 10. HISTORIAL DE TICKETS (USUARIO)
-// ==========================================
 window.guardarTicketHistorial = async function(cuota) {
     if(!codigoActivoUsuario) return;
     let picksObj = ticketDinamicoVIP.map(t => { 
@@ -522,38 +531,26 @@ window.solicitarAccesoEscalera = async function() { const btn = document.getElem
 
 window.editarMiCapitalEscalera = function() {
     let actual = localStorage.getItem('oracle_cap_escalera'); let def = actual ? actual : 50000;
-    let n = prompt("Toca el icono ✏️ para ajustar tu banca.\n\nIngresa el capital real (COP) con el que iniciarás esta escalera para calcular tus apuestas:", def);
+    let n = prompt("Ingresa el capital real (COP) con el que iniciarás esta escalera para calcular tu inversión:", def);
     let val = parseFloat(n);
     if(!isNaN(val) && val >= 1000) { localStorage.setItem('oracle_cap_escalera', val); window.cargarRetoEscaleraNube(); window.mostrarAlerta("Guardado", "Tu fondo inicial ha sido actualizado.", "success"); } else if (n !== null) { window.mostrarAlerta("Error", "Ingresa un número válido.", "error"); }
 };
 
-window.confirmarPickEscalera = async function(idx) {
-    const btn = event.currentTarget; 
-    const textoOriginal = btn.innerHTML;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Confirmando...`;
-    btn.disabled = true;
-
+// 🚀 FIX: Confirmación Global para el Usuario
+window.confirmarRetoEscaleraGlobal = async function() {
     try {
-        const ref = doc(db, "global", "escalera"); 
-        const snap = await getDoc(ref);
-        
+        const ref = doc(db, "global", "escalera"); const snap = await getDoc(ref);
         if(snap.exists()) {
             let data = snap.data(); 
-            if(!data.ticket_data.picks[idx].confirmados) data.ticket_data.picks[idx].confirmados = [];
-            
-            if(!data.ticket_data.picks[idx].confirmados.includes(codigoActivoUsuario)) {
-                data.ticket_data.picks[idx].confirmados.push(codigoActivoUsuario); 
+            if(!data.ticket_data.confirmados) data.ticket_data.confirmados = [];
+            if(!data.ticket_data.confirmados.includes(codigoActivoUsuario)) {
+                data.ticket_data.confirmados.push(codigoActivoUsuario); 
                 await updateDoc(ref, { ticket_data: data.ticket_data }); 
                 window.cargarRetoEscaleraNube(); 
-                window.mostrarAlerta("¡Inversión Confirmada!", "Has marcado este pick como realizado.", "success");
+                window.mostrarAlerta("¡Inversión Confirmada!", "Has marcado el reto como realizado.", "success");
             }
         }
-    } catch(e) { 
-        console.error("Error de Firebase:", e);
-        window.mostrarAlerta("Acceso Denegado por Firebase", "Error: " + e.message, "error"); 
-        btn.innerHTML = textoOriginal;
-        btn.disabled = false;
-    }
+    } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); }
 };
 
 window.cargarRetoEscaleraNube = async function() {
@@ -563,50 +560,49 @@ window.cargarRetoEscaleraNube = async function() {
         if(snap.exists()) { 
             const data = snap.data(); const tk = data.ticket_data;
             let userCapStr = localStorage.getItem('oracle_cap_escalera'); let capInicial = userCapStr ? parseFloat(userCapStr) : (tk.capital_inicial || 50000);
-            let currentCap = capInicial; let picksHtml = ''; let runningMulti = 1.0; let foundPendiente = false;
+            let currentCap = capInicial; 
             
-            if(tk && tk.picks) { 
-                tk.picks.forEach((p, index) => { 
-                    let estadoP = p.estado || 'pendiente';
-                    let stakePct = p.stake !== undefined ? parseFloat(p.stake) : 100; let stakeFraction = stakePct / 100;
-                    let amountToBet = currentCap * stakeFraction; let amountKept = currentCap - amountToBet; let winCap = amountKept + (amountToBet * p.cuota); let loseCap = amountKept;
-                    let startPctGlobal = (currentCap / capInicial) * 100; let endPctGlobal = (winCap / capInicial) * 100; let lostPctGlobal = (loseCap / capInicial) * 100;
+            // 🚀 MATEMÁTICA GLOBAL (PARLAY) PARA EL USUARIO
+            let estadoReto = tk.estado_reto || 'pendiente';
+            let stakePct = tk.stake !== undefined ? parseFloat(tk.stake) : 100;
+            let amountToBet = currentCap * (stakePct / 100);
+            let winCap = (currentCap - amountToBet) + (amountToBet * tk.cuotaTotal);
+            let loseCap = currentCap - amountToBet;
+            
+            if(estadoReto === 'ganado') currentCap = winCap;
+            else if(estadoReto === 'perdido') currentCap = loseCap;
 
-                    if(estadoP === 'won') { currentCap = winCap; runningMulti *= p.cuota; } else if (estadoP === 'lost') { currentCap = loseCap; endPctGlobal = lostPctGlobal; }
-                    
+            let totalPctReal = (currentCap / capInicial) * 100;
+            let progreso = tk.cuotaTotal > 1 ? ((totalPctReal / 100) - 1) / (tk.cuotaTotal - 1) * 100 : 0;
+            if(estadoReto === 'perdido') progreso = 0; if(progreso < 0) progreso = 0; if(progreso > 100) progreso = 100;
+
+            let picksHtml = '';
+            if(tk && tk.picks) { 
+                tk.picks.forEach((p) => { 
                     let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); 
                     let iconStatus = '<i class="far fa-clock text-gray-400"></i>'; let borderClass = 'border-white/5 bg-gray-900/50'; let titleColor = 'text-white';
                     
-                    if(estadoP === 'won') { iconStatus = '<i class="fas fa-check-circle text-green-500"></i>'; borderClass = 'border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)] bg-green-900/10'; titleColor = 'text-green-400'; }
-                    if(estadoP === 'lost') { iconStatus = '<i class="fas fa-times-circle text-red-500"></i>'; borderClass = 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)] bg-red-900/10'; titleColor = 'text-red-400 opacity-50'; }
-                    let colorBar = estadoP === 'won' ? 'text-green-400' : (estadoP === 'lost' ? 'text-red-400' : 'text-gray-400');
+                    if(estadoReto === 'ganado') { iconStatus = '<i class="fas fa-check-circle text-green-500"></i>'; borderClass = 'border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)] bg-green-900/10'; titleColor = 'text-green-400'; }
+                    if(estadoReto === 'perdido') { iconStatus = '<i class="fas fa-times-circle text-red-500"></i>'; borderClass = 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)] bg-red-900/10'; titleColor = 'text-red-400 opacity-50'; }
                     
-                    let isCurrentPick = (estadoP === 'pendiente' && !foundPendiente); if(estadoP === 'pendiente') foundPendiente = true; 
-                    let btnConfirmar = '';
-                    if(isCurrentPick || estadoP === 'won' || estadoP === 'lost') {
-                        if(p.confirmados && p.confirmados.includes(codigoActivoUsuario)) { btnConfirmar = `<div class="w-full mt-3 py-2 bg-green-900/40 text-green-400 text-[10px] font-black uppercase text-center rounded border border-green-500/50 shadow-inner"><i class="fas fa-check-double mr-1"></i> Inversión Realizada</div>`; } 
-                        else if (isCurrentPick) { btnConfirmar = `<button onclick="window.confirmarPickEscalera(${index})" class="w-full mt-3 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[10px] uppercase shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition active:scale-95"><i class="fas fa-hand-holding-usd mr-1"></i> Marcar Como Realizado</button>`; }
-                    }
-
-                    let badgeProgreso = '';
-                    if (estadoP === 'won') { badgeProgreso = `<div class="bg-green-900/40 border border-green-500/50 text-green-400 text-[10px] font-black p-2 rounded flex justify-between items-center w-full shadow-inner mt-2"><span class="text-[8px] text-gray-400 uppercase">Fondo Acumulado</span><span>${startPctGlobal.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] text-green-500 mx-1"></i> ${endPctGlobal.toFixed(1)}%</span></div>`; } 
-                    else if (estadoP === 'lost') { badgeProgreso = `<div class="bg-red-900/40 border border-red-500/50 text-red-400 text-[10px] font-black p-2 rounded flex justify-between items-center w-full shadow-inner mt-2"><span class="text-[8px] text-gray-400 uppercase">Fondo Acumulado</span><span>${startPctGlobal.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] text-red-500 mx-1"></i> 0%</span></div>`; } 
-                    else { badgeProgreso = `<div class="bg-gray-800 border border-gray-600 text-gray-400 text-[10px] font-black p-2 rounded flex justify-between items-center w-full shadow-inner mt-2" title="Proyección"><span class="text-[8px] text-gray-500 uppercase">Proyección Fondo</span><span>${startPctGlobal.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] text-gray-500 mx-1"></i> ${endPctGlobal.toFixed(1)}%</span></div>`; }
-
-                    picksHtml += `<div class="p-3 rounded-xl mb-3 border relative transition-all duration-500 ${borderClass}"><div class="absolute top-3 right-3 text-lg">${iconStatus}</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1 flex justify-between items-center pr-6"><span><i class="fas fa-handshake mr-1"></i> ${defMercado.titulo}</span></div><div class="text-[11px] font-bold ${titleColor} mb-2 border-b border-white/5 pb-2 pr-6">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex flex-col gap-2 mt-2"><div class="flex justify-between items-center bg-black/60 p-2 rounded-lg border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div><div class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[10px] font-black p-2 rounded flex justify-between items-center w-full shadow-inner mt-1"><span class="uppercase"><i class="fas fa-coins mr-1"></i> TU INVERSIÓN (${stakePct}%)</span><span>${formatoCOP(amountToBet)}</span></div>${badgeProgreso}</div>${btnConfirmar}</div>`; 
+                    picksHtml += `<div class="p-3 rounded-xl mb-3 border relative transition-all duration-500 ${borderClass}"><div class="absolute top-3 right-3 text-lg">${iconStatus}</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1 flex justify-between items-center pr-6"><span><i class="fas fa-handshake mr-1"></i> ${defMercado.titulo}</span></div><div class="text-[11px] font-bold ${titleColor} mb-2 border-b border-white/5 pb-2 pr-6">${p.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded-lg border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; 
                 }); 
             }
             
-            let capActualFinal = currentCap; let totalPctReal = (capActualFinal / capInicial) * 100; let progreso = tk.cuotaTotal > 1 ? ((totalPctReal / 100) - 1) / (tk.cuotaTotal - 1) * 100 : 0;
-            if(tk.estado_reto === 'perdido') progreso = 0; if(progreso < 0) progreso = 0; if(progreso > 100) progreso = 100;
-            
             let statusRetoHtml = '';
-            if(tk.estado_reto === 'ganado') statusRetoHtml = '<div class="bg-gradient-to-r from-green-600 to-green-500 text-white text-[11px] font-black uppercase tracking-widest text-center py-3 rounded-xl mb-4 shadow-[0_0_20px_rgba(34,197,94,0.4)] animate-pulse"><i class="fas fa-trophy mr-1 text-lg"></i> ¡RETO SUPERADO!</div>';
-            if(tk.estado_reto === 'perdido') statusRetoHtml = '<div class="bg-gradient-to-r from-red-600 to-red-800 text-white text-[11px] font-black uppercase tracking-widest text-center py-3 rounded-xl mb-4 shadow-[0_0_20px_rgba(239,68,68,0.4)]"><i class="fas fa-skull mr-1 text-lg"></i> RETO FALLADO</div>';
+            if(estadoReto === 'ganado') statusRetoHtml = '<div class="bg-gradient-to-r from-green-600 to-green-500 text-white text-[11px] font-black uppercase tracking-widest text-center py-3 rounded-xl mb-4 shadow-[0_0_20px_rgba(34,197,94,0.4)] animate-pulse"><i class="fas fa-trophy mr-1 text-lg"></i> ¡RETO SUPERADO!</div>';
+            if(estadoReto === 'perdido') statusRetoHtml = '<div class="bg-gradient-to-r from-red-600 to-red-800 text-white text-[11px] font-black uppercase tracking-widest text-center py-3 rounded-xl mb-4 shadow-[0_0_20px_rgba(239,68,68,0.4)]"><i class="fas fa-skull mr-1 text-lg"></i> RETO FALLADO</div>';
+
+            let btnConfirmar = '';
+            if (tk.confirmados && tk.confirmados.includes(codigoActivoUsuario)) {
+                btnConfirmar = `<div class="w-full mt-4 py-3 bg-green-900/40 text-green-400 text-xs font-black uppercase text-center rounded-xl border border-green-500/50 shadow-inner"><i class="fas fa-check-double mr-1"></i> Inversión Realizada</div>`;
+            } else if (estadoReto === 'activo') {
+                btnConfirmar = `<button onclick="window.confirmarRetoEscaleraGlobal()" class="w-full mt-4 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[12px] uppercase shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition active:scale-95"><i class="fas fa-hand-holding-usd mr-1"></i> Confirmar Inversión del Día</button>`;
+            }
 
             let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; 
             if(tk && tk.picks) { 
-                html += `${statusRetoHtml}<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)] mb-4 relative overflow-hidden"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-3"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-rocket mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-1 rounded-md shadow-sm">Meta: C ${tk.cuotaTotal}</span></div><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner relative group cursor-pointer hover:border-yellow-500 transition-colors" onclick="window.editarMiCapitalEscalera()" title="Haz clic para editar tu capital"><div class="absolute inset-0 bg-black/60 hidden group-hover:flex items-center justify-center rounded-xl"><i class="fas fa-pencil-alt text-yellow-500 text-lg"></i></div><span class="text-[7px] text-gray-500 uppercase font-bold tracking-wider mb-1">Mi Capital <i class="fas fa-pencil-alt ml-0.5"></i></span><span class="text-white font-black text-xs truncate">${formatoCOP(capInicial)}</span></div><div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-xl text-center flex flex-col justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-colors"><span class="text-[7px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase font-bold tracking-wider mb-1">Actual</span><span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-[11px] truncate">${formatoCOP(capActualFinal)}</span></div><div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner"><span class="text-[7px] text-blue-400 uppercase font-bold tracking-wider mb-1">Crecimiento</span><span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span></div></div><div class="mb-5"><div class="flex justify-between text-[8px] text-gray-400 font-bold uppercase mb-1 px-1"><span>Progreso</span><span>${progreso.toFixed(0)}%</span></div><div class="w-full bg-gray-800 rounded-full h-2 border border-white/5 overflow-hidden"><div class="${tk.estado_reto === 'perdido' ? 'bg-red-600' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'} h-full rounded-full transition-all duration-1000 ease-out" style="width: ${progreso}%"></div></div></div>${picksHtml}</div>`; 
+                html += `${statusRetoHtml}<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)] mb-4 relative overflow-hidden"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-3"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-rocket mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-1 rounded-md shadow-sm">Meta: C ${tk.cuotaTotal}</span></div><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner relative group cursor-pointer hover:border-yellow-500 transition-colors" onclick="window.editarMiCapitalEscalera()" title="Haz clic para editar tu capital"><div class="absolute inset-0 bg-black/60 hidden group-hover:flex items-center justify-center rounded-xl"><i class="fas fa-pencil-alt text-yellow-500 text-lg"></i></div><span class="text-[7px] text-gray-500 uppercase font-bold tracking-wider mb-1">Mi Capital <i class="fas fa-pencil-alt ml-0.5"></i></span><span class="text-white font-black text-xs truncate">${formatoCOP(capInicial)}</span></div><div class="bg-black border ${estadoReto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-xl text-center flex flex-col justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-colors"><span class="text-[7px] ${estadoReto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase font-bold tracking-wider mb-1">Actual</span><span class="${estadoReto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-[11px] truncate">${formatoCOP(currentCap)}</span></div><div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner"><span class="text-[7px] text-blue-400 uppercase font-bold tracking-wider mb-1">Crecimiento</span><span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span></div></div><div class="mb-5"><div class="flex justify-between text-[8px] text-gray-400 font-bold uppercase mb-1 px-1"><span>Progreso Matemático</span><span>${progreso.toFixed(0)}%</span></div><div class="w-full bg-gray-800 rounded-full h-2 border border-white/5 overflow-hidden"><div class="${estadoReto === 'perdido' ? 'bg-red-600' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'} h-full rounded-full transition-all duration-1000 ease-out" style="width: ${progreso}%"></div></div></div>${picksHtml} <div class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[10px] font-black p-3 rounded-lg flex justify-between items-center w-full shadow-inner mt-4"><span class="uppercase"><i class="fas fa-coins mr-1"></i> TU INVERSIÓN TOTAL (${stakePct}%)</span><span>${formatoCOP(amountToBet)}</span></div> ${btnConfirmar} </div>`; 
             } 
             divTexto.innerHTML = html; 
         } else { divTexto.innerHTML = '<div class="text-center opacity-50 py-10"><i class="fas fa-lock text-3xl mb-3"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin reto oficial hoy.</p></div>'; } 
@@ -630,12 +626,12 @@ window.iniciarApadrinamiento = async function() {
     const valor = document.getElementById('inputBankrollInicial').value; const monto = parseFloat(valor);
     if (!monto || monto < 10000) { return window.mostrarAlerta("Error", "Ingresa un bankroll válido (mínimo $10,000).", "error"); }
     let usuarioActual = typeof codigoActivoUsuario !== 'undefined' && codigoActivoUsuario ? codigoActivoUsuario : localStorage.getItem('oracle_vip_code');
-    if (!usuarioActual) { return window.mostrarAlerta("Sesión Expirada", "Por favor inicia sesión.", "error"); }
+    if (!usuarioActual) { return window.mostrarAlerta("Sesión Expirada", "Por favor inicia sesión nuevamente con tu código VIP.", "error"); }
     const btn = document.querySelector('#apadrinamientoOnboarding button'); const txtOriginal = btn ? btn.innerText : 'ACTIVAR TERMINAL';
     if(btn) { btn.innerText = "PROCESANDO..."; btn.disabled = true; }
     try {
         await setDoc(doc(db, "codigos_nube", usuarioActual), { apadrinamiento: { bankroll_inicial: monto, bankroll_actual: monto, fecha_inicio: Date.now(), activo: true } }, { merge: true });
-        window.mostrarAlerta("Éxito", "Software configurado.", "success");
+        window.mostrarAlerta("Éxito", "Software configurado. Ya puedes acceder al radar de operaciones.", "success");
         const onboarding = document.getElementById('apadrinamientoOnboarding'); const dash = document.getElementById('apadrinamientoDashboard');
         if(onboarding) onboarding.style.display = 'none'; if(dash) { dash.style.display = 'block'; dash.classList.remove('hidden'); }
         if(window.cargarDatosApadrinamiento) window.cargarDatosApadrinamiento();
@@ -683,10 +679,10 @@ window.generarTicketApadrinamiento = async function() {
             let c = document.createElement('div'); c.id = 'previewArriesgar'; btn.parentNode.insertBefore(c, btn);
             c.innerHTML = `<div class="bg-red-900/20 border border-red-500/50 p-4 rounded-xl mb-3 shadow-inner transform transition-all animate-pulse"><div class="text-red-400 font-black text-[11px] uppercase mb-2"><i class="fas fa-exclamation-triangle"></i> MERCADO INESTABLE - PLAN B</div><p class="text-[9px] text-gray-300 mb-3 leading-relaxed">FR reducirá tu Stake al <b class="text-yellow-500 text-xs">${porcentajeStake}%</b> para proteger tu capital.</p><div class="mb-3">${picksHtml}</div><div class="text-right text-xs font-black text-white pt-2 border-t border-white/10">Cuota Final: <span class="text-yellow-500">${cuotaAlcanzada.toFixed(2)}</span></div></div>`;
             window.ticketPlanBPendiente = objTicket; btn.removeAttribute('onclick'); btn.innerHTML = `<i class="fas fa-fire"></i> ARRIESGAR STAKE (${porcentajeStake}%)`; btn.className = "w-full py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl font-black text-[12px] uppercase shadow-[0_10px_20px_rgba(220,38,38,0.3)] transition-all active:scale-95"; btn.disabled = false;
-            btn.onclick = async function() { btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> ENVIANDO ORDEN...`; btn.disabled = true; try { await setDoc(doc(db, "tickets_apadrinamiento", ticketId), window.ticketPlanBPendiente); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Riesgo Asumido", `Ticket guardado.`, "warning"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "Error al procesar.", "error"); window.renderizarDashboardApadrinamiento(); } };
-            window.mostrarAlerta("Alerta de Riesgo", "No hay eventos VIP confirmados. Puedes forzar un Plan B.", "warning");
+            btn.onclick = async function() { btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> ENVIANDO ORDEN...`; btn.disabled = true; try { await setDoc(doc(db, "tickets_apadrinamiento", ticketId), window.ticketPlanBPendiente); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Riesgo Asumido", `Ticket alternativo guardado.`, "warning"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "Error al procesar.", "error"); window.renderizarDashboardApadrinamiento(); } };
+            window.mostrarAlerta("Alerta de Riesgo", "No hay eventos VIP confirmados. Puedes forzar un ticket de Plan B.", "warning");
         } else {
-            try { await setDoc(doc(db, "tickets_apadrinamiento", ticketId), objTicket); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Oportunidad Encontrada", `Operación guardada.`, "success"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "No se pudo guardar.", "error"); window.renderizarDashboardApadrinamiento(); }
+            try { await setDoc(doc(db, "tickets_apadrinamiento", ticketId), objTicket); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Oportunidad Encontrada", `Operación Diamante guardada con Stake del 10%.`, "success"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "No se pudo guardar.", "error"); window.renderizarDashboardApadrinamiento(); }
         }
     }, 1500); 
 };
@@ -710,7 +706,7 @@ window.cargarHistorialApadrinamiento = async function() {
 window.editarCuotaUsuario = async function(id, cuotaActual) { const nueva = prompt("Ingresa la cuota exacta que te dio tu casa de apuestas (usa punto para decimales):", cuotaActual); if (nueva && !isNaN(parseFloat(nueva))) { try { await updateDoc(doc(db, "tickets_apadrinamiento", id), { cuota_usuario: parseFloat(nueva) }); window.cargarHistorialApadrinamiento(); window.mostrarAlerta("Guardado", "Estadística actualizada.", "success"); } catch(e) {} } };
 
 // ==========================================
-// 12. ADMIN: GENERADOR RETO ESCALERA
+// 12. ADMIN: GENERADOR RETO ESCALERA Y CONTROL LIVE (RESTAURADO)
 // ==========================================
 window.generarRetoAdmin = async function() {
     const meta = parseFloat(document.getElementById('inputCuotaObjetivo').value); const probMin = parseFloat(document.getElementById('inputProbMinima').value) || 85; const fechaElegida = document.getElementById('inputFechaEscalera').value;
@@ -730,23 +726,32 @@ window.generarRetoAdmin = async function() {
         if(unicas.length === 0) { window.mostrarAlerta("Límite", `Sin apuestas válidas para un Reto (Prob >= ${probMin}% y Cuota >= 1.15).`, "warning"); return; }
         
         let seleccionados = []; let cuotaAcum = 1.0; for(let op of unicas) { seleccionados.push(op); cuotaAcum *= op.cuota; if(cuotaAcum >= meta) break; if(seleccionados.length >= 2) break; }
-        window.retoPendientePublicar = { picks: seleccionados.map(s => ({ home_team: s.partido.home_team, away_team: s.partido.away_team, mercadoKey: s.mercadoKey, nombre: s.nombre, point: s.point === undefined ? null : s.point, cuota: s.cuota, probabilidad: s.probabilidad, stake: 100, confirmados: [] })), cuotaTotal: cuotaAcum.toFixed(2), fechaFiltro: fechaElegida };
+        
+        // 🚀 FIX: EL STAKE AHORA ES UNO SOLO PARA TODO EL TICKET (GLOBAL)
+        window.retoPendientePublicar = { picks: seleccionados.map(s => ({ home_team: s.partido.home_team, away_team: s.partido.away_team, mercadoKey: s.mercadoKey, nombre: s.nombre, point: s.point === undefined ? null : s.point, cuota: s.cuota, probabilidad: s.probabilidad })), cuotaTotal: cuotaAcum.toFixed(2), fechaFiltro: fechaElegida, stake: 100, confirmados: [] };
         
         let previewHtml = `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET (PREVIEW)</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${cuotaAcum.toFixed(2)}</span></div>`;
-        seleccionados.forEach((p, idx) => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; previewHtml += `<div class="bg-gray-900/50 p-3 rounded-lg mb-3 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo || defMercado}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.partido.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div><div class="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span class="text-[9px] text-blue-400 uppercase font-bold"><i class="fas fa-percentage mr-1"></i> % de Fondo a Apostar</span><input type="number" value="100" class="w-20 bg-blue-900/30 text-blue-400 font-black text-center text-xs p-1.5 rounded border border-blue-500/50 outline-none" onchange="window.actualizarStakePreview(${idx}, this.value)"></div></div>`; });
-        previewHtml += `</div>`; document.getElementById('previewRetoAdmin').innerHTML = previewHtml; document.getElementById('previewRetoAdmin').classList.remove('hidden'); document.getElementById('inputAdminReto').value = `⚠️ Gestión de Banca Sugerida: Respeta el % indicado.`; document.getElementById('inputAdminReto').classList.remove('hidden'); document.getElementById('btnPublicarReto').classList.remove('hidden');
-        if (cuotaAcum < meta) window.mostrarAlerta("Aviso", `Se logró una cuota de ${cuotaAcum.toFixed(2)}.`, "warning"); else window.mostrarAlerta("Generado", `Cuota lograda: ${cuotaAcum.toFixed(2)}. Revisa el % de Stake.`, "success");
+        seleccionados.forEach((p) => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; previewHtml += `<div class="bg-gray-900/50 p-3 rounded-lg mb-3 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo || defMercado}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.partido.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; });
+        
+        // 🚀 FIX: EL STAKE AHORA ESTÁ AFUERA, ES GLOBAL PARA EL RETO
+        previewHtml += `<div class="mt-2 pt-2 flex justify-between items-center"><span class="text-[9px] text-blue-400 uppercase font-bold"><i class="fas fa-percentage mr-1"></i> % de Fondo a Apostar en la Combinada</span><input type="number" value="100" class="w-20 bg-blue-900/30 text-blue-400 font-black text-center text-xs p-1.5 rounded border border-blue-500/50 outline-none" onchange="window.actualizarStakePreview(this.value)"></div></div>`; 
+        document.getElementById('previewRetoAdmin').innerHTML = previewHtml; document.getElementById('previewRetoAdmin').classList.remove('hidden'); document.getElementById('inputAdminReto').value = `⚠️ Gestión de Banca Sugerida: Respeta el % de Stake indicado para proteger tu capital.`; document.getElementById('inputAdminReto').classList.remove('hidden'); document.getElementById('btnPublicarReto').classList.remove('hidden');
+        if (cuotaAcum < meta) window.mostrarAlerta("Aviso", `Se logró una cuota de ${cuotaAcum.toFixed(2)}.`, "warning"); else window.mostrarAlerta("Generado", `Cuota lograda: ${cuotaAcum.toFixed(2)}.`, "success");
     } catch(e) { window.mostrarAlerta("Error", "Fallo IA.", "error"); } finally { btn.innerHTML = originalBtn; btn.disabled = false; }
 };
 
-window.actualizarStakePreview = function(idx, val) { let v = parseFloat(val); if(!isNaN(v) && v > 0 && v <= 100 && window.retoPendientePublicar) { window.retoPendientePublicar.picks[idx].stake = v; } };
+window.actualizarStakePreview = function(val) { let v = parseFloat(val); if(!isNaN(v) && v > 0 && v <= 100 && window.retoPendientePublicar) { window.retoPendientePublicar.stake = v; } };
 
 window.publicarRetoEscalera = async function() {
     const txt = document.getElementById('inputAdminReto').value; if(!txt && !window.retoPendientePublicar) return window.mostrarAlerta("Error", "Nada para publicar.", "error");
     const btn = document.getElementById('btnPublicarReto'); const originalTxt = btn.innerText; btn.innerText = "Publicando..."; btn.disabled = true;
     const capitalStr = document.getElementById('inputCapitalEscalera')?.value; const capitalInicial = parseFloat(capitalStr) || 50000;
-    window.retoPendientePublicar.capital_inicial = capitalInicial; window.retoPendientePublicar.estado_reto = 'activo';
-    window.retoPendientePublicar.picks.forEach(p => { p.estado = 'pendiente'; if(!p.confirmados) p.confirmados = []; if(p.stake === undefined) p.stake = 100; });
+    
+    // 🚀 FIX: ESTADO RETO GLOBAL Y CONFIRMADOS A NIVEL RAIZ
+    window.retoPendientePublicar.capital_inicial = capitalInicial; 
+    window.retoPendientePublicar.estado_reto = 'activo';
+    window.retoPendientePublicar.confirmados = [];
+    if(window.retoPendientePublicar.stake === undefined) window.retoPendientePublicar.stake = 100;
 
     try { 
         const ahora = Date.now(); await setDoc(doc(db, "global", "escalera"), { mensaje: txt, ticket_data: window.retoPendientePublicar, timestamp: ahora }); 
@@ -767,74 +772,95 @@ window.cargarGestionRetoActivoAdmin = async function() {
         if(snap.exists()) {
             const data = snap.data(); const tk = data.ticket_data;
             if(!tk || !tk.picks || tk.picks.length === 0) { panel.innerHTML = ''; return; }
-            let capitalInicial = tk.capital_inicial || 50000; let currentCap = capitalInicial; let htmlPicks = '';
             
+            let capitalInicial = tk.capital_inicial || 50000; 
+            let currentCap = capitalInicial;
+            let estadoReto = tk.estado_reto || 'activo';
+            let stakePct = tk.stake !== undefined ? parseFloat(tk.stake) : 100; 
+            
+            // 🚀 FIX: MATEMÁTICA DE INTERÉS COMPUESTO GLOBAL (APUESTA COMBINADA)
+            let amountToBet = currentCap * (stakePct / 100); 
+            let amountKept = currentCap - amountToBet; 
+            let winCap = amountKept + (amountToBet * tk.cuotaTotal); 
+            let loseCap = amountKept;
+            
+            if (estadoReto === 'ganado') { currentCap = winCap; } 
+            else if (estadoReto === 'perdido') { currentCap = loseCap; }
+            
+            let totalPctReal = (currentCap / capitalInicial) * 100;
+            let confCount = tk.confirmados ? tk.confirmados.length : 0; 
+            let confList = confCount > 0 ? tk.confirmados.join(', ') : 'Nadie aún';
+            
+            let htmlPicks = '';
             tk.picks.forEach((p, index) => {
-                let stakePct = p.stake !== undefined ? parseFloat(p.stake) : 100; let stakeFraction = stakePct / 100;
-                let amountToBet = currentCap * stakeFraction; let amountKept = currentCap - amountToBet; let winCap = amountKept + (amountToBet * p.cuota); let loseCap = amountKept;
-                let startPctGlobal = (currentCap / capitalInicial) * 100; let endPctGlobal = (winCap / capitalInicial) * 100;
-                
-                if (p.estado === 'won') { currentCap = winCap; } else if (p.estado === 'lost') { currentCap = loseCap; endPctGlobal = (loseCap / capitalInicial) * 100; }
-                let bgStatus = p.estado === 'won' ? 'bg-green-900/30 border-green-500/50' : (p.estado === 'lost' ? 'bg-red-900/30 border-red-500/50' : 'bg-gray-900/50 border-white/10');
-                let colorPct = p.estado === 'won' ? 'text-green-400' : (p.estado === 'lost' ? 'text-red-400' : 'text-gray-400');
-                let confCount = p.confirmados ? p.confirmados.length : 0; let confList = confCount > 0 ? p.confirmados.join(', ') : 'Nadie aún';
-                
-                htmlPicks += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex flex-col relative"><div class="flex justify-between items-center mb-2 border-b border-white/5 pb-2"><div class="flex flex-col w-1/2 pr-2"><span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span><span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span></div><div class="flex gap-1 items-center justify-end w-1/2"><button onclick="window.editarStakePickEscalera(${index}, ${stakePct})" class="bg-blue-600/20 text-blue-400 p-2 rounded-lg border border-blue-500/30 hover:bg-blue-600/40 active:scale-95 transition flex items-center gap-1 font-black text-[9px]"><i class="fas fa-percent"></i> ${stakePct}%</button><div class="w-[1px] h-6 bg-gray-700 mx-1"></div><button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition"><i class="fas fa-check"></i></button><button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition"><i class="fas fa-times"></i></button><button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition"><i class="fas fa-undo"></i></button><button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 ml-1 transition"><i class="fas fa-trash-alt"></i></button></div></div><div class="flex justify-between items-center pt-1"><span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">Fondo Acum. Total</span><span class="text-[10px] font-black ${colorPct}">${startPctGlobal.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] mx-1"></i> ${endPctGlobal.toFixed(1)}%</span></div><div class="mt-2 pt-2 border-t border-white/5"><span class="text-[8px] text-blue-400 font-bold uppercase"><i class="fas fa-users mr-1"></i> Confirmados (${confCount}):</span><div class="text-[7px] text-gray-400 mt-1 break-words">${confList}</div></div></div>`;
+                htmlPicks += `<div class="bg-gray-900/50 p-3 rounded-lg mb-2 border border-white/5 flex flex-col relative"><div class="flex justify-between items-center mb-2"><div class="flex flex-col w-full pr-2"><span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span><span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span></div><div class="flex gap-1 items-center justify-end"><button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 transition" title="Borrar Pick de la combinada"><i class="fas fa-trash-alt"></i></button></div></div></div>`;
             });
             
-            let metaCapital = capitalInicial * (tk.cuotaTotal || 1); let totalPctReal = (currentCap / capitalInicial) * 100;
-            let html = `<div class="bg-black/60 p-4 rounded-2xl border border-yellow-500/50 shadow-lg relative"><div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">CONTROL LIVE</div><h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-3"><i class="fas fa-gamepad text-yellow-500 mr-1"></i> Tablero</h3><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[7px] text-gray-500 uppercase tracking-wider">C. Inicial</span><span class="text-gray-400 font-black text-xs">${formatoCOP(capitalInicial)}</span></div><div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[7px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase tracking-wider">Fondo Actual</span><span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-sm">${formatoCOP(currentCap)}</span></div><div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[7px] text-blue-400 uppercase tracking-wider">Crecimiento Global</span><span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span></div></div>${htmlPicks}</div>`; 
+            let html = `<div class="bg-black/60 p-4 rounded-2xl border border-yellow-500/50 shadow-lg relative"><div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">CONTROL LIVE</div><h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-3"><i class="fas fa-gamepad text-yellow-500 mr-1"></i> Tablero</h3><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center"><span class="block text-[7px] text-gray-500 uppercase">C. Inicial</span><span class="text-gray-400 font-black text-xs">${formatoCOP(capitalInicial)}</span></div><div class="bg-black border ${estadoReto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-lg text-center"><span class="block text-[7px] ${estadoReto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase">Actual</span><span class="${estadoReto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-sm">${formatoCOP(currentCap)}</span></div><div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-lg text-center"><span class="block text-[7px] text-blue-400 uppercase">Crecimiento</span><span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span></div></div>${htmlPicks}`; 
+            
+            // 🚀 FIX: CONTROLES GLOBALES PARA RESOLVER EL RETO
+            html += `<div class="mt-4 pt-3 border-t border-white/10 flex flex-col gap-2">
+                        <button onclick="window.editarStakeRetoEscalera(${stakePct})" class="w-full bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-500/30 hover:bg-blue-600/40 active:scale-95 transition font-black text-[10px] uppercase"><i class="fas fa-percentage mr-1"></i> Ajustar Stake Global (${stakePct}%)</button>
+                        <div class="flex gap-2">
+                            <button onclick="window.marcarRetoEscalera('ganado')" class="flex-1 bg-green-600/20 text-green-500 p-3 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition font-black text-[10px] uppercase"><i class="fas fa-check mr-1"></i> Reto Ganado</button>
+                            <button onclick="window.marcarRetoEscalera('perdido')" class="flex-1 bg-red-600/20 text-red-500 p-3 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition font-black text-[10px] uppercase"><i class="fas fa-times mr-1"></i> Reto Perdido</button>
+                            <button onclick="window.marcarRetoEscalera('activo')" class="bg-gray-600/20 text-gray-400 p-3 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition" title="Devolver a Pendiente"><i class="fas fa-undo"></i></button>
+                        </div>
+                        <div class="mt-2"><span class="text-[8px] text-blue-400 font-bold uppercase"><i class="fas fa-users mr-1"></i> Confirmados (${confCount}):</span><div class="text-[7px] text-gray-400 mt-1 break-words">${confList}</div></div>
+                    </div></div>`;
             panel.innerHTML = html;
         } else { panel.innerHTML = ''; }
     } catch(e) { console.error(e); }
 };
 
-window.editarStakePickEscalera = async function(index, currentStake) {
-    let n = prompt("Ingresa el % de inversión (ej: 100, 50, 25):", currentStake); let val = parseFloat(n);
+window.editarStakeRetoEscalera = async function(currentStake) {
+    let n = prompt("Ingresa el % de inversión del Reto (ej: 100, 50, 25):", currentStake); let val = parseFloat(n);
     if(!isNaN(val) && val > 0 && val <= 100) {
         try {
             const snap = await getDoc(doc(db, "global", "escalera"));
             if(snap.exists()) {
-                let d = snap.data(); d.ticket_data.picks[index].stake = val; await updateDoc(doc(db, "global", "escalera"), { ticket_data: d.ticket_data });
-                window.cargarGestionRetoActivoAdmin(); window.mostrarAlerta("Éxito", "Porcentaje de inversión ajustado.", "success");
+                let d = snap.data(); d.ticket_data.stake = val; await updateDoc(doc(db, "global", "escalera"), { ticket_data: d.ticket_data });
+                window.cargarGestionRetoActivoAdmin(); window.mostrarAlerta("Éxito", "Porcentaje de inversión global ajustado.", "success");
                 if(document.getElementById('vista_escalera').classList.contains('view-active')) window.cargarRetoEscaleraNube();
             }
         } catch(e) { window.mostrarAlerta("Error", "No se pudo actualizar el porcentaje", "error"); }
-    } else if (n !== null) { window.mostrarAlerta("Error", "Ingresa un porcentaje válido del 1 al 100.", "warning"); }
+    } else if (n !== null) { window.mostrarAlerta("Error", "Ingresa un porcentaje válido.", "warning"); }
 };
 
 window.eliminarPickEscalera = async function(index) {
-    window.mostrarConfirmacion("Borrar Pick", "¿Eliminar esta selección de la Escalera?", async () => {
+    window.mostrarConfirmacion("Borrar Pick", "¿Eliminar esta selección de la Escalera? La cuota se recalculará automáticamente.", async () => {
         try {
             const snap = await getDoc(doc(db, "global", "escalera"));
             if(snap.exists()) {
                 const data = snap.data(); data.ticket_data.picks.splice(index, 1);
-                let perdidos = 0; let ganados = 0;
-                data.ticket_data.picks.forEach(p => { if(p.estado === 'lost') perdidos++; if(p.estado === 'won') ganados++; });
-                if (data.ticket_data.picks.length === 0) data.ticket_data.estado_reto = 'activo'; else if (perdidos > 0) data.ticket_data.estado_reto = 'perdido'; else if (ganados === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado'; else data.ticket_data.estado_reto = 'activo';
+                
+                // Recalcular cuota total
+                let cuotaAcum = 1.0;
+                data.ticket_data.picks.forEach(p => cuotaAcum *= p.cuota);
+                data.ticket_data.cuotaTotal = cuotaAcum.toFixed(2);
+                
+                if (data.ticket_data.picks.length === 0) data.ticket_data.estado_reto = 'activo'; 
+                
                 await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data }); window.cargarGestionRetoActivoAdmin();
                 if(document.getElementById('vista_escalera').classList.contains('view-active')) window.cargarRetoEscaleraNube();
-                window.mostrarAlerta("Actualizado", "Pick eliminado y porcentajes ajustados.", "success");
+                window.mostrarAlerta("Actualizado", "Pick eliminado y cuota ajustada.", "success");
             }
         } catch(e) { window.mostrarAlerta("Error", "Fallo al eliminar.", "error"); }
     });
 };
 
-window.marcarPickEscalera = async function(index, estado) {
+window.marcarRetoEscalera = async function(estado) {
     try {
         const snap = await getDoc(doc(db, "global", "escalera"));
         if(snap.exists()) {
-            const data = snap.data(); data.ticket_data.picks[index].estado = estado;
-            let perdidos = 0; let ganados = 0;
-            data.ticket_data.picks.forEach(p => { if(p.estado === 'lost') perdidos++; if(p.estado === 'won') ganados++; });
-            if (perdidos > 0) data.ticket_data.estado_reto = 'perdido'; else if (ganados === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado'; else data.ticket_data.estado_reto = 'activo';
+            const data = snap.data(); data.ticket_data.estado_reto = estado;
             await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data }); window.cargarGestionRetoActivoAdmin();
             if(document.getElementById('vista_escalera').classList.contains('view-active')) window.cargarRetoEscaleraNube();
         }
-    } catch(e) { window.mostrarAlerta("Error", "No se pudo actualizar el pick", "error"); }
+    } catch(e) { window.mostrarAlerta("Error", "No se pudo actualizar el reto", "error"); }
 };
 
-window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto Activo", "¿Deseas borrar el Reto Escalera activo para que no lo vean los usuarios en la app?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Sistema Limpio", "El reto activo ha sido eliminado de la nube.", "success"); window.cargarGestionRetoActivoAdmin(); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
+window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto Activo", "¿Borrar Reto Escalera activo?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Limpio", "Reto activo eliminado.", "success"); window.cargarGestionRetoActivoAdmin(); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
 
 window.cargarHistorialEscaleraAdmin = async function() {
     const lista = document.getElementById('historialEscaleraAdminList'); if(!lista) return; lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500 text-xl"></i></div>';
@@ -863,52 +889,76 @@ window.crearCodigo = async function(eI) {
         iC.value = ''; window.mostrarAlerta("Éxito", `Código creado.`, "success"); if(window.renderizarListaAdmin) window.renderizarListaAdmin(); 
     } catch (error) { window.mostrarAlerta("Error", "Fallo de conexión al servidor.", "error"); } 
 };
+
 window.eliminarCodigo = async function(c) { window.mostrarConfirmacion("Eliminar", `¿Borrar código ${c}?`, async () => { try { await deleteDoc(doc(db, "codigos_nube", c)); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); } catch(e){} }); };
-window.resetearDispositivo = async function(c) { window.mostrarConfirmacion("Resetear Dispositivo", `¿Permitir nuevo login para ${c}?`, async () => { try { await updateDoc(doc(db, "codigos_nube", c), { deviceID: null }); window.renderizarListaAdmin(); window.mostrarAlerta("Liberado", "Login liberado.", "success"); } catch(e){ window.mostrarAlerta("Error", "No se pudo resetear.", "error"); } }); };
+
+window.resetearDispositivo = async function(c) {
+    window.mostrarConfirmacion("Resetear Dispositivo", `¿Permitir que el código ${c} inicie sesión en un celular nuevo?`, async () => {
+        try { await updateDoc(doc(db, "codigos_nube", c), { deviceID: null }); window.renderizarListaAdmin(); window.mostrarAlerta("Liberado", "El cliente ya puede iniciar sesión en su nuevo equipo.", "success"); } catch(e) { window.mostrarAlerta("Error", "No se pudo resetear.", "error"); }
+    });
+};
 
 window.renderizarListaAdmin = async function() {
     const l = document.getElementById('codesList'); if(!l) return; l.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-yellow-500"></i></div>';
-    try { 
-        const s = await getDocs(collection(db, "codigos_nube")); l.innerHTML = ''; let a = []; s.forEach(d => a.push(d.data())); a.sort((x, y) => y.creado - x.creado); 
-        a.forEach(c => { 
-            let co = c.ilimitado ? 'text-purple-400 bg-purple-900/20 border-purple-500/30' : 'text-yellow-500 bg-yellow-900/20 border-yellow-500/30'; 
-            let st = c.deviceID ? '<span class="text-red-400"><i class="fas fa-lock"></i> Usado</span>' : '<span class="text-green-400"><i class="fas fa-unlock"></i> Libre</span>'; 
-            let bR = c.deviceID ? `<button onclick="window.resetearDispositivo('${c.code}')" class="text-blue-400 hover:text-blue-300 transition-colors p-2 bg-blue-900/20 border border-blue-500/30 rounded-lg mr-2" title="Liberar Celular"><i class="fas fa-unlock-alt"></i></button>` : ''; 
-            l.innerHTML += `<div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/5 mb-2 shadow-sm"><div class="flex flex-col"><span class="text-white font-black text-xs tracking-wider">${c.code}</span><div class="flex gap-2 mt-1 text-[8px] uppercase font-bold"><span class="px-1.5 py-0.5 rounded border ${co}">${c.ilimitado ? 'Premium' : 'VIP'}</span>${st}</div></div><div class="flex items-center">${bR}<button onclick="window.eliminarCodigo('${c.code}')" class="text-gray-500 hover:text-red-500 transition-colors p-2 bg-white/5 rounded-lg"><i class="fas fa-trash"></i></button></div></div>`; 
-        }); 
-    } catch (e) { l.innerHTML = `<p class="text-red-500 text-xs">Error.</p>`; }
+    try { const snap = await getDocs(collection(db, "codigos_nube")); l.innerHTML = ''; let arr = []; snap.forEach(d => arr.push(d.data())); arr.sort((a,b) => b.creado - a.creado); arr.forEach(c => { 
+        let col = c.ilimitado ? 'text-purple-400 bg-purple-900/20 border-purple-500/30' : 'text-yellow-500 bg-yellow-900/20 border-yellow-500/30'; 
+        let std = c.deviceID ? '<span class="text-red-400"><i class="fas fa-lock"></i> Usado</span>' : '<span class="text-green-400"><i class="fas fa-unlock"></i> Libre</span>'; 
+        let btnReset = c.deviceID ? `<button onclick="window.resetearDispositivo('${c.code}')" class="text-blue-400 hover:text-blue-300 transition-colors p-2 bg-blue-900/20 border border-blue-500/30 rounded-lg mr-2" title="Liberar Celular"><i class="fas fa-unlock-alt"></i></button>` : '';
+        l.innerHTML += `<div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/5 mb-2 shadow-sm"><div class="flex flex-col"><span class="text-white font-black text-xs tracking-wider">${c.code}</span><div class="flex gap-2 mt-1 text-[8px] uppercase font-bold"><span class="px-1.5 py-0.5 rounded border ${col}">${c.ilimitado?'Premium':'VIP'}</span>${std}</div></div><div class="flex items-center">${btnReset}<button onclick="window.eliminarCodigo('${c.code}')" class="text-gray-500 hover:text-red-500 transition-colors p-2 bg-white/5 rounded-lg"><i class="fas fa-trash"></i></button></div></div>`; 
+    }); } catch (e) { l.innerHTML = `<p class="text-red-500 text-xs">Error.</p>`; }
 };
 
-window.renderizarSolicitudesAdmin = async function() { 
-    const l = document.getElementById('solicitudesList'); if(!l) return; l.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-green-500"></i></div>'; 
-    try { const s = await getDocs(collection(db, "codigos_nube")); l.innerHTML = ''; let c = 0; s.forEach(d => { let da = d.data(); if(da.ladderStatus === 'pending') { c++; l.innerHTML += `<div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-green-500/30 mb-2 shadow-md"><span class="text-white font-black text-[11px] uppercase"><i class="fas fa-user text-green-500 mr-2"></i>${da.code}</span><button onclick="window.aprobarEscalera('${da.code}')" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-md text-[9px] font-black uppercase transition-all active:scale-95 shadow-lg">Aprobar</button></div>`; } }); if(c === 0) { l.innerHTML = `<p class="text-[10px] text-gray-500 text-center py-4">No hay solicitudes</p>`; } } catch(e){} 
+window.renderizarSolicitudesAdmin = async function() {
+    const l = document.getElementById('solicitudesList'); if(!l) return; l.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-green-500"></i></div>';
+    try { const snap = await getDocs(collection(db, "codigos_nube")); l.innerHTML = ''; let conteo = 0; snap.forEach(d => { let c = d.data(); if(c.ladderStatus === 'pending') { conteo++; l.innerHTML += `<div class="flex justify-between items-center bg-black/60 p-3 rounded-lg border border-green-500/30 mb-2 shadow-md"><span class="text-white font-black text-[11px] uppercase"><i class="fas fa-user text-green-500 mr-2"></i>${c.code}</span><button onclick="window.aprobarEscalera('${c.code}')" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-md text-[9px] font-black uppercase transition-all active:scale-95 shadow-lg">Aprobar</button></div>`; } }); if(conteo === 0) { l.innerHTML = `<p class="text-[10px] text-gray-500 text-center py-4 font-bold uppercase tracking-widest border border-dashed border-white/10 rounded-lg">No hay solicitudes pendientes</p>`; } } catch(e){}
 };
 window.aprobarEscalera = async function(c) { try { await updateDoc(doc(db, "codigos_nube", c), { ladderStatus: 'approved' }); window.mostrarAlerta("Éxito", "Usuario aprobado.", "success"); window.renderizarSolicitudesAdmin(); } catch(e){} };
 
 // ==========================================
-// 14. ADMIN: MONITOR GLOBAL Y GESTIÓN
+// 14. ADMIN: MONITOR GLOBAL Y GESTIÓN DE USUARIOS
 // ==========================================
-window.eliminarTicketAdmin = async function(iD, fV = 'dash') { window.mostrarConfirmacion("Eliminar Ticket", "Se borrará permanentemente de la base de datos.", async () => { try { await deleteDoc(doc(db, "tickets_guardados", iD)); window.mostrarAlerta("Eliminado", "Ticket borrado con éxito.", "success"); if(fV === 'dash') { window.cargarMonitorTickets(); } else if (fV === 'users') { window.cargarUsuariosAdmin(true); window.cargarMonitorTickets(); } } catch(e) {} }); };
-window.limpiarTodoMonitor = async function() { window.mostrarConfirmacion("Purgar Todo", "Esta acción eliminará TODO el historial.", async () => { try { const q = query(collection(db, "tickets_guardados")); const s = await getDocs(q); s.forEach(async (d) => { await deleteDoc(d.ref); }); setTimeout(() => { window.cargarMonitorTickets(); window.cargarUsuariosAdmin(true); window.mostrarAlerta("Limpieza", "Completada.", "success"); }, 1500); } catch(e) {} }); };
+window.eliminarTicketAdmin = async function(idDoc, fromView = 'dash') {
+    window.mostrarConfirmacion("Eliminar Ticket", "Se borrará permanentemente de la base de datos.", async () => {
+        try { await deleteDoc(doc(db, "tickets_guardados", idDoc)); window.mostrarAlerta("Eliminado", "Ticket borrado con éxito.", "success"); if(fromView === 'dash') { window.cargarMonitorTickets(); } else if (fromView === 'users') { window.cargarUsuariosAdmin(true); window.cargarMonitorTickets(); } } catch(e) { window.mostrarAlerta("Error", "Fallo al intentar borrar.", "error"); }
+    });
+};
+
+window.limpiarTodoMonitor = async function() {
+    window.mostrarConfirmacion("Purgar Todo", "Esta acción eliminará TODO el historial de tickets guardados de todos los usuarios. Es irreversible. ¿Continuar?", async () => {
+        try { const q = query(collection(db, "tickets_guardados")); const snap = await getDocs(q); let contador = 0; snap.forEach(async (d) => { await deleteDoc(d.ref); contador++; }); setTimeout(() => { window.cargarMonitorTickets(); window.cargarUsuariosAdmin(true); window.mostrarAlerta("Purga Completa", "Base de datos limpia.", "success"); }, 1500); } catch(e) { window.mostrarAlerta("Error", "No se pudo limpiar.", "error"); }
+    });
+};
 
 window.cargarMonitorTickets = async function() {
-    const l = document.getElementById('monitorTicketsList'); if(!l) return; l.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-yellow-500 text-2xl"></i></div>';
+    const lista = document.getElementById('monitorTicketsList'); if(!lista) return; lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-yellow-500 text-2xl"></i></div>';
     try { 
-        const q = query(collection(db, "tickets_guardados"), orderBy("timestamp", "desc"), limit(15)); const s = await getDocs(q); l.innerHTML = ''; 
-        if(s.empty) { l.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">Nadie ha guardado tickets aún.</p>`; return; } 
-        s.forEach(doc => { 
-            let t = doc.data(); let pH = ''; let aP = t.picksObj || t.picks || [];
-            if(aP.length > 0 && typeof aP[0] === 'object') {
-                pH = aP.map(p => {
-                    let m = p.mercadoKey || p.mercado || ''; const dM = definicionesApuestas[m] || { 'titulo': 'Mercado Especial' }; 
-                    let ic = "fa-handshake"; if(m.includes('shots')) ic = "fa-bullseye"; else if(m.includes('corners')) ic = "fa-flag"; 
-                    let bIA = p.verificado_ia ? `<span class="text-blue-400 text-[8px] ml-1"><i class="fas fa-gem"></i></span>` : ''; 
-                    return `<div class="bg-gray-900/80 p-2 rounded mb-1 border border-white/5 relative"><div class="text-[7px] text-gray-400 font-bold uppercase mb-0.5"><i class="fas ${ic} mr-1"></i> ${dM.titulo}</div><div class="text-[9px] font-bold text-white leading-tight mb-1">${p.partido}</div><div class="flex justify-between items-center"><span class="text-[8px] text-yellow-500 font-black uppercase">PICK: ${p.pick} ${bIA}</span><span class="text-white font-black text-[10px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span></div></div>`;
+        const q = query(collection(db, "tickets_guardados"), orderBy("timestamp", "desc"), limit(15)); const snap = await getDocs(q); lista.innerHTML = ''; 
+        if(snap.empty) { lista.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">Nadie ha guardado tickets aún.</p>`; return; } 
+        snap.forEach(doc => { 
+            let t = doc.data(); let picksHtml = ''; let arrayPicks = t.picksObj || t.picks || [];
+            if(arrayPicks.length > 0 && typeof arrayPicks[0] === 'object') {
+                picksHtml = arrayPicks.map(p => {
+                    let mercado = p.mercadoKey || p.mercado || ''; const defMercado = definicionesApuestas[mercado] || { 'titulo': 'Mercado Especial' }; 
+                    let ico = "fa-handshake"; if(mercado.includes('shots')) ico = "fa-bullseye"; else if(mercado.includes('corners')) ico = "fa-flag"; else if(mercado.includes('cards')) ico = "fa-square"; else if(mercado === 'totals') ico = "fa-futbol"; else if(mercado === 'spreads') ico = "fa-balance-scale";
+                    let badgeIA = p.verificado_ia ? `<span class="text-blue-400 text-[8px] ml-1"><i class="fas fa-gem"></i></span>` : ''; let probBadge = p.probabilidad ? `<span class="bg-gray-800 text-gray-300 px-1 rounded text-[7px] ml-1">${p.probabilidad}%</span>` : '';
+                    return `<div class="bg-gray-900/80 p-2 rounded mb-1 border border-white/5 relative"><div class="text-[7px] text-gray-400 font-bold uppercase mb-0.5"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[9px] font-bold text-white leading-tight mb-1">${p.partido}</div><div class="flex justify-between items-center"><span class="text-[8px] text-yellow-500 font-black uppercase">PICK: ${p.pick} ${badgeIA} ${probBadge}</span><span class="text-white font-black text-[10px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span></div></div>`;
                 }).join('');
-            } else if (aP.length > 0) { pH = aP.map(p => `<li class="text-[8px] text-gray-300 border-b border-white/5 py-1 last:border-0">${p}</li>`).join(''); }
-            l.innerHTML += `<div class="bg-black/60 p-3 rounded-xl border border-yellow-500/20 relative shadow-md mb-3"><div class="absolute top-0 right-0 flex overflow-hidden rounded-bl-xl rounded-tr-xl shadow-md z-10"><button onclick="window.eliminarTicketAdmin('${doc.id}', 'dash')" class="bg-red-600 hover:bg-red-500 text-white text-[10px] px-3 py-1 transition-colors border-r border-red-700"><i class="fas fa-trash"></i></button><span class="bg-yellow-500 text-black text-[10px] font-black px-3 py-1">C: ${t.cuota}</span></div><div class="flex justify-between items-center mb-2 border-b border-white/5 pb-1 mt-1 pr-14"><span class="text-[11px] font-black text-white uppercase"><i class="fas fa-user-secret text-yellow-500 mr-1"></i> ${t.codigo_usuario}</span><span class="text-[8px] text-gray-500">${t.fecha}</span></div><div class="mt-2">${pH}</div></div>`; 
+            } else if (arrayPicks.length > 0) { picksHtml = arrayPicks.map(p => `<li class="text-[8px] text-gray-300 border-b border-white/5 py-1 last:border-0">${p}</li>`).join(''); }
+
+            lista.innerHTML += `
+            <div class="bg-black/60 p-3 rounded-xl border border-yellow-500/20 relative shadow-md mb-3">
+                <div class="absolute top-0 right-0 flex overflow-hidden rounded-bl-xl rounded-tr-xl shadow-md z-10">
+                    <button onclick="window.eliminarTicketAdmin('${doc.id}', 'dash')" class="bg-red-600 hover:bg-red-500 text-white text-[10px] px-3 py-1 transition-colors"><i class="fas fa-trash"></i></button>
+                    <span class="bg-yellow-500 text-black text-[10px] font-black px-3 py-1">C: ${t.cuota}</span>
+                </div>
+                <div class="flex justify-between items-center mb-2 border-b border-white/5 pb-1 mt-1 pr-14">
+                    <span class="text-[11px] font-black text-white uppercase"><i class="fas fa-user-secret text-yellow-500 mr-1"></i> ${t.codigo_usuario}</span>
+                    <span class="text-[8px] text-gray-500">${t.fecha}</span>
+                </div>
+                <div class="mt-2">${picksHtml}</div>
+            </div>`; 
         }); 
-    } catch(e) {}
+    } catch(e) { lista.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al leer los tickets.</p>`; }
 };
 
 let ticketsGlobalesAdminCache = []; window.usuariosAdminList = [];
@@ -922,7 +972,7 @@ window.cargarUsuariosAdmin = async function(fR = false) {
         s.forEach(doc => { let t = doc.data(); t.id = doc.id; ticketsGlobalesAdminCache.push(t); let u = t.codigo_usuario || 'Desconocido'; if(!mU[u]) mU[u] = { uid: u, count: 0, last: t.timestamp }; mU[u].count++; if(t.timestamp > mU[u].last) mU[u].last = t.timestamp; }); 
         window.usuariosAdminList = Object.values(mU).sort((a, b) => b.last - a.last); window.renderizarUsuariosFiltrados(); 
         if(document.getElementById('panelDetalleUsuarioAdmin') && !document.getElementById('panelDetalleUsuarioAdmin').classList.contains('hidden')) { let ti = document.getElementById('tituloDetalleUsuarioAdmin').innerText; let cU = ti.replace('TICKETS DE: ', ''); window.verDetalleUsuarioAdmin(cU); } 
-    } catch(e) {} 
+    } catch(e) { c.innerHTML = '<p class="text-red-500 text-xs text-center">Error al cargar usuarios.</p>'; } 
 };
 
 window.renderizarUsuariosFiltrados = function(f = '') { 
@@ -977,9 +1027,9 @@ window.verDetalleFondoAdmin = async function(c) {
             let bS = 'bg-gray-800/50 border-gray-600'; let bSt = '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-[8px] font-black uppercase"><i class="far fa-clock"></i> Pendiente</span>'; let cB = '';
             if (t.estado === 'pendiente') { cB = `<div class="flex gap-2 mt-3 pt-3 border-t border-white/5"><button onclick="window.resolverTicketFondo('${t.id}', '${c}', 'won', ${t.monto_apostar}, ${t.cuota_usuario})" class="flex-1 py-2 bg-green-600/20 text-green-500 border border-green-500/30 rounded-lg text-[9px] font-black uppercase"><i class="fas fa-check mr-1"></i> Pagar (+)</button><button onclick="window.resolverTicketFondo('${t.id}', '${c}', 'lost', ${t.monto_apostar}, ${t.cuota_usuario})" class="flex-1 py-2 bg-red-600/20 text-red-500 border border-red-500/30 rounded-lg text-[9px] font-black uppercase"><i class="fas fa-times mr-1"></i> Restar (-)</button></div>`; } else if (t.estado === 'won') { bS = 'bg-green-900/20 border-green-500/50'; bSt = '<span class="bg-green-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase"><i class="fas fa-check-circle"></i> Ganada</span>'; } else if (t.estado === 'lost') { bS = 'bg-red-900/20 border-red-500/50'; bSt = '<span class="bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase"><i class="fas fa-times-circle"></i> Perdida</span>'; }
             let pH = t.picks.map(p => { return `<div class="bg-gray-900/60 p-2 rounded mb-1 border border-white/5"><div class="text-[9px] font-bold text-white truncate">${p.partido}</div><div class="flex justify-between items-center mt-1"><span class="text-[8px] text-yellow-500 font-black uppercase">PICK: ${p.pick}</span></div></div>`; }).join('');
-            hT += `<div class="${bS} p-3 rounded-xl border relative mb-3 transition-all"><div class="flex justify-between items-center mb-2 border-b border-white/10 pb-2"><span class="text-[9px] font-bold text-gray-400"><i class="far fa-calendar-alt"></i> ${t.fecha}</span>${bSt}</div><div class="mb-2">${pH}</div><div class="flex justify-between items-end bg-black/60 p-2 rounded-lg border border-black shadow-inner"><div class="flex flex-col"><span class="text-[7px] text-gray-500 uppercase font-bold">Inversión (${t.stake_porcentaje}%)</span><span class="text-xs font-black text-white">${formatoCOP(t.monto_apostar)}</span></div><div class="flex flex-col text-right"><span class="text-[7px] text-gray-500 uppercase font-bold">Cuota</span><span class="text-xs font-black text-yellow-500">${t.cuota_usuario.toFixed(2)}</span></div></div>${cB}</div>`;
+            hT += `<div class="${bS} p-3 rounded-xl border relative mb-3 transition-all"><div class="flex justify-between items-center mb-2 border-b border-white/10 pb-2"><span class="text-[9px] font-bold text-gray-400"><i class="far fa-calendar-alt"></i> ${t.fecha}</span>${bSt}</div><div class="mb-2">${pH}</div><div class="flex justify-between items-end bg-black/60 p-2 rounded-lg border border-black shadow-inner"><div class="flex flex-col"><span class="text-[7px] text-gray-500 uppercase font-bold">Inversión (${t.stake_porcentaje}%)</span><span class="text-xs font-black text-white">${formatoCOP(t.monto_apostar)}</span></div><div class="flex flex-col text-right"><span class="text-[7px] text-gray-500 uppercase font-bold">Cuota del Cliente</span><span class="text-xs font-black text-yellow-500">${t.cuota_usuario.toFixed(2)}</span></div></div>${cB}</div>`;
         }); tC.innerHTML = hT;
-    } catch (e) {}
+    } catch (e) { console.error(e); tC.innerHTML = '<p class="text-red-500 text-xs text-center">Error al cargar datos del fondo.</p>'; }
 };
 
 window.resolverTicketFondo = async function(tI, cU, e, mA, c) { window.mostrarConfirmacion("Matemática de Fondo", `¿Liquidar como ${e === 'won' ? 'GANADA' : 'PERDIDA'}?`, async () => { try { const tR = doc(db, "tickets_apadrinamiento", tI); const uR = doc(db, "codigos_nube", cU); const uS = await getDoc(uR); if(!uS.exists()) return; let bA = uS.data().apadrinamiento.bankroll_actual; if (e === 'won') { let gN = (mA * c) - mA; bA += gN; } else if (e === 'lost') { bA -= mA; } await updateDoc(tR, { estado: e }); await updateDoc(uR, { "apadrinamiento.bankroll_actual": bA }); window.mostrarAlerta("Liquidada", "Saldo actualizado.", "success"); window.verDetalleFondoAdmin(cU); } catch (ex) {} }); };
