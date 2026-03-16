@@ -413,7 +413,6 @@ async function precargarBaseDeDatos() {
     const cacheTimeKey = 'oracle_cache_tiempo';
     const ahoraMs = Date.now();
 
-    // 1. INTENTO DE CACHÉ CON AUTODESTRUCCIÓN SI ESTÁ CORRUPTO
     try {
         const cacheGuardado = localStorage.getItem(cacheKey);
         const tiempoGuardado = localStorage.getItem(cacheTimeKey);
@@ -429,12 +428,10 @@ async function precargarBaseDeDatos() {
             return; 
         }
     } catch (errorCache) {
-        console.warn("Caché corrupto detectado. Purgando memoria local...");
         localStorage.removeItem(cacheKey);
         localStorage.removeItem(cacheTimeKey);
     }
 
-    // 2. DESCARGA DESDE LA NUBE
     const tiempoActualISO = new Date().toISOString(); 
     try {
         const q = query(collection(db, "eventos_sincronizados"), where("commence_time", ">=", tiempoActualISO)); 
@@ -444,8 +441,6 @@ async function precargarBaseDeDatos() {
         snap.forEach(doc => { 
             let p = doc.data(); p.id = doc.id; 
             if(p.sport_key && p.sport_key.includes('soccer')) { 
-                
-                // PRE-CÁLCULO MATEMÁTICO
                 const d = new Date(p.commence_time);
                 const mes = String(d.getMonth() + 1).padStart(2, '0');
                 const dia = String(d.getDate()).padStart(2, '0');
@@ -465,16 +460,13 @@ async function precargarBaseDeDatos() {
         try {
             localStorage.setItem(cacheKey, JSON.stringify(CACHE_PARTIDOS_FUTUROS));
             localStorage.setItem(cacheTimeKey, ahoraMs.toString());
-        } catch(e) { console.log("Memoria del celular llena, no se guardó caché."); }
+        } catch(e) {}
 
         competicionesGlobales = Object.values(ligasMap); window.construirMenuLateral(); 
         
     } catch(e) { 
-        // 3. CAPTURA DE ERRORES EXTREMOS (API KEY O FIREBASE RULES)
         console.error("Error Crítico de Red/Base de Datos:", e); 
         const errMsg = `<div class="text-center p-10 text-red-500 font-bold border border-red-500/30 bg-red-900/10 rounded-xl m-4 shadow-lg"><i class="fas fa-exclamation-triangle text-4xl mb-3 animate-pulse"></i><br><span class="text-sm uppercase tracking-widest">Fallo de Conexión</span><br><span class="text-[9px] text-gray-400 mt-3 block bg-black/50 p-2 rounded">${e.message}</span></div>`;
-        
-        // Lo mostramos tanto en la vista gratuita como en la VIP para que no se quede colgado
         const cFree = document.getElementById('containerPartidos'); 
         const cVip = document.getElementById('containerPartidosVIP');
         if(cFree) cFree.innerHTML = errMsg;
@@ -519,80 +511,45 @@ if (document.readyState === 'loading') { document.addEventListener('DOMContentLo
 // ==========================================
 const promesaConTimeout = (promesa, ms) => { let timeout = new Promise((resolve, reject) => { let id = setTimeout(() => { clearTimeout(id); reject(new Error("Timeout")); }, ms); }); return Promise.race([promesa, timeout]); };
 
-// 🚀 INTERCEPTOR LEGAL EN LA PUERTA DE ENTRADA (MEJORADO)
 window.preValidarCodigo = function() {
     const input = document.getElementById('vipCode');
-    
-    // 1. Verificamos que el input no esté vacío
-    if (!input || input.value.trim() === '') {
-        return window.mostrarAlerta("Atención", "Debes ingresar un código de acceso válido.", "error");
-    }
+    if (!input || input.value.trim() === '') { return window.mostrarAlerta("Atención", "Debes ingresar un código de acceso válido.", "error"); }
 
-    // 2. Ocultamos el modal de Login temporalmente para que no estorbe abajo
     const modalLogin = document.getElementById('modalLogin');
-    if(modalLogin) {
-        modalLogin.classList.add('hidden');
-        modalLogin.style.display = 'none';
-    }
+    if(modalLogin) { modalLogin.classList.add('hidden'); modalLogin.style.display = 'none'; }
 
-    // 3. Levantamos el muro legal
     const modalTerminos = document.getElementById('modalTerminosGenerales');
-    if(modalTerminos) { 
-        modalTerminos.classList.remove('hidden'); 
-        modalTerminos.style.display = 'flex'; 
-    }
+    if(modalTerminos) { modalTerminos.classList.remove('hidden'); modalTerminos.style.display = 'flex'; }
 };
 
 window.cerrarModalTerminosGenerales = function() {
-    // Si rechaza, cerramos los términos y VOLVEMOS a mostrar el Login
     const modalTerminos = document.getElementById('modalTerminosGenerales');
-    if(modalTerminos) { 
-        modalTerminos.classList.add('hidden'); 
-        modalTerminos.style.display = 'none'; 
-    }
+    if(modalTerminos) { modalTerminos.classList.add('hidden'); modalTerminos.style.display = 'none'; }
     
     const modalLogin = document.getElementById('modalLogin');
-    if(modalLogin) {
-        modalLogin.classList.remove('hidden');
-        modalLogin.style.display = 'flex';
-    }
+    if(modalLogin) { modalLogin.classList.remove('hidden'); modalLogin.style.display = 'flex'; }
 };
 
 window.aceptarTerminosYLogin = function() {
-    // 1. Cerramos el muro legal
     const modalTerminos = document.getElementById('modalTerminosGenerales');
-    if(modalTerminos) { 
-        modalTerminos.classList.add('hidden'); 
-        modalTerminos.style.display = 'none'; 
-    }
+    if(modalTerminos) { modalTerminos.classList.add('hidden'); modalTerminos.style.display = 'none'; }
     
-    // 2. Volvemos a mostrar el login pero le cambiamos el estado al botón para dar feedback
     const modalLogin = document.getElementById('modalLogin');
-    if(modalLogin) {
-        modalLogin.classList.remove('hidden');
-        modalLogin.style.display = 'flex';
-    }
+    if(modalLogin) { modalLogin.classList.remove('hidden'); modalLogin.style.display = 'flex'; }
 
     const btn = document.getElementById('btnValidarCodigo');
     const txtOriginal = btn ? btn.innerHTML : 'VERIFICAR ACCESO';
     
-    if(btn) {
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONECTANDO...';
-        btn.disabled = true;
-    }
+    if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONECTANDO...'; btn.disabled = true; }
     
-    // 3. Disparamos la función original a Firebase (validarCodigo)
     window.validarCodigo(txtOriginal, btn);
 };
 
-// 🚀 MODIFICAMOS LIGERAMENTE validarCodigo PARA QUE RECIBA LOS PARÁMETROS DEL BOTÓN
 window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj = null) {
     const codigoIngresado = document.getElementById('vipCode').value.toUpperCase().trim();
     if(!codigoIngresado) return;
     
     const btn = btnObj || document.getElementById('btnValidarCodigo'); 
-    
-    // Solo le cambiamos el estado si NO venía del interceptor (por si lo llaman directo por consola)
     if(!btnObj && btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; }
     
     if (codigoIngresado.startsWith("MASTER_")) {
@@ -624,10 +581,7 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
                 window.mostrarAlerta("Licencia en Uso", "Este código ya está vinculado a otro celular. Contacta al gestor.", "error");
             } else {
                 if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR }); }
-                
-                // 🚀 AQUÍ ELIMINAMOS LA PALABRA INVERSOR
                 window.mostrarAlerta("Acceso Concedido", `Bienvenido.`, "success");
-                
                 window.concederAcceso(data.ilimitado, codigoIngresado, data.ladderStatus || 'none', false);
             }
         } else {
@@ -646,25 +600,16 @@ window.enviarNotificacionGlobal = async function() {
     const btn = document.getElementById('btnEnviarPush'); btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ENVIANDO...`; btn.disabled = true;
     try {
         await setDoc(doc(collection(db, "notificaciones_push")), { 
-            titulo: titulo, 
-            cuerpo: cuerpo, 
-            url: window.location.origin + "/?inbox=true",
-            timestamp: Date.now(), 
-            enviadoPor: "FR (Gestor)",
-            audiencia: "todos"
+            titulo: titulo, cuerpo: cuerpo, url: window.location.origin + "/?inbox=true", timestamp: Date.now(), enviadoPor: "FR (Gestor)", audiencia: "todos"
         });
         window.mostrarAlerta("Éxito", "La notificación ha sido enviada y guardada en la bandeja.", "success");
         document.getElementById('pushTitulo').value = ''; document.getElementById('pushCuerpo').value = '';
-        
-        // Refrescamos la lista del Admin automáticamente
         if(window.cargarNotificacionesAdmin) window.cargarNotificacionesAdmin();
-        
     } catch(e) { window.mostrarAlerta("Error", "No se pudo comunicar con el servidor.", "error"); } finally {
         btn.innerHTML = `<i class="fas fa-paper-plane mr-1"></i> Notificar a Inversores`; btn.disabled = false;
     }
 }
 
-// 🚀 NUEVO: CARGAR HISTORIAL DE NOTIFICACIONES EN EL ADMIN
 window.cargarNotificacionesAdmin = async function() {
     const lista = document.getElementById('adminNotificacionesList'); if(!lista) return;
     lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500"></i></div>';
@@ -678,29 +623,14 @@ window.cargarNotificacionesAdmin = async function() {
             let data = doc.data();
             let f = new Date(data.timestamp).toLocaleDateString('es-CO', {month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
             let audBadge = data.audiencia === "escalera" ? '<span class="bg-yellow-500/20 text-yellow-500 px-1 rounded ml-1">Escalera</span>' : '<span class="bg-blue-500/20 text-blue-400 px-1 rounded ml-1">Todos</span>';
-            
-            lista.innerHTML += `
-            <div class="bg-black/40 p-3 rounded-xl border border-white/10 relative shadow-sm mb-2 flex justify-between items-center">
-                <div class="flex flex-col w-3/4">
-                    <span class="text-[10px] font-black text-white uppercase truncate">${data.titulo}</span>
-                    <span class="text-[8px] text-gray-400 mt-0.5">${f} • Aud: ${audBadge}</span>
-                </div>
-                <button onclick="window.eliminarNotificacionAdmin('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 p-2 rounded-lg hover:bg-red-600/40 transition active:scale-95" title="Eliminar Mensaje">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>`;
+            lista.innerHTML += `<div class="bg-black/40 p-3 rounded-xl border border-white/10 relative shadow-sm mb-2 flex justify-between items-center"><div class="flex flex-col w-3/4"><span class="text-[10px] font-black text-white uppercase truncate">${data.titulo}</span><span class="text-[8px] text-gray-400 mt-0.5">${f} • Aud: ${audBadge}</span></div><button onclick="window.eliminarNotificacionAdmin('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 p-2 rounded-lg hover:bg-red-600/40 transition active:scale-95"><i class="fas fa-trash-alt"></i></button></div>`;
         });
     } catch(e) { lista.innerHTML = '<p class="text-red-500 text-xs text-center">Error al cargar.</p>'; }
 };
 
-// 🚀 NUEVO: ELIMINAR NOTIFICACIÓN GLOBALMENTE
 window.eliminarNotificacionAdmin = async function(idDoc) {
     window.mostrarConfirmacion("Eliminar Comunicado", "¿Deseas borrar este mensaje? Desaparecerá de la bandeja de todos los usuarios de forma inmediata.", async () => {
-        try {
-            await deleteDoc(doc(db, "notificaciones_push", idDoc));
-            window.mostrarAlerta("Eliminada", "La notificación ha sido borrada de la base de datos global.", "success");
-            window.cargarNotificacionesAdmin();
-        } catch(e) { window.mostrarAlerta("Error", "No se pudo borrar la notificación.", "error"); }
+        try { await deleteDoc(doc(db, "notificaciones_push", idDoc)); window.mostrarAlerta("Eliminada", "La notificación ha sido borrada.", "success"); window.cargarNotificacionesAdmin(); } catch(e) { window.mostrarAlerta("Error", "No se pudo borrar la notificación.", "error"); }
     });
 };
 
@@ -850,7 +780,7 @@ window.renderizarLayoutAdmin = function() {
     `;
 
     window.cargarMonitorTickets(); window.cargarUsuariosAdmin(); window.cargarFondosAdmin(); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); window.cargarHistorialEscaleraAdmin(); window.cargarNotificacionesAdmin();
-    window.cargarGestionRetoActivoAdmin(); // Invocamos el nuevo panel de control
+    window.cargarGestionRetoActivoAdmin();
     const hoy = new Date(); let mes = String(hoy.getMonth() + 1).padStart(2, '0'); let dia = String(hoy.getDate()).padStart(2, '0'); document.getElementById('inputFechaEscalera').value = `${hoy.getFullYear()}-${mes}-${dia}`;
 };
 
@@ -934,7 +864,6 @@ window.construirMenuLateral = function() {
     let html = ''; Object.keys(arbol).sort().forEach(deporte => { const idDep = deporte.replace(/[^a-zA-Z0-9]/g, ''); let iconDep = 'fa-futbol'; if(deporte === 'Baloncesto') iconDep = 'fa-basketball-ball'; else if(deporte === 'Tenis') iconDep = 'fa-table-tennis'; else if(deporte === 'Fútbol Americano' || deporte === 'American Football') iconDep = 'fa-football-ball'; else if(deporte === 'Béisbol' || deporte === 'Baseball') iconDep = 'fa-baseball-ball'; else if(deporte === 'Hockey') iconDep = 'fa-hockey-puck'; else if(deporte === 'MMA' || deporte === 'UFC') iconDep = 'fa-hand-rock'; else if(deporte === 'Boxeo') iconDep = 'fa-mitten'; html += `<div class="mb-2"><button onclick="window.toggleAcordeon('dep_${idDep}')" class="w-full text-left p-3 flex justify-between bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md"><span><i class="fas ${iconDep} mr-2"></i>${deporte}</span><i id="icon_dep_${idDep}" class="fas fa-chevron-down transition-transform"></i></button><div id="acc_dep_${idDep}" class="hidden flex-col gap-1 mt-1 pl-2">`; Object.keys(arbol[deporte]).sort().forEach(pais => { const idPais = idDep + '_' + pais.replace(/[^a-zA-Z0-9]/g, ''); const bandera = arbol[deporte][pais][0].bandera; html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1"><button onclick="window.toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between text-white font-bold text-[10px] uppercase"><span><span class="mr-2 drop-shadow-md">${bandera}</span> ${pais}</span><i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i></button><div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`; arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { html += `<button onclick="window.ejecutarFiltroFinal('${liga.key}', '${bandera} ${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between group"><span class="truncate pr-2">${liga.name}</span><i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i></button>`; }); html += `</div></div>`; }); html += `</div></div>`; }); contenedor.innerHTML = html;
 };
 
-// 🚀 NUEVO BOTÓN MAESTRO DE PURGADO DE FILTROS
 window.limpiarFiltrosYVerTodo = function() {
     const b = document.getElementById('buscadorEquipos'); if(b) b.value = '';
     const f = document.getElementById('filtroFecha'); if(f) f.value = '';
@@ -944,7 +873,6 @@ window.limpiarFiltrosYVerTodo = function() {
 
 window.toggleFiltroIA = function() { filtroIAActivo = !filtroIAActivo; const btn = document.getElementById('btnFiltroIA'); if(filtroIAActivo) { btn.classList.replace('bg-gray-900', 'bg-blue-600'); btn.classList.replace('text-blue-400', 'text-white'); } else { btn.classList.replace('bg-blue-600', 'bg-gray-900'); btn.classList.replace('text-white', 'text-blue-400'); } window.aplicarFiltrosLocales(); };
 
-// 🚀 FILTRADO INSTANTÁNEO PRE-CALCULADO
 window.aplicarFiltrosLocales = function() {
     const buscador = document.getElementById('buscadorEquipos'); const filtroF = document.getElementById('filtroFecha');
     const texto = buscador ? buscador.value.toLowerCase() : ""; const fechaFiltro = filtroF ? filtroF.value : ""; 
@@ -1181,13 +1109,13 @@ window.cargarRetoEscaleraNube = async function() {
             
             let cuotaActual = 1.0;
             let picksHtml = '';
-            let runningMulti = 1.0; // Rastreador de interés compuesto
+            let runningMulti = 1.0; // 🚀 RASTREADOR DE INTERÉS COMPUESTO
             
             if(tk && tk.picks) { 
                 tk.picks.forEach((p, index) => { 
                     let estadoP = p.estado || 'pendiente';
                     
-                    // 🚀 MATEMÁTICA DE PORCENTAJES (CLIENTE)
+                    // MATEMÁTICA DE PORCENTAJES (CLIENTE)
                     let startPct = runningMulti * 100;
                     let endPct = (runningMulti * p.cuota) * 100;
 
@@ -1211,11 +1139,11 @@ window.cargarRetoEscaleraNube = async function() {
                     
                     let badgeProgreso = '';
                     if (estadoP === 'won') {
-                        badgeProgreso = `<div class="bg-green-900/40 border border-green-500/50 text-green-400 text-[9px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-inner"><i class="fas fa-level-up-alt"></i> ${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[7px] text-gray-500 mx-0.5"></i> ${endPct.toFixed(1)}%</div>`;
+                        badgeProgreso = `<div class="bg-green-900/40 border border-green-500/50 text-green-400 text-[10px] font-black p-2 rounded flex justify-between items-center w-full shadow-inner mt-2"><span class="text-[8px] text-gray-400 uppercase">Fondo Acumulado</span><span>${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] text-green-500 mx-1"></i> ${endPct.toFixed(1)}%</span></div>`;
                     } else if (estadoP === 'lost') {
-                        badgeProgreso = `<div class="bg-red-900/40 border border-red-500/50 text-red-400 text-[9px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-inner"><i class="fas fa-level-down-alt"></i> ${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[7px] text-gray-500 mx-0.5"></i> 0%</div>`;
+                        badgeProgreso = `<div class="bg-red-900/40 border border-red-500/50 text-red-400 text-[10px] font-black p-2 rounded flex justify-between items-center w-full shadow-inner mt-2"><span class="text-[8px] text-gray-400 uppercase">Fondo Acumulado</span><span>${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] text-red-500 mx-1"></i> 0%</span></div>`;
                     } else {
-                        badgeProgreso = `<div class="bg-gray-800 border border-gray-600 text-gray-400 text-[9px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-inner" title="Proyección"><i class="fas fa-chart-line"></i> ${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[7px] text-gray-500 mx-0.5"></i> ${endPct.toFixed(1)}%</div>`;
+                        badgeProgreso = `<div class="bg-gray-800 border border-gray-600 text-gray-400 text-[10px] font-black p-2 rounded flex justify-between items-center w-full shadow-inner mt-2" title="Proyección"><span class="text-[8px] text-gray-500 uppercase">Proyección Fondo</span><span>${startPct.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] text-gray-500 mx-1"></i> ${endPct.toFixed(1)}%</span></div>`;
                     }
 
                     picksHtml += `
@@ -1231,9 +1159,7 @@ window.cargarRetoEscaleraNube = async function() {
                                 <div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div>
                                 <span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span>
                             </div>
-                            <div class="flex justify-end">
-                                ${badgeProgreso}
-                            </div>
+                            ${badgeProgreso}
                         </div>
                     </div>`; 
                 }); 
@@ -1241,7 +1167,7 @@ window.cargarRetoEscaleraNube = async function() {
             
             let capInicial = tk.capital_inicial || 0;
             let capActual = tk.estado_reto === 'perdido' ? 0 : capInicial * cuotaActual;
-            let capMeta = capInicial * (tk.cuotaTotal || 1);
+            let totalPctReal = tk.estado_reto === 'perdido' ? 0 : (cuotaActual * 100);
             
             let progreso = tk.cuotaTotal > 1 ? ((cuotaActual - 1) / (tk.cuotaTotal - 1)) * 100 : 0;
             if(tk.estado_reto === 'perdido') progreso = 0;
@@ -1263,14 +1189,18 @@ window.cargarRetoEscaleraNube = async function() {
                         <span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-1 rounded-md shadow-sm">Meta: C ${tk.cuotaTotal}</span>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div class="bg-gray-900 border border-white/5 p-3 rounded-xl text-center flex flex-col justify-center shadow-inner">
-                            <span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider mb-1">Capital Inicial</span>
-                            <span class="text-white font-black text-sm">${formatoCOP(capInicial)}</span>
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <div class="bg-gray-900 border border-white/5 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner">
+                            <span class="text-[7px] text-gray-500 uppercase font-bold tracking-wider mb-1">C. Inicial</span>
+                            <span class="text-white font-black text-xs">${formatoCOP(capInicial)}</span>
                         </div>
-                        <div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-3 rounded-xl text-center flex flex-col justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-colors">
-                            <span class="text-[8px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase font-bold tracking-wider mb-1">Capital Actual</span>
-                            <span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-lg">${formatoCOP(capActual)}</span>
+                        <div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-xl text-center flex flex-col justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-colors">
+                            <span class="text-[7px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase font-bold tracking-wider mb-1">C. Actual</span>
+                            <span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-sm">${formatoCOP(capActual)}</span>
+                        </div>
+                        <div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner">
+                            <span class="text-[7px] text-blue-400 uppercase font-bold tracking-wider mb-1">Crecimiento</span>
+                            <span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span>
                         </div>
                     </div>
 
@@ -1550,9 +1480,14 @@ window.cargarGestionRetoActivoAdmin = async function() {
             
             let capitalActual = tk.capital_inicial * cuotaActual;
             let metaCapital = tk.capital_inicial * tk.cuotaTotal;
+            let totalPctReal = perdidos > 0 ? 0 : (cuotaActual * 100);
 
             let html = `<div class="bg-black/60 p-4 rounded-2xl border border-yellow-500/50 shadow-lg relative"><div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">CONTROL LIVE</div><h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-3"><i class="fas fa-gamepad text-yellow-500 mr-1"></i> Tablero de Escalera</h3>`;
-            html += `<div class="grid grid-cols-2 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center"><span class="block text-[8px] text-gray-500 uppercase">Fondo Actual</span><span class="text-white font-black text-xs">${formatoCOP(capitalActual)}</span></div><div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center"><span class="block text-[8px] text-gray-500 uppercase">Meta Reto</span><span class="text-yellow-500 font-black text-xs">${formatoCOP(metaCapital)}</span></div></div>`;
+            html += `<div class="grid grid-cols-3 gap-2 mb-4">
+                <div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[8px] text-gray-500 uppercase">Fondo Actual</span><span class="text-white font-black text-xs">${formatoCOP(capitalActual)}</span></div>
+                <div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[8px] text-gray-500 uppercase">Meta Reto</span><span class="text-yellow-500 font-black text-xs">${formatoCOP(metaCapital)}</span></div>
+                <div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[8px] text-blue-400 uppercase">Crecimiento</span><span class="text-blue-500 font-black text-xs">${totalPctReal.toFixed(1)}%</span></div>
+            </div>`;
             
             tk.picks.forEach((p, index) => {
                 let bgStatus = p.estado === 'won' ? 'bg-green-900/30 border-green-500/50' : (p.estado === 'lost' ? 'bg-red-900/30 border-red-500/50' : 'bg-gray-900/50 border-white/10');
@@ -1566,17 +1501,22 @@ window.cargarGestionRetoActivoAdmin = async function() {
 
                 let colorPct = p.estado === 'won' ? 'text-green-400' : (p.estado === 'lost' ? 'text-red-400' : 'text-gray-400');
 
-                html += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex justify-between items-center">
-                    <div class="flex flex-col w-1/2">
-                        <span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span>
-                        <span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span>
-                        <span class="text-[8px] font-black ${colorPct} mt-1">${startPct.toFixed(1)}% ➔ ${endPct.toFixed(1)}%</span>
+                html += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex flex-col w-1/2">
+                            <span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span>
+                            <span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span>
+                        </div>
+                        <div class="flex gap-1 items-center justify-end w-1/2">
+                            <button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition" title="Marcar Ganado"><i class="fas fa-check"></i></button>
+                            <button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition" title="Marcar Perdido"><i class="fas fa-times"></i></button>
+                            <button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition" title="Devolver a Pendiente"><i class="fas fa-undo"></i></button>
+                            <button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 ml-1 transition" title="Borrar Pick"><i class="fas fa-trash-alt"></i></button>
+                        </div>
                     </div>
-                    <div class="flex gap-1 items-center justify-end w-1/2">
-                        <button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition" title="Marcar Ganado"><i class="fas fa-check"></i></button>
-                        <button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition" title="Marcar Perdido"><i class="fas fa-times"></i></button>
-                        <button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition" title="Devolver a Pendiente"><i class="fas fa-undo"></i></button>
-                        <button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 ml-1 transition" title="Borrar Pick"><i class="fas fa-trash-alt"></i></button>
+                    <div class="flex justify-between items-center border-t border-white/5 pt-2 mt-1">
+                        <span class="text-[8px] text-gray-500 uppercase">Acumulado del Pick</span>
+                        <span class="text-[10px] font-black ${colorPct}">${startPct.toFixed(1)}% ➔ ${endPct.toFixed(1)}%</span>
                     </div>
                 </div>`;
             });
