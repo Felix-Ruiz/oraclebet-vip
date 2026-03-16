@@ -1210,24 +1210,32 @@ window.iniciarApadrinamiento = async function() {
     if(btn) { btn.innerText = "PROCESANDO..."; btn.disabled = true; }
 
     try {
-        // 3. BLINDAJE FIREBASE: Usamos setDoc con merge: true (Es 100% a prueba de fallos)
-        await setDoc(doc(db, "codigos_nube", codigoActivoUsuario), { 
+        // 3. BLINDAJE FIREBASE: Usamos setDoc con merge
+        await setDoc(doc(db, "codigos_nube", window.codigoActivoUsuario), { 
             apadrinamiento: { 
                 bankroll_inicial: monto, 
                 bankroll_actual: monto, 
                 fecha_inicio: Date.now() 
             } 
-        }, { merge: true }); // El merge asegura que no borre tus otros datos (como el deviceID)
+        }, { merge: true });
 
         window.mostrarAlerta("Éxito", "Software configurado. Ya puedes acceder al radar de operaciones.", "success");
         
-        // Refrescar la vista
+        // Ocultar Onboarding y Mostrar Dashboard
+        document.getElementById('apadrinamientoOnboarding').style.display = 'none';
+        const dash = document.getElementById('apadrinamientoDashboard');
+        if(dash) {
+            dash.style.display = 'block';
+            dash.classList.remove('hidden');
+        }
+        
+        // Refrescar los números
         if(window.cargarDatosApadrinamiento) window.cargarDatosApadrinamiento();
 
     } catch(e) {
         console.error("Fallo crítico en activación:", e);
-        // 4. RASTREADOR VISUAL: Si falla, te mostrará el error exacto de Google en la pantalla
-        window.mostrarAlerta("Fallo de Servidor", e.message, "error");
+        // Si falla ahora, te mostrará este mensaje en pantalla con el error exacto en inglés:
+        window.mostrarAlerta("Error de Servidor", "Google dice: " + e.message, "error");
     } finally {
         if(btn) { btn.innerText = txtOriginal; btn.disabled = false; }
     }
