@@ -98,49 +98,30 @@ window.iniciarSwipeNotificaciones = function() {
 };
 
 window.abrirBandejaNotificaciones = async function() {
-    if (!modoVipActivo && !adminAutenticado) { window.mostrarAlerta("Acceso Restringido", "Debes iniciar sesión con tu credencial para leer los comunicados oficiales del Gestor.", "warning"); window.abrirModalLogin(); return; }
+    if (!modoVipActivo && !adminAutenticado) { window.mostrarAlerta("Acceso Restringido", "Debes iniciar sesión con tu credencial para leer los comunicados oficiales.", "warning"); window.abrirModalLogin(); return; }
     let modal = document.getElementById('modalBandejaNotificaciones');
     if (!modal) {
         document.body.insertAdjacentHTML('beforeend', `
         <div id="modalBandejaNotificaciones" class="fixed inset-0 bg-black/95 hidden items-end justify-center z-[400] transition-opacity duration-300 backdrop-blur-md">
             <div class="bg-gray-900 border-t border-blue-500/50 w-full h-[85vh] rounded-t-3xl shadow-[0_-10px_40px_rgba(59,130,246,0.15)] flex flex-col relative transform translate-y-full transition-transform duration-300" id="bandejaContenido">
-                <div class="p-5 flex justify-between items-center border-b border-white/10 bg-black/50 rounded-t-3xl">
-                    <h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Notificaciones FR</h3>
-                    <button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button>
-                </div>
-                <div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
-                    <div class="text-center p-10"><i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i></div>
-                </div>
+                <div class="p-5 flex justify-between items-center border-b border-white/10 bg-black/50 rounded-t-3xl"><h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Notificaciones FR</h3><button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button></div>
+                <div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-900 to-black overflow-x-hidden"><div class="text-center p-10"><i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i></div></div>
             </div>
         </div>`);
         modal = document.getElementById('modalBandejaNotificaciones');
     }
     modal.classList.remove('hidden'); modal.style.display = 'flex'; setTimeout(() => { document.getElementById('bandejaContenido').classList.remove('translate-y-full'); }, 10);
-
     const lista = document.getElementById('listaBandejaNotificaciones');
     try {
-        const hiddenNotifs = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]');
-        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(15));
-        const snap = await getDocs(q);
-        lista.innerHTML = ''; let validCount = 0;
+        const hiddenNotifs = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]'); const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(15)); const snap = await getDocs(q); lista.innerHTML = ''; let validCount = 0;
         snap.forEach(doc => {
-            const data = doc.data(); 
-            const esNotificacionEscalera = data.audiencia === "escalera" || (data.url && data.url.includes("escalera")) || (data.titulo && data.titulo.toLowerCase().includes("escalera"));
-            if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) return;
-            if (hiddenNotifs.includes(doc.id)) return; 
-            validCount++;
-            const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-            let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400';
-            let clickAction = data.url && data.url !== "/" ? `onclick="if(!window.isSwiping) window.procesarEnlaceInterno('${data.url}')"` : ``;
+            const data = doc.data(); const esNotificacionEscalera = data.audiencia === "escalera" || (data.url && data.url.includes("escalera")) || (data.titulo && data.titulo.toLowerCase().includes("escalera"));
+            if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) return; if (hiddenNotifs.includes(doc.id)) return; validCount++;
+            const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}); let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400'; let clickAction = data.url && data.url !== "/" ? `onclick="if(!window.isSwiping) window.procesarEnlaceInterno('${data.url}')"` : ``;
             lista.innerHTML += `
             <div class="notif-item relative mb-3 overflow-hidden" data-id="${doc.id}">
                 <div class="absolute inset-0 bg-red-600 rounded-xl flex justify-end items-center pr-5 text-white font-black text-xs shadow-inner opacity-0 transition-opacity duration-300"><i class="fas fa-trash-alt"></i></div>
-                <div ${clickAction} class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative transition-transform duration-200 notif-card w-full z-10 block ${data.url && data.url !== '/' ? 'cursor-pointer active:scale-[0.98]' : ''}">
-                    <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
-                    <div class="flex justify-between items-start mb-2"><span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>${data.url && data.url !== "/" ? '<i class="fas fa-chevron-right text-gray-500 text-[10px]"></i>' : ''}</div>
-                    <p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p>
-                    <div class="flex justify-between items-center border-t border-white/5 pt-2"><span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span><span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span></div>
-                </div>
+                <div ${clickAction} class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative transition-transform duration-200 notif-card w-full z-10 block ${data.url && data.url !== '/' ? 'cursor-pointer active:scale-[0.98]' : ''}"><div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div><div class="flex justify-between items-start mb-2"><span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>${data.url && data.url !== "/" ? '<i class="fas fa-chevron-right text-gray-500 text-[10px]"></i>' : ''}</div><p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p><div class="flex justify-between items-center border-t border-white/5 pt-2"><span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span><span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span></div></div>
             </div>`;
         });
         if(validCount === 0) { lista.innerHTML = `<div class="text-center mt-10 text-gray-500 text-xs font-bold uppercase tracking-widest"><i class="fas fa-check-circle text-4xl mb-3 opacity-50 block"></i> Bandeja Vacía</div>`; } else { setTimeout(() => window.iniciarSwipeNotificaciones(), 50); }
@@ -199,7 +180,7 @@ const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo();
 let modoVipActivo = false; let modoIlimitadoActivo = false; let codigoActivoUsuario = ''; let estadoEscalera = 'none';
 let CACHE_PARTIDOS_FUTUROS = []; let partidosGlobales = []; let partidosFiltrados = []; let competicionesGlobales = []; let seleccionesVIPGlobal = []; let ticketDinamicoVIP = []; let modoMercadoGlobal = 'mixto'; let modoRiesgoGlobal = false; 
 let perfilApadrinamiento = null; let unsubscribeApadrinamiento = null; let tiempoInactividad = 0; const TIEMPO_MAXIMO_SEGUNDOS = 180; let timerInactividad;
-let filtroIAActivo = false; 
+let filtroIAActivo = false; let correoAdminTemp = ""; 
 
 const definicionesApuestas = { 'h2h': { 'titulo': 'Ganador (1X2)' }, 'totals': { 'titulo': 'Goles Totales' }, 'spreads': { 'titulo': 'Hándicap (Spread)' }, 'alternate_totals_corners': { 'titulo': 'Líneas de Córners' }, 'team_total_corners': { 'titulo': 'Córners por Equipo' }, 'corners_handicap': { 'titulo': 'Hándicap de Córners' }, 'alternate_totals_cards': { 'titulo': 'Líneas de Tarjetas' }, 'player_shots': { 'titulo': 'Disparos del Jugador' }, 'player_shots_on_target': { 'titulo': 'Disparos a Puerta' }, 'player_cards': { 'titulo': 'Tarjeta a Jugador' } };
 
@@ -255,37 +236,38 @@ onAuthStateChanged(auth, (user) => {
     if (user) { adminAutenticado = true; if(document.readyState === 'complete' || document.readyState === 'interactive') { window.renderizarLayoutAdmin(); } else { document.addEventListener('DOMContentLoaded', () => { window.renderizarLayoutAdmin(); }); } } else { adminAutenticado = false; }
 });
 
-window.iniciarApp = async function() { 
-    if(adminAutenticado) return; 
-    const fFecha = document.getElementById('filtroFecha'); if(fFecha) { const hoy = new Date(); let mes = String(hoy.getMonth() + 1).padStart(2, '0'); let dia = String(hoy.getDate()).padStart(2, '0'); fFecha.value = `${hoy.getFullYear()}-${mes}-${dia}`; }
-    const cFree = document.getElementById('containerPartidos'); const cVip = document.getElementById('containerPartidosVIP');
-    let loadHtml = `<div class="text-center p-10 opacity-50 text-xs uppercase tracking-widest"><i class="fas fa-spinner animate-spin text-yellow-500 mb-2 text-xl"></i><br>Sincronizando Cartelera...</div>`;
-    if(cFree) cFree.innerHTML = loadHtml; if(cVip) cVip.innerHTML = loadHtml;
-    
-    await precargarBaseDeDatos(); 
-    try { const session = localStorage.getItem('oracle_session'); if(session) { const data = JSON.parse(session); window.concederAcceso(data.ilimitado, data.code, data.ladderStat, true); } } catch(e) {} 
-    window.ejecutarTopFutbol(); 
-
-    setTimeout(() => { if (window.location.search) { window.procesarEnlaceInterno(window.location.href); window.history.replaceState({}, document.title, "/"); } window.verificarNotificacionesPendientes(); }, 1500); 
-};
-
-if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', window.iniciarApp); } else { window.iniciarApp(); }
-
 // ==========================================
-// 5. MOTOR DE LOGIN Y PANEL DE ADMIN (CRM)
+// 3. RUTINAS DE ARRANQUE Y LÓGICA ADMIN LOGIN
 // ==========================================
-const promesaConTimeout = (promesa, ms) => { let timeout = new Promise((resolve, reject) => { let id = setTimeout(() => { clearTimeout(id); reject(new Error("Timeout")); }, ms); }); return Promise.race([promesa, timeout]); };
-
 window.preValidarCodigo = function() {
     const input = document.getElementById('vipCode');
     if (!input || input.value.trim() === '') { return window.mostrarAlerta("Atención", "Debes ingresar un código de acceso válido.", "error"); }
     
     const rawVal = input.value.trim();
+
+    // 🚀 LÓGICA SILENCIOSA: SI HAY UN @ ES EL ADMIN
     if (rawVal.includes('@')) {
-        window.validarCodigo('VERIFICAR ACCESO', document.getElementById('btnValidarCodigo'));
+        if (!correoAdminTemp) {
+            correoAdminTemp = rawVal; // Guarda el correo
+            input.value = '';
+            input.type = 'password';
+            input.placeholder = 'CONTRASEÑA MASTER';
+            const btn = document.getElementById('btnValidarCodigo');
+            if(btn) btn.innerHTML = '<i class="fas fa-lock"></i> INGRESAR ADMIN';
+            return; 
+        }
+    }
+
+    // SI YA ESTAMOS EN MODO ADMIN Y TENEMOS EL CORREO, PASA A VALIDAR DIRECTO SIN TÉRMINOS
+    if (correoAdminTemp) {
+        const btn = document.getElementById('btnValidarCodigo');
+        const txtOriginal = btn ? btn.innerHTML : 'VERIFICAR ACCESO';
+        if(btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONECTANDO...'; btn.disabled = true; }
+        window.validarCodigo(txtOriginal, btn);
         return;
     }
 
+    // FLUJO NORMAL PARA CLIENTES (Muestra Términos)
     const modalLogin = document.getElementById('modalLogin'); if(modalLogin) { modalLogin.classList.add('hidden'); modalLogin.style.display = 'none'; }
     const modalTerminos = document.getElementById('modalTerminosGenerales'); if(modalTerminos) { modalTerminos.classList.remove('hidden'); modalTerminos.style.display = 'flex'; }
 };
@@ -305,38 +287,33 @@ window.aceptarTerminosYLogin = function() {
 
 window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj = null) {
     const inputEl = document.getElementById('vipCode');
-    if(!inputEl) return;
-    const rawVal = inputEl.value.trim();
-    if(!rawVal) return;
+    const rawVal = inputEl ? inputEl.value : ''; 
+    if(!rawVal.trim()) return;
     
     const btn = btnObj || document.getElementById('btnValidarCodigo'); 
     if(!btnObj && btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; }
     
-    if (rawVal.includes('@')) {
+    // 🚀 EJECUTA EL LOGIN DEL ADMIN (usando la contraseña que acaba de escribir en la casilla)
+    if (correoAdminTemp) {
         try {
-            let pw = prompt("Introduce tu contraseña de Administrador:");
-            if (!pw) throw new Error("Cancelado");
-            await promesaConTimeout(signInWithEmailAndPassword(auth, rawVal.toLowerCase(), pw.trim()), 8000);
-            window.cerrarModalLogin(); window.renderizarLayoutAdmin();
-        } catch(e) {
-            if(e.message !== "Cancelado") window.mostrarAlerta("Acceso Denegado", "Credenciales de administrador incorrectas.", "error");
-        } finally { if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; } }
+            await signInWithEmailAndPassword(auth, correoAdminTemp, rawVal);
+            window.cerrarModalLogin(); 
+            if(CACHE_PARTIDOS_FUTUROS.length === 0) await precargarBaseDeDatos();
+            window.renderizarLayoutAdmin();
+        } catch(e) { 
+            correoAdminTemp = ""; 
+            if(inputEl) { inputEl.type = 'text'; inputEl.placeholder = 'CÓDIGO DE INVERSOR'; inputEl.value = ''; }
+            window.mostrarAlerta("Acceso Denegado", "Credenciales incorrectas.", "error"); 
+        } finally { 
+            if(btn) { btn.innerHTML = 'VERIFICAR ACCESO'; btn.disabled = false; } 
+        } 
         return;
     }
-
-    const codigoIngresado = rawVal.toUpperCase();
     
-    if (codigoIngresado.startsWith("MASTER_")) {
-        try {
-            if (!correoAdminTemp) { correoAdminTemp = prompt("Introduce el correo del Administrador:"); if (!correoAdminTemp) throw new Error("Correo requerido."); }
-            const p = codigoIngresado.split("MASTER_")[1];
-            await promesaConTimeout(signInWithEmailAndPassword(auth, correoAdminTemp.trim(), p), 8000);
-            window.cerrarModalLogin(); window.renderizarLayoutAdmin();
-        } catch(e) { correoAdminTemp = ""; window.mostrarAlerta("Acceso Denegado", "Credenciales de Master incorrectas.", "error"); } finally { if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; } } return;
-    }
+    const codigoIngresado = rawVal.trim().toUpperCase();
     
     try {
-        const docRef = doc(db, "codigos_nube", codigoIngresado); const docSnap = await promesaConTimeout(getDoc(docRef), 8000);
+        const docRef = doc(db, "codigos_nube", codigoIngresado); const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
             if (data.deviceID && data.deviceID !== HUELLA_ESTE_CELULAR) {
@@ -495,46 +472,34 @@ function resetearInactividad() { tiempoInactividad = 0; }
 window.addEventListener('mousemove', resetearInactividad); window.addEventListener('scroll', resetearInactividad); window.addEventListener('touchstart', resetearInactividad); window.addEventListener('keydown', resetearInactividad);
 window.iniciarMonitorInactividad = function() { clearInterval(timerInactividad); tiempoInactividad = 0; timerInactividad = setInterval(() => { if(modoVipActivo) { tiempoInactividad++; if(tiempoInactividad >= TIEMPO_MAXIMO_SEGUNDOS) { window.ejecutarCierreSesion(); window.mostrarAlerta("Sesión Expirada", "Cerrada por inactividad.", "warning"); } } }, 1000); };
 
-window.cambiarVista = function(vista) {
-    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('view-active')); const vistaActiva = document.getElementById('vista_' + vista); if(vistaActiva) vistaActiva.classList.add('view-active');
-    ['picks', 'historial', 'escalera', 'apadrinamiento'].forEach(b => { const btn = document.getElementById('nav_' + b); if(btn) { if(b === vista) { btn.classList.remove('text-gray-500'); btn.classList.add('text-yellow-500'); } else { btn.classList.add('text-gray-500'); btn.classList.remove('text-yellow-500'); } } });
-    if(vista === 'historial' && window.renderizarHistorial) window.renderizarHistorial(); if(vista === 'escalera' && window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI(); if(vista === 'apadrinamiento' && window.chequearApadrinamientoUI) window.chequearApadrinamientoUI();
+window.iniciarApp = async function() { 
+    await precargarBaseDeDatos(); 
+    if(adminAutenticado) return; 
+    const fFecha = document.getElementById('filtroFecha'); if(fFecha) { const hoy = new Date(); let mes = String(hoy.getMonth() + 1).padStart(2, '0'); let dia = String(hoy.getDate()).padStart(2, '0'); fFecha.value = `${hoy.getFullYear()}-${mes}-${dia}`; }
+    try { const session = localStorage.getItem('oracle_session'); if(session) { const data = JSON.parse(session); window.concederAcceso(data.ilimitado, data.code, data.ladderStat, true); } } catch(e) {} 
+    window.ejecutarTopFutbol(); 
+    setTimeout(() => { if (window.location.search) { window.procesarEnlaceInterno(window.location.href); window.history.replaceState({}, document.title, "/"); } window.verificarNotificacionesPendientes(); }, 1500); 
 };
 
-window.resaltarBotonCarrusel = function(keyLiga) { document.querySelectorAll('.carrusel-btn').forEach(btn => { btn.classList.remove('border-yellow-500', 'shadow-[0_0_15px_rgba(212,175,55,0.6)]', 'scale-105'); btn.classList.add('border-white/10'); }); if(keyLiga) { let btnActivo = document.getElementById('btn_carrusel_' + keyLiga); if(btnActivo) { btnActivo.classList.remove('border-white/10'); btnActivo.classList.add('border-yellow-500', 'shadow-[0_0_15px_rgba(212,175,55,0.6)]', 'scale-105'); btnActivo.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } } };
-window.abrirMenuLateral = function() { const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); if(o) { o.classList.remove('hidden'); o.style.display = 'block'; } if(m) m.classList.remove('-translate-x-full'); };
-window.cerrarMenuLateral = function() { const o = document.getElementById('overlayMenu'); const m = document.getElementById('menuLateral'); if(o) { o.classList.add('hidden'); o.style.display = 'none'; } if(m) m.classList.add('-translate-x-full'); };
-window.toggleAcordeon = function(id) { const acc = document.getElementById('acc_' + id); const icon = document.getElementById('icon_' + id); if(!acc || !icon) return; acc.classList.toggle('hidden'); acc.classList.toggle('flex'); icon.style.transform = acc.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; };
-window.toggleLigaList = function(idLiga) { const content = document.getElementById('lista_partidos_' + idLiga); const icon = document.getElementById('icon_lista_' + idLiga); if(!content || !icon) return; if(content.classList.contains('hidden')) { content.classList.remove('hidden'); content.classList.add('flex'); icon.style.transform = 'rotate(180deg)'; } else { content.classList.add('hidden'); content.classList.remove('flex'); icon.style.transform = 'rotate(0deg)'; } };
-
-window.construirMenuLateral = function() {
-    const contenedor = document.getElementById('contenidoMenuLateral'); if(!contenedor) return; let arbol = {}; 
-    competicionesGlobales.forEach(liga => { let deporte = liga.group || 'Otros'; const traducciones = { 'Soccer': 'Fútbol', 'Basketball': 'Baloncesto', 'Tennis': 'Tenis' }; deporte = traducciones[deporte] || deporte; let info = obtenerInfoLiga(liga.key, liga.title); if(!arbol[deporte]) arbol[deporte] = {}; if(!arbol[deporte][info.pais]) arbol[deporte][info.pais] = []; arbol[deporte][info.pais].push({ key: liga.key, name: info.nombreLiga, bandera: info.bandera }); });
-    let html = ''; Object.keys(arbol).sort().forEach(deporte => { const idDep = deporte.replace(/[^a-zA-Z0-9]/g, ''); let iconDep = 'fa-futbol'; if(deporte === 'Baloncesto') iconDep = 'fa-basketball-ball'; else if(deporte === 'Tenis') iconDep = 'fa-table-tennis'; else if(deporte === 'Fútbol Americano' || deporte === 'American Football') iconDep = 'fa-football-ball'; else if(deporte === 'Béisbol' || deporte === 'Baseball') iconDep = 'fa-baseball-ball'; else if(deporte === 'Hockey') iconDep = 'fa-hockey-puck'; else if(deporte === 'MMA' || deporte === 'UFC') iconDep = 'fa-hand-rock'; else if(deporte === 'Boxeo') iconDep = 'fa-mitten'; html += `<div class="mb-2"><button onclick="window.toggleAcordeon('dep_${idDep}')" class="w-full text-left p-3 flex justify-between bg-gray-800 border border-yellow-500/30 rounded-lg text-yellow-500 font-black text-[11px] uppercase shadow-md"><span><i class="fas ${iconDep} mr-2"></i>${deporte}</span><i id="icon_dep_${idDep}" class="fas fa-chevron-down transition-transform"></i></button><div id="acc_dep_${idDep}" class="hidden flex-col gap-1 mt-1 pl-2">`; Object.keys(arbol[deporte]).sort().forEach(pais => { const idPais = idDep + '_' + pais.replace(/[^a-zA-Z0-9]/g, ''); const bandera = arbol[deporte][pais][0].bandera; html += `<div class="border-l border-white/10 ml-2 pl-2 mt-1"><button onclick="window.toggleAcordeon('pais_${idPais}')" class="w-full text-left p-2 flex justify-between text-white font-bold text-[10px] uppercase"><span><span class="mr-2 drop-shadow-md">${bandera}</span> ${pais}</span><i id="icon_pais_${idPais}" class="fas fa-angle-down text-gray-600 transition-transform"></i></button><div id="acc_pais_${idPais}" class="hidden flex-col pl-4 mt-1 space-y-1">`; arbol[deporte][pais].sort((a,b)=>a.name.localeCompare(b.name)).forEach(liga => { html += `<button onclick="window.ejecutarFiltroFinal('${liga.key}', '${bandera} ${pais} - ${liga.name}')" class="text-left text-[9px] text-gray-400 hover:text-yellow-500 py-2 border-b border-white/5 flex justify-between group"><span class="truncate pr-2">${liga.name}</span><i class="fas fa-play text-[8px] opacity-0 group-hover:opacity-100 text-yellow-500 transition-opacity"></i></button>`; }); html += `</div></div>`; }); html += `</div></div>`; }); contenedor.innerHTML = html;
-};
-
-window.limpiarFiltrosYVerTodo = function() { const b = document.getElementById('buscadorEquipos'); if(b) b.value = ''; const f = document.getElementById('filtroFecha'); if(f) f.value = ''; if(filtroIAActivo) window.toggleFiltroIA(); window.ejecutarTopFutbol(); };
-window.toggleFiltroIA = function() { filtroIAActivo = !filtroIAActivo; const btn = document.getElementById('btnFiltroIA'); if(filtroIAActivo) { btn.classList.replace('bg-gray-900', 'bg-blue-600'); btn.classList.replace('text-blue-400', 'text-white'); } else { btn.classList.replace('bg-blue-600', 'bg-gray-900'); btn.classList.replace('text-white', 'text-blue-400'); } window.aplicarFiltrosLocales(); };
-
+// ==========================================
+// 6. FLUJO DE RENDERIZADO VISUAL DE PARTIDOS
+// ==========================================
 window.aplicarFiltrosLocales = function() {
     const buscador = document.getElementById('buscadorEquipos'); const filtroF = document.getElementById('filtroFecha');
     const texto = buscador ? buscador.value.toLowerCase() : ""; const fechaFiltro = filtroF ? filtroF.value : ""; 
-    const limiteTiempoVisualizacion = Date.now() - (4 * 60 * 60 * 1000); 
-    
+    const limTS = Date.now() - (4 * 60 * 60 * 1000); 
     partidosFiltrados = partidosGlobales.filter(p => { 
-        if (p._timestamp < limiteTiempoVisualizacion) return false; 
+        if (p._timestamp < limTS) return false; 
         if (texto && !p._textoBusqueda.includes(texto)) return false;
         if (fechaFiltro && p._fechaFiltro !== fechaFiltro) return false;
         if (filtroIAActivo && !p._tieneIA) return false;
         return true; 
     });
-    
     const cont = document.getElementById('contadorPartidosActivos'); if(cont) cont.innerText = `${partidosFiltrados.length} Eventos`;
     if(modoVipActivo) { if(window.renderizarPartidosVIP) window.renderizarPartidosVIP(); } else { if(window.renderizarPartidosFree) window.renderizarPartidosFree(); }
 };
 
 window.ejecutarTopFutbol = function() { window.cerrarMenuLateral(); window.resaltarBotonCarrusel(null); const title = document.getElementById('nombreLigaActiva'); if(title) title.innerText = "Cartelera Global"; let soccerLigas = competicionesGlobales.map(l => l.key); if(soccerLigas.length === 0) { soccerLigas = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_uefa_champs_league', 'soccer_italy_serie_a', 'soccer_conmebol_copa_libertadores', 'soccer_conmebol_copa_sudamericana', 'soccer_uefa_europa_league', 'soccer_uefa_europa_conference_league']; } partidosGlobales = CACHE_PARTIDOS_FUTUROS.filter(p => soccerLigas.includes(p.sport_key)); partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time)); window.aplicarFiltrosLocales(); };
-
 window.ejecutarFiltroFinal = function(keyLiga, nombreMostrar) { window.cerrarMenuLateral(); const title = document.getElementById('nombreLigaActiva'); if(title) title.innerText = nombreMostrar; window.resaltarBotonCarrusel(keyLiga); const fFecha = document.getElementById('filtroFecha'); if(fFecha) fFecha.value = ""; partidosGlobales = CACHE_PARTIDOS_FUTUROS.filter(p => p.sport_key === keyLiga); partidosGlobales.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time)); window.aplicarFiltrosLocales(); };
 
 function agruparPorPaisYLiga(partidos) { const paises = {}; partidos.forEach(p => { let info = obtenerInfoLiga(p.sport_key, p.sport_title); if (!paises[info.pais]) paises[info.pais] = { bandera: info.bandera, ligas: {} }; if (!paises[info.pais].ligas[info.nombreLiga]) paises[info.pais].ligas[info.nombreLiga] = []; paises[info.pais].ligas[info.nombreLiga].push(p); }); return paises; }
@@ -635,6 +600,9 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
     resDiv.innerHTML = `<div class="card-glass p-4 border-t-2 ${modoRiesgoGlobal ? 'border-red-500 bg-red-500/5' : (esRadarAuto ? 'border-purple-500 bg-purple-500/5' : 'border-yellow-500 bg-yellow-500/5')} rounded-xl shadow-2xl mb-10"><div class="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><span class="text-xs font-black ${modoRiesgoGlobal ? 'text-red-500' : (esRadarAuto?'text-purple-500':'text-yellow-500')} uppercase"><i class="fas fa-ticket-alt mr-1"></i> Análisis de FR</span><span class="text-[10px] ${modoRiesgoGlobal ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10'} font-black px-3 py-1 rounded-full">Índice: ${probPromedio}%</span></div>${riskBanner} ${ctrls} ${htmlPartidos}<div class="flex justify-between items-end bg-black/60 p-4 rounded-xl border border-white/10 mt-4"><div class="flex flex-col"><span class="text-[10px] font-bold text-gray-400 uppercase">Cuota Final Calculada</span></div><span class="text-3xl font-black ${modoRiesgoGlobal ? 'text-red-400' : 'text-white'}">${cuotaTotal.toFixed(2)}</span></div>${btnBar}<button onclick="window.guardarTicketHistorial('${cuotaTotal.toFixed(2)}')" class="w-full mt-2 py-4 bg-yellow-600 hover:bg-yellow-500 text-black rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition active:scale-95"><i class="fas fa-save text-lg"></i> GUARDAR EN HISTORIAL</button></div>`;
 };
 
+// ==========================================
+// 7. HISTORIAL DE TICKETS (USUARIO)
+// ==========================================
 window.guardarTicketHistorial = async function(cuota) {
     if(!codigoActivoUsuario) return;
     let picksObj = ticketDinamicoVIP.map(t => { 
@@ -677,7 +645,7 @@ window.renderizarHistorial = function() {
 };
 
 window.marcarTicket = async function(id, estado) { try { let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)); let index = hist.findIndex(t => t.id === id); if(index !== -1) { hist[index].estado = estado; localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist)); window.renderizarHistorial(); } await updateDoc(doc(db, "tickets_guardados", id.toString()), { estado: estado }); } catch(e) {} };
-window.limpiarHistorialSeguro = function() { window.mostrarConfirmacion("Limpiar Historial", "¿Estás seguro que deseas borrar todos los tickets guardados?", () => { try { localStorage.removeItem('oracle_historial_' + codigoActivoUsuario); window.renderizarHistorial(); window.mostrarAlerta("Historial Limpio", "Tus tickets han sido eliminados de tu dispositivo.", "success"); } catch(e){} }); };
+window.limpiarHistorialSeguro = function() { window.mostrarConfirmacion("Limpiar Historial", "¿Estás seguro que deseas borrar todos los tickets guardados?", () => { try { localStorage.removeItem('oracle_historial_' + codigoActivoUsuario); window.renderizarHistorial(); window.mostrarAlerta("Historial Limpio", "Tus tickets han sido eliminados.", "success"); } catch(e){} }); };
 
 // ==========================================
 // 8. ESCALERA VIP
@@ -698,7 +666,7 @@ window.solicitarAccesoEscalera = async function() { const btn = document.getElem
 
 window.editarMiCapitalEscalera = function() {
     let actual = localStorage.getItem('oracle_cap_escalera'); let def = actual ? actual : 50000;
-    let n = prompt("Ingresa el capital real (COP) con el que iniciarás esta escalera:", def);
+    let n = prompt("Ingresa el capital real (COP) con el que iniciarás esta escalera para calcular tus apuestas:", def);
     let val = parseFloat(n);
     if(!isNaN(val) && val >= 1000) { localStorage.setItem('oracle_cap_escalera', val); window.cargarRetoEscaleraNube(); window.mostrarAlerta("Guardado", "Tu fondo inicial ha sido actualizado.", "success"); } else if (n !== null) { window.mostrarAlerta("Error", "Ingresa un número válido.", "error"); }
 };
@@ -765,13 +733,16 @@ window.cargarRetoEscaleraNube = async function() {
 
             let html = `<p class="text-[11px] text-gray-300 font-bold whitespace-pre-wrap leading-relaxed mb-4">${data.mensaje || ''}</p>`; 
             if(tk && tk.picks) { 
-                html += `${statusRetoHtml}<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)] mb-4 relative overflow-hidden"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-3"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-rocket mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-1 rounded-md shadow-sm">Meta: C ${tk.cuotaTotal}</span></div><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner relative group cursor-pointer hover:border-yellow-500 transition-colors" onclick="window.editarMiCapitalEscalera()" title="Haz clic para editar tu capital"><div class="absolute inset-0 bg-black/60 hidden group-hover:flex items-center justify-center rounded-xl"><i class="fas fa-pencil-alt text-yellow-500 text-lg"></i></div><span class="text-[7px] text-gray-500 uppercase font-bold tracking-wider mb-1">Mi Capital <i class="fas fa-pencil-alt ml-0.5"></i></span><span class="text-white font-black text-xs truncate">${formatoCOP(capInicial)}</span></div><div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-xl text-center flex flex-col justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-colors"><span class="text-[7px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase font-bold tracking-wider mb-1">Actual</span><span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-[11px] truncate">${formatoCOP(capActualFinal)}</span></div><div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner"><span class="text-[7px] text-blue-400 uppercase font-bold tracking-wider mb-1">Crecimiento</span><span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span></div></div><div class="mb-5"><div class="flex justify-between text-[8px] text-gray-400 font-bold uppercase mb-1 px-1"><span>Progreso Matemático</span><span>${progreso.toFixed(0)}%</span></div><div class="w-full bg-gray-800 rounded-full h-2 border border-white/5 overflow-hidden"><div class="${tk.estado_reto === 'perdido' ? 'bg-red-600' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'} h-full rounded-full transition-all duration-1000 ease-out" style="width: ${progreso}%"></div></div></div>${picksHtml}</div>`; 
+                html += `${statusRetoHtml}<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)] mb-4 relative overflow-hidden"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-3"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-rocket mr-1"></i> TICKET OFICIAL</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-1 rounded-md shadow-sm">Meta: C ${tk.cuotaTotal}</span></div><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner relative group cursor-pointer hover:border-yellow-500 transition-colors" onclick="window.editarMiCapitalEscalera()" title="Haz clic para editar tu capital"><div class="absolute inset-0 bg-black/60 hidden group-hover:flex items-center justify-center rounded-xl"><i class="fas fa-pencil-alt text-yellow-500 text-lg"></i></div><span class="text-[7px] text-gray-500 uppercase font-bold tracking-wider mb-1">Mi Capital <i class="fas fa-pencil-alt ml-0.5"></i></span><span class="text-white font-black text-xs truncate">${formatoCOP(capInicial)}</span></div><div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-xl text-center flex flex-col justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-colors"><span class="text-[7px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase font-bold tracking-wider mb-1">Actual</span><span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-[11px] truncate">${formatoCOP(capActualFinal)}</span></div><div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-xl text-center flex flex-col justify-center shadow-inner"><span class="text-[7px] text-blue-400 uppercase font-bold tracking-wider mb-1">Crecimiento</span><span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span></div></div><div class="mb-5"><div class="flex justify-between text-[8px] text-gray-400 font-bold uppercase mb-1 px-1"><span>Progreso</span><span>${progreso.toFixed(0)}%</span></div><div class="w-full bg-gray-800 rounded-full h-2 border border-white/5 overflow-hidden"><div class="${tk.estado_reto === 'perdido' ? 'bg-red-600' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'} h-full rounded-full transition-all duration-1000 ease-out" style="width: ${progreso}%"></div></div></div>${picksHtml}</div>`; 
             } 
             divTexto.innerHTML = html; 
         } else { divTexto.innerHTML = '<div class="text-center opacity-50 py-10"><i class="fas fa-lock text-3xl mb-3"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin reto oficial hoy.</p></div>'; } 
     } catch(e) { console.error(e); divTexto.innerHTML = "Error cargando el reto del servidor."; }
 };
 
+// ==========================================
+// 9. APADRINAMIENTO Y FONDOS
+// ==========================================
 window.chequearApadrinamientoUI = function() {
     const bloqueado = document.getElementById('apadrinamientoBloqueado'); const onboard = document.getElementById('apadrinamientoOnboarding'); const dash = document.getElementById('apadrinamientoDashboard'); if(!bloqueado || !onboard || !dash) return;
     if(!codigoActivoUsuario) { bloqueado.classList.remove('hidden'); onboard.classList.add('hidden'); dash.classList.add('hidden'); return; } bloqueado.classList.add('hidden');
@@ -802,8 +773,7 @@ window.abrirModalTerminosApadrinamiento = function() { const modal = document.ge
 window.cerrarModalTerminosApadrinamiento = function() { const modal = document.getElementById('modalTerminosApadrinamiento'); if(modal) { modal.classList.add('hidden'); modal.style.display = 'none'; } };
 
 window.renderizarDashboardApadrinamiento = async function() {
-    if(!perfilApadrinamiento) return; 
-    document.getElementById('uiBankrollInicial').innerText = formatoCOP(perfilApadrinamiento.bankroll_inicial); document.getElementById('uiBankrollActual').innerText = formatoCOP(perfilApadrinamiento.bankroll_actual);
+    if(!perfilApadrinamiento) return; document.getElementById('uiBankrollInicial').innerText = formatoCOP(perfilApadrinamiento.bankroll_inicial); document.getElementById('uiBankrollActual').innerText = formatoCOP(perfilApadrinamiento.bankroll_actual);
     let rendimiento = ((perfilApadrinamiento.bankroll_actual - perfilApadrinamiento.bankroll_inicial) / perfilApadrinamiento.bankroll_inicial) * 100; let uiRendimiento = document.getElementById('uiBankrollRendimiento'); let uiBadge = document.getElementById('uiBankrollBadge');
     if (rendimiento > 0) { uiRendimiento.innerText = `Rendimiento: +${rendimiento.toFixed(2)}%`; uiRendimiento.className = "text-[10px] font-bold text-green-400 mt-1"; uiBadge.className = "absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg"; } else if (rendimiento < 0) { uiRendimiento.innerText = `Rendimiento: ${rendimiento.toFixed(2)}%`; uiRendimiento.className = "text-[10px] font-bold text-red-400 mt-1"; uiBadge.className = "absolute top-0 right-0 bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg"; } else { uiRendimiento.innerText = `Rendimiento: 0.00%`; uiRendimiento.className = "text-[10px] font-bold text-gray-400 mt-1"; uiBadge.className = "absolute top-0 right-0 bg-gray-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg"; }
     let previewExistente = document.getElementById('previewArriesgar'); if(previewExistente) previewExistente.remove();
@@ -829,7 +799,7 @@ window.generarTicketApadrinamiento = async function() {
         
         if (ticketFinal.length === 0) { esPlanB = true; let pickUnicoR = opcionesRespaldo.find(x => x.opcion.cuota >= 1.30 && x.opcion.cuota <= 1.55); if (pickUnicoR) { ticketFinal.push(pickUnicoR); cuotaAlcanzada = pickUnicoR.opcion.cuota; probPromedio = pickUnicoR.opcion.probabilidad; } else { let encontradoR = false; for(let i = 0; i < opcionesRespaldo.length && !encontradoR; i++) { for(let j = i + 1; j < opcionesRespaldo.length && !encontradoR; j++) { if (opcionesRespaldo[i].partido.id !== opcionesRespaldo[j].partido.id) { let combinada = opcionesRespaldo[i].opcion.cuota * opcionesRespaldo[j].opcion.cuota; if (combinada >= 1.30 && combinada <= 1.60) { ticketFinal.push(opcionesRespaldo[i]); ticketFinal.push(opcionesRespaldo[j]); cuotaAlcanzada = combinada; probPromedio = (opcionesRespaldo[i].opcion.probabilidad + opcionesRespaldo[j].opcion.probabilidad) / 2; encontradoR = true; } } } } } }
 
-        if (ticketFinal.length === 0) { window.mostrarAlerta("Mercado Inestable (72H)", "El mercado está seco. No hay opciones viables para hoy ni para los próximos 2 días.", "error"); btn.innerHTML = `<i class="fas fa-shield-alt text-lg"></i> SIN OPCIONES (72H)`; return; }
+        if (ticketFinal.length === 0) { window.mostrarAlerta("Mercado Inestable", "El mercado está seco.", "error"); btn.innerHTML = `<i class="fas fa-shield-alt text-lg"></i> SIN OPCIONES (72H)`; return; }
         
         let porcentajeStake = 10; if (esPlanB) { porcentajeStake = Math.max(1, Math.min(5, Math.floor((probPromedio - 50) / 9))); }
         const montoApostar = Math.floor(perfilApadrinamiento.bankroll_actual * (porcentajeStake / 100)); const hoyStr = new Date().toLocaleDateString('es-CO', {timeZone: 'America/Bogota'}); const ticketId = Date.now().toString();
@@ -840,16 +810,16 @@ window.generarTicketApadrinamiento = async function() {
             let c = document.createElement('div'); c.id = 'previewArriesgar'; btn.parentNode.insertBefore(c, btn);
             c.innerHTML = `<div class="bg-red-900/20 border border-red-500/50 p-4 rounded-xl mb-3 shadow-inner transform transition-all animate-pulse"><div class="text-red-400 font-black text-[11px] uppercase mb-2"><i class="fas fa-exclamation-triangle"></i> MERCADO INESTABLE - PLAN B</div><p class="text-[9px] text-gray-300 mb-3 leading-relaxed">FR reducirá tu Stake al <b class="text-yellow-500 text-xs">${porcentajeStake}%</b> para proteger tu capital.</p><div class="mb-3">${picksHtml}</div><div class="text-right text-xs font-black text-white pt-2 border-t border-white/10">Cuota Final: <span class="text-yellow-500">${cuotaAlcanzada.toFixed(2)}</span></div></div>`;
             window.ticketPlanBPendiente = objTicket; btn.removeAttribute('onclick'); btn.innerHTML = `<i class="fas fa-fire"></i> ARRIESGAR STAKE (${porcentajeStake}%)`; btn.className = "w-full py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl font-black text-[12px] uppercase shadow-[0_10px_20px_rgba(220,38,38,0.3)] transition-all active:scale-95"; btn.disabled = false;
-            btn.onclick = async function() { btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> ENVIANDO ORDEN...`; btn.disabled = true; try { await setDoc(doc(db, "tickets_apadrinamiento", ticketId), window.ticketPlanBPendiente); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Riesgo Asumido", `Ticket alternativo guardado.`, "warning"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "Error al procesar.", "error"); window.renderizarDashboardApadrinamiento(); } };
+            btn.onclick = async function() { btn.innerHTML = `<i class="fas fa-spinner fa-spin text-lg"></i> ENVIANDO ORDEN...`; btn.disabled = true; try { await setDoc(doc(db, "tickets_apadrinamiento", tI), window.ticketPlanBPendiente); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Riesgo Asumido", `Ticket alternativo guardado con Stake de protección (${porcentajeStake}%).`, "warning"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "Error al procesar.", "error"); window.renderizarDashboardApadrinamiento(); } };
             window.mostrarAlerta("Alerta de Riesgo", "No hay eventos VIP confirmados. Puedes forzar un ticket de Plan B.", "warning");
         } else {
-            try { await setDoc(doc(db, "tickets_apadrinamiento", ticketId), objTicket); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Oportunidad Encontrada", `Operación Diamante guardada con Stake del 10%.`, "success"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "No se pudo guardar.", "error"); window.renderizarDashboardApadrinamiento(); }
+            try { await setDoc(doc(db, "tickets_apadrinamiento", tI), objTicket); await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { "apadrinamiento.ultimo_dia_generado": hoyStr }); window.mostrarAlerta("Oportunidad Encontrada", `Operación Diamante guardada con Stake del 10%.`, "success"); window.renderizarDashboardApadrinamiento(); } catch(e) { window.mostrarAlerta("Error", "No se pudo guardar.", "error"); window.renderizarDashboardApadrinamiento(); }
         }
     }, 1500); 
 };
 
 window.cargarHistorialApadrinamiento = async function() {
-    const cont = document.getElementById('contenedorTicketsApadrinamiento'); if(!cont) return; cont.innerHTML = `<p class="text-center text-xs text-gray-500"><i class="fas fa-spinner fa-spin"></i> Cargando operaciones...</p>`;
+    const cont = document.getElementById('contenedorTicketsApadrinamiento'); if(!cont) return; cont.innerHTML = `<p class="text-center text-xs text-gray-500"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>`;
     try {
         const q = query(collection(db, "tickets_apadrinamiento"), where("codigo_usuario", "==", codigoActivoUsuario)); const snap = await getDocs(q); cont.innerHTML = '';
         if(snap.empty) { cont.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-white/5 p-4 rounded-lg bg-black/30">Sin historial.</p>`; return; }
@@ -858,13 +828,7 @@ window.cargarHistorialApadrinamiento = async function() {
             let bgStatus = 'bg-gray-800/50 border-gray-600'; let badgeStatus = '<span class="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm"><i class="far fa-clock"></i> Abierta</span>';
             if(t.estado === 'won') { bgStatus = 'bg-green-900/20 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)]'; badgeStatus = '<span class="bg-green-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-md"><i class="fas fa-check-circle"></i> Ganada</span>'; }
             if(t.estado === 'lost') { bgStatus = 'bg-red-900/20 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]'; badgeStatus = '<span class="bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-md"><i class="fas fa-times-circle"></i> Perdida</span>'; }
-            let picksHtml = t.picks.map(p => { 
-                const defMercado = definicionesApuestas[p.mercado] || { 'titulo': 'Mercado Especial' }; 
-                let ico = "fa-handshake"; if(p.mercado.includes('shots')) ico = "fa-bullseye"; else if(p.mercado.includes('corners')) ico = "fa-flag"; else if(p.mercado.includes('cards')) ico = "fa-square"; else if(p.mercado === 'totals') ico = "fa-futbol"; else if(p.mercado === 'spreads') ico = "fa-balance-scale"; 
-                let badgeIA = p.verificado_ia ? `<span class="bg-blue-600 text-white px-1.5 py-0.5 rounded text-[7px] font-black uppercase ml-2 shadow-sm"><i class="fas fa-robot"></i> IA</span>` : '';
-                let probBadge = p.probabilidad ? `<div class="absolute top-0 right-0 bg-gray-700 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">PROB: ${p.probabilidad}%</div>` : '';
-                return `<div class="bg-gray-900/60 p-3 rounded-lg mb-2 border border-white/5 relative overflow-hidden shadow-inner">${probBadge}<div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[10px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido}</div><div class="flex justify-between items-center bg-black/40 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[9px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${p.pick}</span>${badgeIA}<button onclick="window.abrirModalAyuda('${p.mercado}', '${p.pick.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-[11px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span></div></div>`; 
-            }).join('');
+            let picksHtml = t.picks.map(p => { const defMercado = definicionesApuestas[p.mercado] || { 'titulo': 'Mercado Especial' }; let ico = "fa-handshake"; if(p.mercado.includes('shots')) ico = "fa-bullseye"; else if(p.mercado.includes('corners')) ico = "fa-flag"; return `<div class="bg-gray-900/60 p-3 rounded-lg mb-2 border border-white/5 relative overflow-hidden shadow-inner"><div class="absolute top-0 right-0 bg-gray-700 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">PROB: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[10px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido}</div><div class="flex justify-between items-center bg-black/40 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[9px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${p.pick}</span></div><span class="text-white font-black text-[11px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span></div></div>`; }).join('');
             cont.innerHTML += `<div class="${bgStatus} p-4 rounded-xl border relative mb-4 transition-all"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-[9px] font-bold text-gray-400"><i class="far fa-calendar-alt"></i> Generado: ${t.fecha}</span>${badgeStatus}</div><div class="mb-4">${picksHtml}</div><div class="flex justify-between items-end bg-black/60 p-3 rounded-lg border border-black shadow-inner"><div class="flex flex-col gap-1 w-1/2 border-r border-white/10 pr-3"><span class="text-[8px] text-gray-500 uppercase font-bold">Inversión (${t.stake_porcentaje}%)</span><span class="text-sm font-black text-white">${formatoCOP(t.monto_apostar)}</span></div><div class="flex flex-col gap-1 w-1/2 pl-3"><span class="text-[8px] text-gray-500 uppercase font-bold flex justify-between items-center">Cuota Real ${t.estado === 'pendiente' ? `<button onclick="window.editarCuotaUsuario('${t.id}', ${t.cuota_usuario})" class="text-blue-400 hover:text-blue-300 p-1"><i class="fas fa-edit"></i></button>` : ''}</span><span class="text-sm font-black text-yellow-500">${t.cuota_usuario.toFixed(2)}</span></div></div></div>`;
         });
     } catch(e) { cont.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al cargar historial.</p>`; }
@@ -873,7 +837,7 @@ window.cargarHistorialApadrinamiento = async function() {
 window.editarCuotaUsuario = async function(id, cuotaActual) { const nueva = prompt("Ingresa la cuota exacta que te dio tu casa de apuestas:", cuotaActual); if (nueva && !isNaN(parseFloat(nueva))) { try { await updateDoc(doc(db, "tickets_apadrinamiento", id), { cuota_usuario: parseFloat(nueva) }); window.cargarHistorialApadrinamiento(); window.mostrarAlerta("Guardado", "Estadística actualizada.", "success"); } catch(e) {} } };
 
 // ==========================================
-// 10. ADMIN: GENERADOR RETO ESCALERA Y CONTROL LIVE
+// 10. ADMIN: GENERADOR RETO ESCALERA Y LIVE
 // ==========================================
 window.generarRetoAdmin = async function() {
     const meta = parseFloat(document.getElementById('inputCuotaObjetivo').value); const probMin = parseFloat(document.getElementById('inputProbMinima').value) || 85; const fechaElegida = document.getElementById('inputFechaEscalera').value;
@@ -896,11 +860,8 @@ window.generarRetoAdmin = async function() {
         window.retoPendientePublicar = { picks: seleccionados.map(s => ({ home_team: s.partido.home_team, away_team: s.partido.away_team, mercadoKey: s.mercadoKey, nombre: s.nombre, point: s.point === undefined ? null : s.point, cuota: s.cuota, probabilidad: s.probabilidad, stake: 100, confirmados: [] })), cuotaTotal: cuotaAcum.toFixed(2), fechaFiltro: fechaElegida };
         
         let previewHtml = `<div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]"><div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2"><span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET (PREVIEW)</span><span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${cuotaAcum.toFixed(2)}</span></div>`;
-        seleccionados.forEach((p, idx) => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; else if(p.mercadoKey.includes('cards')) ico = "fa-square"; else if(p.mercadoKey === 'totals') ico = "fa-futbol"; else if(p.mercadoKey === 'spreads') ico = "fa-balance-scale"; 
-            previewHtml += `<div class="bg-gray-900/50 p-3 rounded-lg mb-3 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo || defMercado}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.partido.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div><div class="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span class="text-[9px] text-blue-400 uppercase font-bold"><i class="fas fa-percentage mr-1"></i> % de Fondo a Apostar</span><input type="number" value="100" class="w-20 bg-blue-900/30 text-blue-400 font-black text-center text-xs p-1.5 rounded border border-blue-500/50 outline-none" onchange="window.actualizarStakePreview(${idx}, this.value)"></div></div>`; 
-        });
-        
-        previewHtml += `</div>`; document.getElementById('previewRetoAdmin').innerHTML = previewHtml; document.getElementById('previewRetoAdmin').classList.remove('hidden'); document.getElementById('inputAdminReto').value = `⚠️ Gestión de Banca Sugerida: Respeta el % indicado en cada pick.`; document.getElementById('inputAdminReto').classList.remove('hidden'); document.getElementById('btnPublicarReto').classList.remove('hidden');
+        seleccionados.forEach((p, idx) => { let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); let safePickTxt = pickTxt.replace(/'/g, "\\'"); let ico = "fa-handshake"; if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; previewHtml += `<div class="bg-gray-900/50 p-3 rounded-lg mb-3 border border-white/5 relative"><div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div><div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo || defMercado}</div><div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.partido.away_team}</div><div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span></div><span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span></div><div class="mt-2 pt-2 border-t border-white/10 flex justify-between items-center"><span class="text-[9px] text-blue-400 uppercase font-bold"><i class="fas fa-percentage mr-1"></i> % de Fondo a Apostar</span><input type="number" value="100" class="w-20 bg-blue-900/30 text-blue-400 font-black text-center text-xs p-1.5 rounded border border-blue-500/50 outline-none" onchange="window.actualizarStakePreview(${idx}, this.value)"></div></div>`; });
+        previewHtml += `</div>`; document.getElementById('previewRetoAdmin').innerHTML = previewHtml; document.getElementById('previewRetoAdmin').classList.remove('hidden'); document.getElementById('inputAdminReto').value = `⚠️ Gestión de Banca Sugerida: Respeta el % indicado en cada pick para no perder todo en un solo fallo.`; document.getElementById('inputAdminReto').classList.remove('hidden'); document.getElementById('btnPublicarReto').classList.remove('hidden');
         if (cuotaAcum < meta) window.mostrarAlerta("Aviso", `Se logró una cuota de ${cuotaAcum.toFixed(2)}.`, "warning"); else window.mostrarAlerta("Generado", `Cuota lograda: ${cuotaAcum.toFixed(2)}. Revisa el % de Stake antes de publicar.`, "success");
     } catch(e) { window.mostrarAlerta("Error", "Fallo IA.", "error"); } finally { btn.innerHTML = originalBtn; btn.disabled = false; }
 };
@@ -911,7 +872,6 @@ window.publicarRetoEscalera = async function() {
     const txt = document.getElementById('inputAdminReto').value; if(!txt && !window.retoPendientePublicar) return window.mostrarAlerta("Error", "Nada para publicar.", "error");
     const btn = document.getElementById('btnPublicarReto'); const originalTxt = btn.innerText; btn.innerText = "Publicando..."; btn.disabled = true;
     const capitalStr = document.getElementById('inputCapitalEscalera')?.value; const capitalInicial = parseFloat(capitalStr) || 50000;
-    
     window.retoPendientePublicar.capital_inicial = capitalInicial; window.retoPendientePublicar.estado_reto = 'activo';
     window.retoPendientePublicar.picks.forEach(p => { p.estado = 'pendiente'; if(!p.confirmados) p.confirmados = []; if(p.stake === undefined) p.stake = 100; });
 
@@ -920,7 +880,7 @@ window.publicarRetoEscalera = async function() {
         const idHistorial = ahora.toString(); const fechaStr = new Date().toLocaleDateString('es-CO', {timeZone: 'America/Bogota'}) + ' ' + new Date().toLocaleTimeString('es-CO', {timeZone: 'America/Bogota', hour: '2-digit', minute:'2-digit'});
         await setDoc(doc(db, "historial_escalera", idHistorial), { id: idHistorial, mensaje: txt, ticket_data: window.retoPendientePublicar, fecha: fechaStr, timestamp: ahora });
         await setDoc(doc(collection(db, "notificaciones_push")), { titulo: "🔥 NUEVO RETO ESCALERA", cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra para revisarlo!", url: window.location.origin + "/?view=escalera", timestamp: ahora, enviadoPor: "FR (Bot)", audiencia: "escalera" });
-        window.mostrarAlerta("Publicado", "Ticket publicado y notificación enviada a los inversores.", "success"); 
+        window.mostrarAlerta("Publicado", "Ticket publicado y notificación enviada.", "success"); 
         
         document.getElementById('inputAdminReto').value=''; document.getElementById('previewRetoAdmin').innerHTML=''; document.getElementById('previewRetoAdmin').classList.add('hidden'); document.getElementById('inputAdminReto').classList.add('hidden'); document.getElementById('btnPublicarReto').classList.add('hidden'); window.retoPendientePublicar = null; 
         if(window.cargarHistorialEscaleraAdmin) window.cargarHistorialEscaleraAdmin(); window.cargarGestionRetoActivoAdmin();
@@ -946,62 +906,60 @@ window.cargarGestionRetoActivoAdmin = async function() {
                 let colorPct = p.estado === 'won' ? 'text-green-400' : (p.estado === 'lost' ? 'text-red-400' : 'text-gray-400');
                 let confCount = p.confirmados ? p.confirmados.length : 0; let confList = confCount > 0 ? p.confirmados.join(', ') : 'Nadie aún';
                 
-                htmlPicks += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex flex-col relative"><div class="flex justify-between items-center mb-2 border-b border-white/5 pb-2"><div class="flex flex-col w-1/2 pr-2"><span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span><span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span></div><div class="flex gap-1 items-center justify-end w-1/2"><button onclick="window.editarStakePickEscalera(${index}, ${stakePct})" class="bg-blue-600/20 text-blue-400 p-2 rounded-lg border border-blue-500/30 hover:bg-blue-600/40 active:scale-95 transition flex items-center gap-1 font-black text-[9px]" title="Ajustar Stake"><i class="fas fa-percent"></i> ${stakePct}%</button><div class="w-[1px] h-6 bg-gray-700 mx-1"></div><button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition" title="Marcar Ganado"><i class="fas fa-check"></i></button><button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition" title="Marcar Perdido"><i class="fas fa-times"></i></button><button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition" title="Devolver a Pendiente"><i class="fas fa-undo"></i></button><button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 ml-1 transition" title="Borrar Pick"><i class="fas fa-trash-alt"></i></button></div></div><div class="flex justify-between items-center pt-1"><span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">Fondo Acum. Total</span><span class="text-[10px] font-black ${colorPct}">${startPctGlobal.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] mx-1"></i> ${endPctGlobal.toFixed(1)}%</span></div><div class="mt-2 pt-2 border-t border-white/5"><span class="text-[8px] text-blue-400 font-bold uppercase"><i class="fas fa-users mr-1"></i> Confirmados (${confCount}):</span><div class="text-[7px] text-gray-400 mt-1 break-words">${confList}</div></div></div>`;
+                htmlPicks += `<div class="${bgStatus} p-3 rounded-lg mb-2 border flex flex-col relative"><div class="flex justify-between items-center mb-2 border-b border-white/5 pb-2"><div class="flex flex-col w-1/2 pr-2"><span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span><span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span></div><div class="flex gap-1 items-center justify-end w-1/2"><button onclick="window.editarStakePickEscalera(${index}, ${stakePct})" class="bg-blue-600/20 text-blue-400 p-2 rounded-lg border border-blue-500/30 hover:bg-blue-600/40 active:scale-95 transition flex items-center gap-1 font-black text-[9px]"><i class="fas fa-percent"></i> ${stakePct}%</button><div class="w-[1px] h-6 bg-gray-700 mx-1"></div><button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition"><i class="fas fa-check"></i></button><button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition"><i class="fas fa-times"></i></button><button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition"><i class="fas fa-undo"></i></button><button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 ml-1 transition"><i class="fas fa-trash-alt"></i></button></div></div><div class="flex justify-between items-center pt-1"><span class="text-[8px] text-gray-500 uppercase font-bold">Fondo Acum.</span><span class="text-[10px] font-black ${colorPct}">${startPctGlobal.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] mx-1"></i> ${endPctGlobal.toFixed(1)}%</span></div><div class="mt-2 pt-2 border-t border-white/5"><span class="text-[8px] text-blue-400 font-bold uppercase"><i class="fas fa-users mr-1"></i> Confirmados (${confCount}):</span><div class="text-[7px] text-gray-400 mt-1 break-words">${confList}</div></div></div>`;
             });
             
             let metaCapital = capitalInicial * (tk.cuotaTotal || 1); let totalPctReal = (currentCap / capitalInicial) * 100;
-            let html = `<div class="bg-black/60 p-4 rounded-2xl border border-yellow-500/50 shadow-lg relative"><div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">CONTROL LIVE</div><h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-3"><i class="fas fa-gamepad text-yellow-500 mr-1"></i> Tablero de Escalera</h3><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[7px] text-gray-500 uppercase tracking-wider">C. Inicial</span><span class="text-gray-400 font-black text-xs">${formatoCOP(capitalInicial)}</span></div><div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[7px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase tracking-wider">Fondo Actual</span><span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-sm">${formatoCOP(currentCap)}</span></div><div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-lg text-center flex flex-col justify-center"><span class="block text-[7px] text-blue-400 uppercase tracking-wider">Crecimiento Global</span><span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span></div></div>${htmlPicks}</div>`; 
+            let html = `<div class="bg-black/60 p-4 rounded-2xl border border-yellow-500/50 shadow-lg relative"><div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">CONTROL LIVE</div><h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-3"><i class="fas fa-gamepad text-yellow-500 mr-1"></i> Tablero</h3><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center"><span class="block text-[7px] text-gray-500 uppercase">C. Inicial</span><span class="text-gray-400 font-black text-xs">${formatoCOP(capitalInicial)}</span></div><div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-lg text-center"><span class="block text-[7px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase">Actual</span><span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-sm">${formatoCOP(currentCap)}</span></div><div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-lg text-center"><span class="block text-[7px] text-blue-400 uppercase">Crecimiento</span><span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span></div></div>${htmlPicks}</div>`; 
             panel.innerHTML = html;
         } else { panel.innerHTML = ''; }
     } catch(e) { console.error(e); }
 };
 
-window.editarStakePickEscalera = async function(index, currentStake) {
-    let n = prompt("Ingresa el % de inversión (ej: 100, 50, 25):", currentStake); let val = parseFloat(n);
+window.editarStakePickEscalera = async function(i, cS) {
+    let n = prompt("Ingresa el % de inversión (ej: 100, 50, 25):", cS); let val = parseFloat(n);
     if(!isNaN(val) && val > 0 && val <= 100) {
         try {
             const snap = await getDoc(doc(db, "global", "escalera"));
             if(snap.exists()) {
-                let d = snap.data(); d.ticket_data.picks[index].stake = val; await updateDoc(doc(db, "global", "escalera"), { ticket_data: d.ticket_data });
-                window.cargarGestionRetoActivoAdmin(); window.mostrarAlerta("Éxito", "Porcentaje de inversión ajustado.", "success");
+                let d = snap.data(); d.ticket_data.picks[i].stake = val; await updateDoc(doc(db, "global", "escalera"), { ticket_data: d.ticket_data });
+                window.cargarGestionRetoActivoAdmin(); window.mostrarAlerta("Éxito", "Porcentaje ajustado.", "success");
                 if(document.getElementById('vista_escalera').classList.contains('view-active')) window.cargarRetoEscaleraNube();
             }
-        } catch(e) { window.mostrarAlerta("Error", "No se pudo actualizar el porcentaje", "error"); }
-    } else if (n !== null) { window.mostrarAlerta("Error", "Ingresa un porcentaje válido del 1 al 100.", "warning"); }
+        } catch(e) { window.mostrarAlerta("Error", "No se pudo actualizar", "error"); }
+    } else if (n !== null) { window.mostrarAlerta("Error", "Porcentaje inválido.", "warning"); }
 };
 
-window.eliminarPickEscalera = async function(index) {
-    window.mostrarConfirmacion("Borrar Pick", "¿Eliminar esta selección de la Escalera? Los porcentajes se recalcularán automáticamente.", async () => {
+window.eliminarPickEscalera = async function(i) {
+    window.mostrarConfirmacion("Borrar Pick", "¿Eliminar esta selección?", async () => {
         try {
             const snap = await getDoc(doc(db, "global", "escalera"));
             if(snap.exists()) {
-                const data = snap.data(); data.ticket_data.picks.splice(index, 1);
-                let perdidos = 0; let ganados = 0;
-                data.ticket_data.picks.forEach(p => { if(p.estado === 'lost') perdidos++; if(p.estado === 'won') ganados++; });
-                if (data.ticket_data.picks.length === 0) data.ticket_data.estado_reto = 'activo'; else if (perdidos > 0) data.ticket_data.estado_reto = 'perdido'; else if (ganados === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado'; else data.ticket_data.estado_reto = 'activo';
+                const data = snap.data(); data.ticket_data.picks.splice(i, 1);
+                let p = 0; let g = 0; data.ticket_data.picks.forEach(pi => { if(pi.estado === 'lost') p++; if(pi.estado === 'won') g++; });
+                if (data.ticket_data.picks.length === 0) data.ticket_data.estado_reto = 'activo'; else if (p > 0) data.ticket_data.estado_reto = 'perdido'; else if (g === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado'; else data.ticket_data.estado_reto = 'activo';
                 await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data }); window.cargarGestionRetoActivoAdmin();
                 if(document.getElementById('vista_escalera').classList.contains('view-active')) window.cargarRetoEscaleraNube();
-                window.mostrarAlerta("Actualizado", "Pick eliminado y porcentajes ajustados.", "success");
+                window.mostrarAlerta("Actualizado", "Pick eliminado.", "success");
             }
         } catch(e) { window.mostrarAlerta("Error", "Fallo al eliminar.", "error"); }
     });
 };
 
-window.marcarPickEscalera = async function(index, estado) {
+window.marcarPickEscalera = async function(i, e) {
     try {
         const snap = await getDoc(doc(db, "global", "escalera"));
         if(snap.exists()) {
-            const data = snap.data(); data.ticket_data.picks[index].estado = estado;
-            let perdidos = 0; let ganados = 0;
-            data.ticket_data.picks.forEach(p => { if(p.estado === 'lost') perdidos++; if(p.estado === 'won') ganados++; });
-            if (perdidos > 0) data.ticket_data.estado_reto = 'perdido'; else if (ganados === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado'; else data.ticket_data.estado_reto = 'activo';
+            const data = snap.data(); data.ticket_data.picks[i].estado = e;
+            let p = 0; let g = 0; data.ticket_data.picks.forEach(pi => { if(pi.estado === 'lost') p++; if(pi.estado === 'won') g++; });
+            if (p > 0) data.ticket_data.estado_reto = 'perdido'; else if (g === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado'; else data.ticket_data.estado_reto = 'activo';
             await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data }); window.cargarGestionRetoActivoAdmin();
             if(document.getElementById('vista_escalera').classList.contains('view-active')) window.cargarRetoEscaleraNube();
         }
     } catch(e) { window.mostrarAlerta("Error", "No se pudo actualizar el pick", "error"); }
 };
 
-window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto Activo", "¿Deseas borrar el Reto Escalera activo para que no lo vean los usuarios en la app?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Sistema Limpio", "El reto activo ha sido eliminado de la nube.", "success"); window.cargarGestionRetoActivoAdmin(); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
+window.eliminarRetoEscaleraGlobal = async function() { window.mostrarConfirmacion("Borrar Reto Activo", "¿Borrar Reto Escalera activo?", async () => { try { await deleteDoc(doc(db, "global", "escalera")); window.mostrarAlerta("Limpio", "Reto activo eliminado.", "success"); window.cargarGestionRetoActivoAdmin(); } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } }); };
 
 window.cargarHistorialEscaleraAdmin = async function() {
     const lista = document.getElementById('historialEscaleraAdminList'); if(!lista) return; lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500 text-xl"></i></div>';
@@ -1009,9 +967,9 @@ window.cargarHistorialEscaleraAdmin = async function() {
         const q = query(collection(db, "historial_escalera"), orderBy("timestamp", "desc"), limit(20)); const snap = await getDocs(q); lista.innerHTML = '';
         if(snap.empty) { lista.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">No hay retos en el historial.</p>`; return; }
         snap.forEach(doc => {
-            let d = doc.data(); let picksHtml = '';
-            if(d.ticket_data && d.ticket_data.picks) { picksHtml = d.ticket_data.picks.map(p => `<div class="bg-gray-900/80 p-2 rounded mt-1 border border-white/5"><div class="text-[9px] font-bold text-white">${p.home_team} vs ${p.away_team}</div><div class="text-[8px] text-yellow-500">PICK: ${p.nombre} (C: ${p.cuota})</div></div>`).join(''); }
-            lista.innerHTML += `<div class="bg-black/40 p-3 rounded-xl border border-blue-500/20 relative shadow-md mb-3"><div class="absolute top-0 right-0 flex overflow-hidden rounded-bl-xl rounded-tr-xl shadow-md z-10"><button onclick="window.eliminarHistorialEscaleraAdmin('${d.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[10px] px-3 py-1 transition-colors border-r border-red-700"><i class="fas fa-trash"></i></button><span class="bg-blue-600 text-white text-[10px] font-black px-3 py-1">C: ${d.ticket_data ? d.ticket_data.cuotaTotal : '-'}</span></div><div class="mb-2 border-b border-white/5 pb-1 pr-14"><span class="text-[9px] text-gray-400 font-bold"><i class="far fa-calendar-alt mr-1"></i> ${d.fecha}</span></div><div class="mt-2">${picksHtml}</div></div>`;
+            let d = doc.data(); let pH = '';
+            if(d.ticket_data && d.ticket_data.picks) { pH = d.ticket_data.picks.map(p => `<div class="bg-gray-900/80 p-2 rounded mt-1 border border-white/5"><div class="text-[9px] font-bold text-white">${p.home_team} vs ${p.away_team}</div><div class="text-[8px] text-yellow-500">PICK: ${p.nombre} (C: ${p.cuota})</div></div>`).join(''); }
+            lista.innerHTML += `<div class="bg-black/40 p-3 rounded-xl border border-blue-500/20 relative shadow-md mb-3"><div class="absolute top-0 right-0 flex overflow-hidden rounded-bl-xl rounded-tr-xl shadow-md z-10"><button onclick="window.eliminarHistorialEscaleraAdmin('${d.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[10px] px-3 py-1 transition-colors border-r border-red-700"><i class="fas fa-trash"></i></button><span class="bg-blue-600 text-white text-[10px] font-black px-3 py-1">C: ${d.ticket_data ? d.ticket_data.cuotaTotal : '-'}</span></div><div class="mb-2 border-b border-white/5 pb-1 pr-14"><span class="text-[9px] text-gray-400 font-bold"><i class="far fa-calendar-alt mr-1"></i> ${d.fecha}</span></div><div class="mt-2">${pH}</div></div>`;
         });
     } catch(e) { lista.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al leer historial.</p>`; }
 };
@@ -1028,10 +986,10 @@ window.crearCodigo = async function(eI) {
         const dS = await getDoc(r); if(dS.exists()) { return window.mostrarAlerta("Error", "Ya existe.", "error"); } 
         const a = Date.now(); await setDoc(r, { code: nC, ilimitado: eI, deviceID: null, ladderStatus: 'none', creado: a }); 
         iC.value = ''; window.mostrarAlerta("Éxito", `Código creado.`, "success"); if(window.renderizarListaAdmin) window.renderizarListaAdmin(); 
-    } catch (error) { window.mostrarAlerta("Error", "Fallo de conexión al servidor.", "error"); } 
+    } catch (error) { window.mostrarAlerta("Error", "Fallo de conexión.", "error"); } 
 };
 window.eliminarCodigo = async function(c) { window.mostrarConfirmacion("Eliminar", `¿Borrar código ${c}?`, async () => { try { await deleteDoc(doc(db, "codigos_nube", c)); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); } catch(e){} }); };
-window.resetearDispositivo = async function(c) { window.mostrarConfirmacion("Resetear Dispositivo", `¿Permitir nuevo login para ${c}?`, async () => { try { await updateDoc(doc(db, "codigos_nube", c), { deviceID: null }); window.renderizarListaAdmin(); window.mostrarAlerta("Liberado", "El cliente ya puede iniciar sesión en su nuevo equipo.", "success"); } catch(e){ window.mostrarAlerta("Error", "No se pudo resetear.", "error"); } }); };
+window.resetearDispositivo = async function(c) { window.mostrarConfirmacion("Resetear Dispositivo", `¿Permitir nuevo login para ${c}?`, async () => { try { await updateDoc(doc(db, "codigos_nube", c), { deviceID: null }); window.renderizarListaAdmin(); window.mostrarAlerta("Liberado", "Login liberado.", "success"); } catch(e){ window.mostrarAlerta("Error", "No se pudo resetear.", "error"); } }); };
 
 window.renderizarListaAdmin = async function() {
     const l = document.getElementById('codesList'); if(!l) return; l.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-yellow-500"></i></div>';
@@ -1151,3 +1109,5 @@ window.verDetalleFondoAdmin = async function(c) {
 
 window.resolverTicketFondo = async function(tI, cU, e, mA, c) { window.mostrarConfirmacion("Matemática de Fondo", `¿Liquidar como ${e === 'won' ? 'GANADA' : 'PERDIDA'}?`, async () => { try { const tR = doc(db, "tickets_apadrinamiento", tI); const uR = doc(db, "codigos_nube", cU); const uS = await getDoc(uR); if(!uS.exists()) return; let bA = uS.data().apadrinamiento.bankroll_actual; if (e === 'won') { let gN = (mA * c) - mA; bA += gN; } else if (e === 'lost') { bA -= mA; } await updateDoc(tR, { estado: e }); await updateDoc(uR, { "apadrinamiento.bankroll_actual": bA }); window.mostrarAlerta("Liquidada", "Saldo actualizado.", "success"); window.verDetalleFondoAdmin(cU); } catch (ex) {} }); };
 window.volverAfondoAdmin = function() { document.getElementById('panelDetalleFondoAdmin').classList.add('hidden'); document.getElementById('panelListaFondoAdmin').classList.remove('hidden'); window.cargarFondosAdmin(); };
+
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', window.iniciarApp); } else { window.iniciarApp(); }
