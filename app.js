@@ -4,7 +4,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 // ==========================================
-// 1. CONFIGURACIÓN FIREBASE
+// 1. CONFIGURACIÓN FIREBASE Y GLOBALES
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyAUB1hC-JSQcrJ68ayl9rEUhP4Qz9xz7Uk",
@@ -20,7 +20,217 @@ const db = getFirestore(app);
 const auth = getAuth(app); 
 const messaging = getMessaging(app);
 
-// 🛡️ ENRUTADOR INTERNO Y RECEPCIÓN DEL SERVICE WORKER
+// 🚀 GLOBALES AL INICIO PARA EVITAR ERRORES EN EL EDITOR
+let modoVipActivo = false; 
+let modoIlimitadoActivo = false; 
+let codigoActivoUsuario = ''; 
+let estadoEscalera = 'none';
+let adminAutenticado = false; 
+let correoAdminTemp = ""; 
+let CACHE_PARTIDOS_FUTUROS = []; 
+let partidosGlobales = []; 
+let partidosFiltrados = []; 
+let competicionesGlobales = []; 
+let seleccionesVIPGlobal = []; 
+let ticketDinamicoVIP = []; 
+let modoMercadoGlobal = 'mixto'; 
+let modoRiesgoGlobal = false; 
+let perfilApadrinamiento = null; 
+let unsubscribeApadrinamiento = null; 
+let tiempoInactividad = 0; 
+const TIEMPO_MAXIMO_SEGUNDOS = 180; 
+let timerInactividad;
+let filtroIAActivo = false; 
+let deferredPrompt;
+
+function obtenerHuellaDispositivo() { 
+    try { 
+        let miHuella = localStorage.getItem('oraclebet_huella_secreta'); 
+        if (!miHuella) { 
+            miHuella = 'disp_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36); 
+            localStorage.setItem('oraclebet_huella_secreta', miHuella); 
+        } 
+        return miHuella; 
+    } catch(e) { 
+        return 'disp_temp_' + Math.random().toString(36).substring(2, 9); 
+    } 
+}
+const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo();
+
+const definicionesApuestas = { 
+    'h2h': { 'titulo': 'Ganador (1X2)' }, 
+    'totals': { 'titulo': 'Goles Totales' }, 
+    'spreads': { 'titulo': 'Hándicap (Spread)' }, 
+    'alternate_totals_corners': { 'titulo': 'Líneas de Córners' }, 
+    'team_total_corners': { 'titulo': 'Córners por Equipo' }, 
+    'corners_handicap': { 'titulo': 'Hándicap de Córners' }, 
+    'alternate_totals_cards': { 'titulo': 'Líneas de Tarjetas' }, 
+    'player_shots': { 'titulo': 'Disparos del Jugador' }, 
+    'player_shots_on_target': { 'titulo': 'Disparos a Puerta' }, 
+    'player_cards': { 'titulo': 'Tarjeta a Jugador' } 
+};
+
+// ==========================================
+// 2. UTILIDADES Y FUNCIONES BÁSICAS
+// ==========================================
+function obtenerInfoLiga(key, apiTitle) {
+    let pais = "Mundial"; 
+    let nombreLiga = apiTitle ? String(apiTitle) : "Competición Genérica"; 
+    let bandera = "🌍"; 
+    let k = key ? String(key).toLowerCase() : "";
+    
+    if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra"; 
+    else if(k.includes('spain')) pais = "España"; 
+    else if(k.includes('italy')) pais = "Italia"; 
+    else if(k.includes('germany')) pais = "Alemania"; 
+    else if(k.includes('france')) pais = "Francia"; 
+    else if(k.includes('colombia')) pais = "Colombia"; 
+    else if(k.includes('mexico')) pais = "México"; 
+    else if(k.includes('argentina')) pais = "Argentina"; 
+    else if(k.includes('brazil')) pais = "Brasil"; 
+    else if(k.includes('portugal')) pais = "Portugal"; 
+    else if(k.includes('netherlands')) pais = "Países Bajos"; 
+    else if(k.includes('turkey')) pais = "Turquía"; 
+    else if(k.includes('belgium')) pais = "Bélgica"; 
+    else if(k.includes('australia')) pais = "Australia"; 
+    else if(k.includes('chile')) pais = "Chile"; 
+    else if(k.includes('peru')) pais = "Perú"; 
+    else if(k.includes('ecuador')) pais = "Ecuador"; 
+    else if(k.includes('uruguay')) pais = "Uruguay"; 
+    else if(k.includes('bolivia')) pais = "Bolivia"; 
+    else if(k.includes('paraguay')) pais = "Paraguay"; 
+    else if(k.includes('venezuela')) pais = "Venezuela"; 
+    else if(k.includes('japan')) pais = "Japón"; 
+    else if(k.includes('korea')) pais = "Corea del Sur"; 
+    else if(k.includes('china')) pais = "China"; 
+    else if(k.includes('saudi_arabia') || k.includes('saudi')) pais = "Arabia Saudita"; 
+    else if(k.includes('scotland')) pais = "Escocia"; 
+    else if(k.includes('sweden')) pais = "Suecia"; 
+    else if(k.includes('switzerland')) pais = "Suiza"; 
+    else if(k.includes('denmark')) pais = "Dinamarca"; 
+    else if(k.includes('norway')) pais = "Noruega"; 
+    else if(k.includes('poland')) pais = "Polonia"; 
+    else if(k.includes('austria')) pais = "Austria"; 
+    else if(k.includes('russia')) pais = "Rusia"; 
+    else if(k.includes('greece')) pais = "Grecia"; 
+    else if(k.includes('conmebol')) pais = "Sudamérica"; 
+    else if(k.includes('uefa') || k.includes('euro')) pais = "Europa"; 
+    else if(k.includes('usa') || k.includes('mls')) pais = "USA"; 
+    else if(k.includes('fifa') || k.includes('world_cup')) pais = "Mundial";
+    
+    const banderas = { 'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'España':'🇪🇸', 'Italia':'🇮🇹', 'Alemania':'🇩🇪', 'Francia':'🇫🇷', 'Colombia':'🇨🇴', 'México':'🇲🇽', 'Argentina':'🇦🇷', 'Brasil':'🇧🇷', 'Sudamérica':'🌎', 'Europa':'🇪🇺', 'USA':'🇺🇸', 'Portugal':'🇵🇹', 'Países Bajos':'🇳🇱', 'Turquía':'🇹🇷', 'Bélgica':'🇧🇪', 'Australia':'🇦🇺', 'Chile':'🇨🇱', 'Perú':'🇵🇪', 'Ecuador':'🇪🇨', 'Uruguay':'🇺🇾', 'Bolivia':'🇧🇴', 'Paraguay':'🇵🇾', 'Venezuela':'🇻🇪', 'Japón':'🇯🇵', 'Corea del Sur':'🇰🇷', 'China':'🇨🇳', 'Arabia Saudita':'🇸🇦', 'Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Suecia':'🇸🇪', 'Suiza':'🇨🇭', 'Dinamarca':'🇩🇰', 'Noruega':'🇳🇴', 'Polonia':'🇵🇱', 'Austria':'🇦🇹', 'Rusia':'🇷🇺', 'Grecia':'🇬🇷', 'Mundial':'🌍' };
+    bandera = banderas[pais] || '🌍';
+    
+    if(nombreLiga === 'EPL') nombreLiga = "Premier League"; 
+    else if(nombreLiga.includes(' - ')) nombreLiga = nombreLiga.split(' - ')[0].trim();
+    
+    if(k === 'soccer_conmebol_copa_libertadores') nombreLiga = "Copa Libertadores"; 
+    if(k === 'soccer_conmebol_copa_sudamericana') nombreLiga = "Copa Sudamericana"; 
+    if(k === 'soccer_uefa_europa_league') nombreLiga = "Europa League"; 
+    if(k === 'soccer_uefa_europa_conference_league') nombreLiga = "Conference League"; 
+    if(k === 'soccer_uefa_champs_league') nombreLiga = "Champions League";
+    
+    return { pais, nombreLiga, bandera };
+}
+
+function formatearPickEspanol(nombre, point, mercadoKey) { 
+    let text = nombre || ""; 
+    text = text.replace(/Total Corners/ig, 'Córners')
+               .replace(/Total Cards/ig, 'Tarjetas')
+               .replace(/over/ig, 'Más de')
+               .replace(/under/ig, 'Menos de'); 
+    let textLower = text.toLowerCase(); 
+    
+    if (textLower === '1') return `Local (1) ${point > 0 ? '+'+point : point}`; 
+    if (textLower === '2') return `Visitante (2) ${point > 0 ? '+'+point : point}`; 
+    if (textLower === 'x') return `Empate (X)`; 
+    if (point !== null && point !== undefined && point !== "") { 
+        if (!text.includes(point.toString())) { 
+            text += ` ${point > 0 && !textLower.includes('más') ? '+'+point : point}`; 
+        } 
+    } 
+    return text.trim(); 
+}
+
+function formatoCOP(valor) { 
+    return new Intl.NumberFormat('es-CO', { 
+        style: 'currency', 
+        currency: 'COP', 
+        minimumFractionDigits: 0 
+    }).format(valor); 
+}
+
+window.mostrarAlerta = function(titulo, mensaje, tipo = 'info', actionUrl = null) {
+    const modal = document.getElementById('modalAlertaGlobal'); 
+    const icon = document.getElementById('alertaIcono'); 
+    const title = document.getElementById('alertaTitulo'); 
+    const msg = document.getElementById('alertaMensaje'); 
+    const btn = document.getElementById('btnAlertaGlobal'); 
+    const content = document.getElementById('modalAlertaContenido');
+    
+    if(!modal) { alert(`${titulo}: ${mensaje}`); return; }
+    
+    title.innerText = titulo; 
+    msg.innerHTML = mensaje; 
+    
+    btn.onclick = function() {
+        window.cerrarAlertaGlobal();
+        if(actionUrl) { window.procesarEnlaceInterno(actionUrl); }
+    };
+
+    if(tipo === 'success') { 
+        icon.innerHTML = '<i class="fas fa-check-circle text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]"></i>'; 
+        btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-green-600 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"; 
+        content.className = "bg-gray-900 border border-green-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; 
+    } else if (tipo === 'error') { 
+        icon.innerHTML = '<i class="fas fa-times-circle text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]"></i>'; 
+        btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"; 
+        content.className = "bg-gray-900 border border-red-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; 
+    } else if (tipo === 'warning') { 
+        icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 drop-shadow-[0_0_15px_rgba(212,175,55,0.6)]"></i>'; 
+        btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-yellow-500 text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]"; 
+        content.className = "bg-gray-900 border border-yellow-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(212,175,55,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; 
+    } else { 
+        icon.innerHTML = '<i class="fas fa-info-circle text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]"></i>'; 
+        btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"; 
+        content.className = "bg-gray-900 border border-blue-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; 
+    }
+    
+    if(actionUrl) { 
+        btn.innerHTML = '<i class="fas fa-rocket mr-1"></i> IR A LA SEÑAL'; 
+    } else { 
+        btn.innerHTML = 'ACEPTAR'; 
+    }
+    
+    modal.classList.remove('hidden'); 
+    modal.style.display = 'flex';
+};
+
+window.mostrarConfirmacion = function(titulo, mensaje, callback) {
+    const modal = document.getElementById('modalConfirmGlobal'); 
+    if(!modal) { 
+        if(confirm(`${titulo}\n${mensaje}`)) callback(); 
+        return; 
+    }
+    document.getElementById('confirmTitulo').innerText = titulo; 
+    document.getElementById('confirmMensaje').innerText = mensaje;
+    
+    const btnAceptar = document.getElementById('btnConfirmAceptar'); 
+    const nuevoBtn = btnAceptar.cloneNode(true); 
+    btnAceptar.parentNode.replaceChild(nuevoBtn, btnAceptar);
+    
+    nuevoBtn.addEventListener('click', () => { 
+        window.cerrarConfirmGlobal(); 
+        callback(); 
+    }); 
+    
+    modal.classList.remove('hidden'); 
+    modal.style.display = 'flex';
+};
+
+// ==========================================
+// 3. SERVICE WORKER Y PUSH NOTIFICATIONS
+// ==========================================
 window.procesarEnlaceInterno = function(urlStr) {
     if(!urlStr) return;
     if(urlStr.includes('view=escalera')) {
@@ -36,23 +246,6 @@ window.procesarEnlaceInterno = function(urlStr) {
         window.abrirBandejaNotificaciones();
     }
 };
-
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./firebase-messaging-sw.js')
-    .then((registration) => { console.log('✅ SW registrado.'); })
-    .catch((err) => { console.error('❌ Error SW:', err); });
-
-    navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'NAVIGATE') {
-            window.procesarEnlaceInterno(event.data.url);
-        }
-    });
-}
-
-// ==========================================
-// 2. FUNCIONES VITALES Y NOTIFICACIONES IN-APP
-// ==========================================
-const VAPID_KEY = "BO7AkZgMGzNtUBR8ZShudo6sW0zTbS7lyOZszkVrbJ3WLL80yEBRIfgreLnFpPHe4cBCLr_J8XmyckjpwMu6xTo";
 
 window.registrarTokenPush = async function(codigoUsuario, modoSilencioso = false) {
     const btn = document.getElementById('btnActivarPushVip') || document.getElementById('btnActivarPushAdmin');
@@ -129,356 +322,6 @@ onMessage(messaging, (payload) => {
     window.mostrarAlerta("🔔 " + payload.notification.title, payload.notification.body, "success", actionUrl); 
 });
 
-window.verificarNotificacionesPendientes = async function() {
-    if (!modoVipActivo && !adminAutenticado) return;
-
-    try {
-        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(1));
-        const snap = await getDocs(q);
-        
-        if (!snap.empty) {
-            const data = snap.docs[0].data();
-            
-            const esNotificacionEscalera = data.audiencia === "escalera" || 
-                                           (data.url && data.url.includes("escalera")) || 
-                                           (data.titulo && data.titulo.toLowerCase().includes("escalera"));
-
-            if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) {
-                localStorage.setItem('oracle_last_push_seen', data.timestamp.toString());
-                return; 
-            }
-            
-            const ultimaVista = localStorage.getItem('oracle_last_push_seen');
-            
-            if (!ultimaVista) {
-                localStorage.setItem('oracle_last_push_seen', Date.now().toString());
-                return; 
-            }
-            
-            if (data.timestamp > parseInt(ultimaVista)) {
-                localStorage.setItem('oracle_last_push_seen', data.timestamp.toString());
-                
-                let urlDestino = null;
-                if (data.url && data.url !== "/" && data.url.includes("view=")) {
-                    urlDestino = data.url;
-                }
-                
-                window.mostrarAlerta(data.titulo, data.cuerpo, "info", urlDestino);
-            }
-        }
-    } catch (error) {
-        console.log("Error verificando bandeja oculta:", error);
-    }
-};
-
-window.iniciarSwipeNotificaciones = function() {
-    const cards = document.querySelectorAll('.notif-card');
-    cards.forEach(card => {
-        let startX = 0;
-        let isDragging = false;
-        let deleteBg = card.previousElementSibling; 
-
-        card.addEventListener('touchstart', e => {
-            startX = e.touches[0].clientX;
-            isDragging = true;
-            window.isSwiping = false;
-            card.style.transition = 'none';
-        }, {passive: true});
-
-        card.addEventListener('touchmove', e => {
-            if (!isDragging) return;
-            let currentX = e.touches[0].clientX;
-            let diffX = startX - currentX;
-            
-            if (diffX > 10) {
-                window.isSwiping = true;
-                if (deleteBg) deleteBg.style.opacity = '1'; 
-            }
-            
-            if (diffX > 0 && diffX < 150) { 
-                card.style.transform = `translateX(-${diffX}px)`;
-            }
-        }, {passive: true});
-
-        card.addEventListener('touchend', e => {
-            isDragging = false;
-            let diffX = startX - e.changedTouches[0].clientX;
-            card.style.transition = 'transform 0.3s ease';
-            
-            if (diffX > 60) {
-                card.style.transform = `translateX(-120%)`;
-                const parent = card.closest('.notif-item');
-                const id = parent.dataset.id;
-                
-                let hidden = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]');
-                if(!hidden.includes(id)) hidden.push(id);
-                localStorage.setItem('oracle_hidden_notifs', JSON.stringify(hidden));
-                
-                setTimeout(() => {
-                    parent.style.height = parent.offsetHeight + 'px';
-                    parent.style.transition = 'all 0.3s ease';
-                    parent.style.opacity = '0';
-                    parent.style.height = '0px';
-                    parent.style.marginBottom = '0px';
-                    setTimeout(() => parent.remove(), 300);
-                }, 100);
-            } else {
-                card.style.transform = `translateX(0)`; 
-                if (deleteBg) deleteBg.style.opacity = '0'; 
-            }
-            
-            setTimeout(() => window.isSwiping = false, 100);
-        });
-    });
-};
-
-window.abrirBandejaNotificaciones = async function() {
-    if (!modoVipActivo && !adminAutenticado) {
-        window.mostrarAlerta("Acceso Restringido", "Debes iniciar sesión con tu credencial para leer los comunicados oficiales del Gestor.", "warning");
-        window.abrirModalLogin();
-        return;
-    }
-
-    let modal = document.getElementById('modalBandejaNotificaciones');
-    if (!modal) {
-        document.body.insertAdjacentHTML('beforeend', `
-        <div id="modalBandejaNotificaciones" class="fixed inset-0 bg-black/95 hidden items-end justify-center z-[400] transition-opacity duration-300 backdrop-blur-md">
-            <div class="bg-gray-900 border-t border-blue-500/50 w-full h-[85vh] rounded-t-3xl shadow-[0_-10px_40px_rgba(59,130,246,0.15)] flex flex-col relative transform translate-y-full transition-transform duration-300" id="bandejaContenido">
-                <div class="p-5 flex justify-between items-center border-b border-white/10 bg-black/50 rounded-t-3xl">
-                    <h3 class="text-white font-black text-lg uppercase tracking-widest flex items-center gap-2"><i class="fas fa-bullhorn text-blue-500"></i> Notificaciones FR</h3>
-                    <button onclick="window.cerrarBandejaNotificaciones()" class="text-gray-500 hover:text-white bg-white/5 w-8 h-8 rounded-full transition-colors"><i class="fas fa-times"></i></button>
-                </div>
-                <div id="listaBandejaNotificaciones" class="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-900 to-black overflow-x-hidden">
-                    <div class="text-center p-10"><i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i></div>
-                </div>
-            </div>
-        </div>`);
-        modal = document.getElementById('modalBandejaNotificaciones');
-    }
-    
-    modal.classList.remove('hidden'); 
-    modal.style.display = 'flex';
-    setTimeout(() => { document.getElementById('bandejaContenido').classList.remove('translate-y-full'); }, 10);
-
-    const lista = document.getElementById('listaBandejaNotificaciones');
-    try {
-        const hiddenNotifs = JSON.parse(localStorage.getItem('oracle_hidden_notifs') || '[]');
-        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(15));
-        const snap = await getDocs(q);
-        lista.innerHTML = '';
-        
-        let validCount = 0;
-        
-        snap.forEach(doc => {
-            const data = doc.data(); 
-            
-            const esNotificacionEscalera = data.audiencia === "escalera" || 
-                                           (data.url && data.url.includes("escalera")) || 
-                                           (data.titulo && data.titulo.toLowerCase().includes("escalera"));
-            
-            if (esNotificacionEscalera && estadoEscalera !== "approved" && !adminAutenticado) return;
-            
-            if (hiddenNotifs.includes(doc.id)) return; 
-            validCount++;
-            
-            const f = new Date(data.timestamp).toLocaleDateString('es-CO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-            let icon = data.titulo.toLowerCase().includes('escalera') ? 'fa-rocket text-yellow-500' : 'fa-bell text-blue-400';
-            
-            let clickAction = data.url && data.url !== "/" ? `onclick="if(!window.isSwiping) window.procesarEnlaceInterno('${data.url}')"` : ``;
-
-            lista.innerHTML += `
-            <div class="notif-item relative mb-3 overflow-hidden" data-id="${doc.id}">
-                <div class="absolute inset-0 bg-red-600 rounded-xl flex justify-end items-center pr-5 text-white font-black text-xs shadow-inner opacity-0 transition-opacity duration-300">
-                    <i class="fas fa-trash-alt"></i>
-                </div>
-                <div ${clickAction} class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-md relative transition-transform duration-200 notif-card w-full z-10 block ${data.url && data.url !== '/' ? 'cursor-pointer active:scale-[0.98]' : ''}">
-                    <div class="absolute left-0 top-0 w-1 h-full bg-blue-600"></div>
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-[11px] font-black text-white uppercase pr-4 leading-tight"><i class="fas ${icon} mr-1.5"></i> ${data.titulo}</span>
-                        ${data.url && data.url !== "/" ? '<i class="fas fa-chevron-right text-gray-500 text-[10px]"></i>' : ''}
-                    </div>
-                    <p class="text-[10px] text-gray-300 leading-relaxed mb-3">${data.cuerpo}</p>
-                    <div class="flex justify-between items-center border-t border-white/5 pt-2">
-                        <span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">${data.enviadoPor}</span>
-                        <span class="text-[8px] text-gray-500 bg-gray-800 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i> ${f}</span>
-                    </div>
-                </div>
-            </div>`;
-        });
-        
-        if(validCount === 0) { 
-            lista.innerHTML = `<div class="text-center mt-10 text-gray-500 text-xs font-bold uppercase tracking-widest"><i class="fas fa-check-circle text-4xl mb-3 opacity-50 block"></i> Bandeja Vacía</div>`; 
-        } else {
-            setTimeout(() => window.iniciarSwipeNotificaciones(), 50);
-        }
-    } catch(e) { 
-        lista.innerHTML = `<div class="text-center text-red-500 text-xs">Error de red.</div>`; 
-    }
-};
-
-window.cerrarBandejaNotificaciones = function() {
-    const modal = document.getElementById('modalBandejaNotificaciones'); 
-    const contenido = document.getElementById('bandejaContenido');
-    if(contenido) { 
-        contenido.classList.add('translate-y-full'); 
-    }
-    setTimeout(() => { 
-        if(modal) { 
-            modal.classList.add('hidden'); 
-            modal.style.display = 'none'; 
-        } 
-    }, 300);
-};
-
-const desplegarCalendarioForzado = (e) => { 
-    if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'date') { 
-        try { e.target.showPicker(); } catch (ex) { } 
-    } 
-};
-document.addEventListener('click', desplegarCalendarioForzado); 
-document.addEventListener('focusin', desplegarCalendarioForzado); 
-
-window.abrirModalLogin = function(e) { 
-    if(e) { e.preventDefault(); e.stopPropagation(); } 
-    if(modoVipActivo) return; 
-    const m = document.getElementById('modalLogin'); 
-    if(m) { 
-        m.classList.remove('hidden'); 
-        m.style.display = 'flex'; 
-    } 
-};
-
-window.cerrarModalLogin = function() { 
-    const m = document.getElementById('modalLogin'); 
-    if(m) { 
-        m.classList.add('hidden'); 
-        m.style.display = 'none'; 
-    } 
-    correoAdminTemp = ""; 
-    const inputElement = document.getElementById('vipCode'); 
-    const btn = document.getElementById('btnValidarCodigo'); 
-    if(inputElement) { 
-        inputElement.type = 'text'; 
-        inputElement.placeholder = 'CÓDIGO DE INVERSOR'; 
-        inputElement.value = ''; 
-    } 
-    if(btn) { 
-        btn.innerHTML = 'VERIFICAR ACCESO'; 
-    } 
-};
-
-window.cerrarConfirmGlobal = function() { 
-    const m = document.getElementById('modalConfirmGlobal'); 
-    if(m) { 
-        m.classList.add('hidden'); 
-        m.style.display = 'none'; 
-    } 
-};
-
-window.cerrarModalAyuda = function() { 
-    const m = document.getElementById('modalAyudaApuesta'); 
-    if(m) { 
-        m.classList.add('hidden'); 
-        m.style.display = 'none'; 
-    } 
-};
-
-window.cerrarAlertaGlobal = function() { 
-    const m = document.getElementById('modalAlertaGlobal'); 
-    const c = document.getElementById('modalAlertaContenido'); 
-    if(m) { 
-        m.classList.add('hidden'); 
-        m.style.display = 'none'; 
-    } 
-    if(c) c.classList.replace('scale-100', 'scale-95'); 
-};
-
-window.mostrarAlerta = function(titulo, mensaje, tipo = 'info', actionUrl = null) {
-    const modal = document.getElementById('modalAlertaGlobal'); 
-    const icon = document.getElementById('alertaIcono'); 
-    const title = document.getElementById('alertaTitulo'); 
-    const msg = document.getElementById('alertaMensaje'); 
-    const btn = document.getElementById('btnAlertaGlobal'); 
-    const content = document.getElementById('modalAlertaContenido');
-    
-    if(!modal) { alert(`${titulo}: ${mensaje}`); return; }
-    
-    title.innerText = titulo; 
-    msg.innerHTML = mensaje; 
-    
-    btn.onclick = function() {
-        window.cerrarAlertaGlobal();
-        if(actionUrl) { window.procesarEnlaceInterno(actionUrl); }
-    };
-
-    if(tipo === 'success') { 
-        icon.innerHTML = '<i class="fas fa-check-circle text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]"></i>'; 
-        btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-green-600 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"; 
-        content.className = "bg-gray-900 border border-green-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(34,197,94,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; 
-    } 
-    else if (tipo === 'error') { 
-        icon.innerHTML = '<i class="fas fa-times-circle text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]"></i>'; 
-        btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"; 
-        content.className = "bg-gray-900 border border-red-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; 
-    } 
-    else if (tipo === 'warning') { 
-        icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 drop-shadow-[0_0_15px_rgba(212,175,55,0.6)]"></i>'; 
-        btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-yellow-500 text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]"; 
-        content.className = "bg-gray-900 border border-yellow-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(212,175,55,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; 
-    } 
-    else { 
-        icon.innerHTML = '<i class="fas fa-info-circle text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]"></i>'; 
-        btn.className = "w-full py-4 rounded-xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"; 
-        content.className = "bg-gray-900 border border-blue-500/50 p-8 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.2)] max-w-xs w-full text-center relative transform scale-100 transition-transform"; 
-    }
-    
-    if(actionUrl) { 
-        btn.innerHTML = '<i class="fas fa-rocket mr-1"></i> IR A LA SEÑAL'; 
-    } else { 
-        btn.innerHTML = 'ACEPTAR'; 
-    }
-    
-    modal.classList.remove('hidden'); 
-    modal.style.display = 'flex';
-};
-
-window.mostrarConfirmacion = function(titulo, mensaje, callback) {
-    const modal = document.getElementById('modalConfirmGlobal'); 
-    if(!modal) { 
-        if(confirm(`${titulo}\n${mensaje}`)) callback(); 
-        return; 
-    }
-    document.getElementById('confirmTitulo').innerText = titulo; 
-    document.getElementById('confirmMensaje').innerText = mensaje;
-    
-    const btnAceptar = document.getElementById('btnConfirmAceptar'); 
-    const nuevoBtn = btnAceptar.cloneNode(true); 
-    btnAceptar.parentNode.replaceChild(nuevoBtn, btnAceptar);
-    
-    nuevoBtn.addEventListener('click', () => { 
-        window.cerrarConfirmGlobal(); 
-        callback(); 
-    }); 
-    
-    modal.classList.remove('hidden'); 
-    modal.style.display = 'flex';
-};
-
-function obtenerHuellaDispositivo() { 
-    try { 
-        let miHuella = localStorage.getItem('oraclebet_huella_secreta'); 
-        if (!miHuella) { 
-            miHuella = 'disp_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36); 
-            localStorage.setItem('oraclebet_huella_secreta', miHuella); 
-        } 
-        return miHuella; 
-    } catch(e) { 
-        return 'disp_temp_' + Math.random().toString(36).substring(2, 9); 
-    } 
-}
-
-// 🚀 LÓGICA DE INSTALACIÓN PWA
-let deferredPrompt;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://');
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
@@ -513,131 +356,9 @@ if (!isStandalone) {
     }
 }
 
-const HUELLA_ESTE_CELULAR = obtenerHuellaDispositivo(); 
-let modoVipActivo = false; 
-let modoIlimitadoActivo = false; 
-let codigoActivoUsuario = ''; 
-let estadoEscalera = 'none';
-let CACHE_PARTIDOS_FUTUROS = []; 
-let partidosGlobales = []; 
-let partidosFiltrados = []; 
-let competicionesGlobales = []; 
-let seleccionesVIPGlobal = []; 
-let ticketDinamicoVIP = []; 
-let modoMercadoGlobal = 'mixto'; 
-let modoRiesgoGlobal = false; 
-let perfilApadrinamiento = null; 
-let unsubscribeApadrinamiento = null; 
-let tiempoInactividad = 0; 
-const TIEMPO_MAXIMO_SEGUNDOS = 180; 
-let timerInactividad;
-let filtroIAActivo = false; 
-let correoAdminTemp = ""; 
-
-const definicionesApuestas = { 
-    'h2h': { 'titulo': 'Ganador (1X2)' }, 
-    'totals': { 'titulo': 'Goles Totales' }, 
-    'spreads': { 'titulo': 'Hándicap (Spread)' }, 
-    'alternate_totals_corners': { 'titulo': 'Líneas de Córners' }, 
-    'team_total_corners': { 'titulo': 'Córners por Equipo' }, 
-    'corners_handicap': { 'titulo': 'Hándicap de Córners' }, 
-    'alternate_totals_cards': { 'titulo': 'Líneas de Tarjetas' }, 
-    'player_shots': { 'titulo': 'Disparos del Jugador' }, 
-    'player_shots_on_target': { 'titulo': 'Disparos a Puerta' }, 
-    'player_cards': { 'titulo': 'Tarjeta a Jugador' } 
-};
-
-function obtenerInfoLiga(key, apiTitle) {
-    let pais = "Mundial"; 
-    let nombreLiga = apiTitle ? String(apiTitle) : "Competición Genérica"; 
-    let bandera = "🌍"; 
-    let k = key ? String(key).toLowerCase() : "";
-    
-    if(k.includes('england') || k === 'soccer_epl' || k === 'soccer_efl_champ' || k.includes('fa_cup')) pais = "Inglaterra"; 
-    else if(k.includes('spain')) pais = "España"; 
-    else if(k.includes('italy')) pais = "Italia"; 
-    else if(k.includes('germany')) pais = "Alemania"; 
-    else if(k.includes('france')) pais = "Francia"; 
-    else if(k.includes('colombia')) pais = "Colombia"; 
-    else if(k.includes('mexico')) pais = "México"; 
-    else if(k.includes('argentina')) pais = "Argentina"; 
-    else if(k.includes('brazil')) pais = "Brasil"; 
-    else if(k.includes('portugal')) pais = "Portugal"; 
-    else if(k.includes('netherlands')) pais = "Países Bajos"; 
-    else if(k.includes('turkey')) pais = "Turquía"; 
-    else if(k.includes('belgium')) pais = "Bélgica"; 
-    else if(k.includes('australia')) pais = "Australia"; 
-    else if(k.includes('chile')) pais = "Chile"; 
-    else if(k.includes('peru')) pais = "Perú"; 
-    else if(k.includes('ecuador')) pais = "Ecuador"; 
-    else if(k.includes('uruguay')) pais = "Uruguay"; 
-    else if(k.includes('bolivia')) pais = "Bolivia"; 
-    else if(k.includes('paraguay')) pais = "Paraguay"; 
-    else if(k.includes('venezuela')) pais = "Venezuela"; 
-    else if(k.includes('japan')) pais = "Japón"; 
-    else if(k.includes('korea')) pais = "Corea del Sur"; 
-    else if(k.includes('china')) pais = "China"; 
-    else if(k.includes('saudi_arabia') || k.includes('saudi')) pais = "Arabia Saudita"; 
-    else if(k.includes('scotland')) pais = "Escocia"; 
-    else if(k.includes('sweden')) pais = "Suecia"; 
-    else if(k.includes('switzerland')) pais = "Suiza"; 
-    else if(k.includes('denmark')) pais = "Dinamarca"; 
-    else if(k.includes('norway')) pais = "Noruega"; 
-    else if(k.includes('poland')) pais = "Polonia"; 
-    else if(k.includes('austria')) pais = "Austria"; 
-    else if(k.includes('russia')) pais = "Rusia"; 
-    else if(k.includes('greece')) pais = "Grecia"; 
-    else if(k.includes('conmebol')) pais = "Sudamérica"; 
-    else if(k.includes('uefa') || k.includes('euro')) pais = "Europa"; 
-    else if(k.includes('usa') || k.includes('mls')) pais = "USA"; 
-    else if(k.includes('fifa') || k.includes('world_cup')) pais = "Mundial";
-    
-    const banderas = { 'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'España':'🇪🇸', 'Italia':'🇮🇹', 'Alemania':'🇩🇪', 'Francia':'🇫🇷', 'Colombia':'🇨🇴', 'México':'🇲🇽', 'Argentina':'🇦🇷', 'Brasil':'🇧🇷', 'Sudamérica':'🌎', 'Europa':'🇪🇺', 'USA':'🇺🇸', 'Portugal':'🇵🇹', 'Países Bajos':'🇳🇱', 'Turquía':'🇹🇷', 'Bélgica':'🇧🇪', 'Australia':'🇦🇺', 'Chile':'🇨🇱', 'Perú':'🇵🇪', 'Ecuador':'🇪🇨', 'Uruguay':'🇺🇾', 'Bolivia':'🇧🇴', 'Paraguay':'🇵🇾', 'Venezuela':'🇻🇪', 'Japón':'🇯🇵', 'Corea del Sur':'🇰🇷', 'China':'🇨🇳', 'Arabia Saudita':'🇸🇦', 'Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Suecia':'🇸🇪', 'Suiza':'🇨🇭', 'Dinamarca':'🇩🇰', 'Noruega':'🇳🇴', 'Polonia':'🇵🇱', 'Austria':'🇦🇹', 'Rusia':'🇷🇺', 'Grecia':'🇬🇷', 'Mundial':'🌍' };
-    
-    bandera = banderas[pais] || '🌍';
-    
-    if(nombreLiga === 'EPL') nombreLiga = "Premier League"; 
-    else if(nombreLiga.includes(' - ')) nombreLiga = nombreLiga.split(' - ')[0].trim();
-    
-    if(k === 'soccer_conmebol_copa_libertadores') nombreLiga = "Copa Libertadores"; 
-    if(k === 'soccer_conmebol_copa_sudamericana') nombreLiga = "Copa Sudamericana"; 
-    if(k === 'soccer_uefa_europa_league') nombreLiga = "Europa League"; 
-    if(k === 'soccer_uefa_europa_conference_league') nombreLiga = "Conference League"; 
-    if(k === 'soccer_uefa_champs_league') nombreLiga = "Champions League";
-    
-    return { pais, nombreLiga, bandera };
-}
-
-function formatearPickEspanol(nombre, point, mercadoKey) { 
-    let text = nombre || ""; 
-    text = text.replace(/Total Corners/ig, 'Córners')
-               .replace(/Total Cards/ig, 'Tarjetas')
-               .replace(/over/ig, 'Más de')
-               .replace(/under/ig, 'Menos de'); 
-               
-    let textLower = text.toLowerCase(); 
-    
-    if (textLower === '1') return `Local (1) ${point > 0 ? '+'+point : point}`; 
-    if (textLower === '2') return `Visitante (2) ${point > 0 ? '+'+point : point}`; 
-    if (textLower === 'x') return `Empate (X)`; 
-    
-    if (point !== null && point !== undefined && point !== "") { 
-        if (!text.includes(point.toString())) { 
-            text += ` ${point > 0 && !textLower.includes('más') ? '+'+point : point}`; 
-        } 
-    } 
-    return text.trim(); 
-}
-
-function formatoCOP(valor) { 
-    return new Intl.NumberFormat('es-CO', { 
-        style: 'currency', 
-        currency: 'COP', 
-        minimumFractionDigits: 0 
-    }).format(valor); 
-}
-
-// 🚀 SISTEMA DE CACHÉ Y CARGA ULTRA RÁPIDA
+// ==========================================
+// 4. CARGA INICIAL Y BASE DE DATOS
+// ==========================================
 async function precargarBaseDeDatos() {
     const cacheKey = 'oracle_cache_cartelera';
     const cacheTimeKey = 'oracle_cache_tiempo';
@@ -751,6 +472,7 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
+// 🚀 LA CARGA SE REPARÓ AQUÍ
 window.iniciarApp = async function() { 
     const fFecha = document.getElementById('filtroFecha'); 
     if(fFecha) { 
@@ -772,13 +494,10 @@ window.iniciarApp = async function() {
     if(cFree) cFree.innerHTML = loadHtml; 
     if(cVip) cVip.innerHTML = loadHtml;
     
-    // 🚀 FIX: Obligamos a cargar la Base de Datos SIEMPRE, sea cliente o Admin
+    // Obligamos a cargar la BD SIEMPRE, antes de evaluar si es admin
     await precargarBaseDeDatos(); 
     
-    if(adminAutenticado) {
-        // Si es admin, detenemos el proceso aquí para que no cargue las vistas de usuario
-        return;
-    }
+    if(adminAutenticado) return; 
     
     try { 
         const session = localStorage.getItem('oracle_session'); 
@@ -804,9 +523,8 @@ if (document.readyState === 'loading') {
 } else { 
     window.iniciarApp(); 
 }
-
 // ==========================================
-// 5. MOTOR DE LOGIN Y PANEL DE ADMIN (CRM)
+// 5. MOTOR DE LOGIN Y UTILIDADES VISUALES
 // ==========================================
 const promesaConTimeout = (promesa, ms) => { 
     let timeout = new Promise((resolve, reject) => { 
@@ -877,7 +595,10 @@ window.aceptarTerminosYLogin = function() {
 };
 
 window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj = null) {
-    const codigoIngresado = document.getElementById('vipCode').value.toUpperCase().trim();
+    const inputEl = document.getElementById('vipCode');
+    if(!inputEl) return;
+    
+    const codigoIngresado = inputEl.value.toUpperCase().trim();
     if(!codigoIngresado) return;
     
     const btn = btnObj || document.getElementById('btnValidarCodigo'); 
@@ -890,16 +611,15 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
     if (codigoIngresado.startsWith("MASTER_")) {
         try {
             if (!correoAdminTemp) {
-                let ingreso = prompt("Introduce el correo del Administrador:");
-                if (!ingreso) throw new Error("Correo requerido.");
-                correoAdminTemp = ingreso.trim(); // 🚀 FIX: Elimina espacios en blanco accidentales
+                let pmt = prompt("Introduce el correo del Administrador:");
+                if (!pmt) throw new Error("Correo requerido.");
+                correoAdminTemp = pmt.trim(); // 🚀 FIX: Destruye los espacios invisibles
             }
             const p = codigoIngresado.split("MASTER_")[1];
             await promesaConTimeout(signInWithEmailAndPassword(auth, correoAdminTemp, p), 8000);
             
             window.cerrarModalLogin();
             
-            // 🚀 FIX: Seguro adicional, si la BD no cargó, la obligamos a cargar
             if(CACHE_PARTIDOS_FUTUROS.length === 0) {
                 await precargarBaseDeDatos();
             }
@@ -907,10 +627,8 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
             window.renderizarLayoutAdmin();
         } catch(e) {
             correoAdminTemp = "";
-            
-            // 🚀 FIX: Traducción de errores de Firebase para ti
             let msgError = "Credenciales incorrectas.";
-            if(e.code === 'auth/user-not-found') msgError = "El correo ingresado no existe en Firebase.";
+            if(e.code === 'auth/user-not-found') msgError = "El correo ingresado no existe en la base de datos de Firebase.";
             if(e.code === 'auth/wrong-password') msgError = "La contraseña de tu código MASTER es incorrecta.";
             if(e.code === 'auth/invalid-email') msgError = "El formato del correo es inválido.";
             
@@ -934,6 +652,7 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
                     await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR }); 
                 }
                 
+                // 🚀 FIX: Palabra inversor eliminada
                 window.mostrarAlerta("Acceso Concedido", `Bienvenido.`, "success");
                 window.concederAcceso(data.ilimitado, codigoIngresado, data.ladderStatus || 'none', false);
             }
@@ -946,440 +665,60 @@ window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj =
         if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; }
     }
 };
-window.enviarNotificacionGlobal = async function() {
-    const titulo = document.getElementById('pushTitulo').value; 
-    const cuerpo = document.getElementById('pushCuerpo').value;
-    
-    if(!titulo || !cuerpo) { 
-        window.mostrarAlerta("Campos Vacíos", "Ingresa un título y un mensaje.", "warning"); 
-        return; 
-    }
-    
-    const btn = document.getElementById('btnEnviarPush'); 
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ENVIANDO...`; 
-    btn.disabled = true;
-    
-    try {
-        await setDoc(doc(collection(db, "notificaciones_push")), { 
-            titulo: titulo, 
-            cuerpo: cuerpo, 
-            url: window.location.origin + "/?inbox=true",
-            timestamp: Date.now(), 
-            enviadoPor: "FR (Gestor)",
-            audiencia: "todos"
-        });
-        
-        window.mostrarAlerta("Éxito", "La notificación ha sido enviada y guardada en la bandeja.", "success");
-        document.getElementById('pushTitulo').value = ''; 
-        document.getElementById('pushCuerpo').value = '';
-        
-        if(window.cargarNotificacionesAdmin) window.cargarNotificacionesAdmin();
-        
-    } catch(e) { 
-        window.mostrarAlerta("Error", "No se pudo comunicar con el servidor.", "error"); 
-    } finally {
-        btn.innerHTML = `<i class="fas fa-paper-plane mr-1"></i> Notificar a Inversores`; 
-        btn.disabled = false;
-    }
-}
 
-window.cargarNotificacionesAdmin = async function() {
-    const lista = document.getElementById('adminNotificacionesList'); 
-    if(!lista) return;
-    
-    lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500"></i></div>';
-    
-    try {
-        const q = query(collection(db, "notificaciones_push"), orderBy("timestamp", "desc"), limit(10));
-        const snap = await getDocs(q);
-        
-        lista.innerHTML = '';
-        
-        if(snap.empty) { 
-            lista.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">No hay comunicados enviados.</p>`; 
-            return; 
-        }
-        
-        snap.forEach(doc => {
-            let data = doc.data();
-            let f = new Date(data.timestamp).toLocaleDateString('es-CO', {
-                month: 'short', 
-                day: '2-digit', 
-                hour: '2-digit', 
-                minute: '2-digit'
-            });
-            
-            let audBadge = data.audiencia === "escalera" 
-                ? '<span class="bg-yellow-500/20 text-yellow-500 px-1 rounded ml-1">Escalera</span>' 
-                : '<span class="bg-blue-500/20 text-blue-400 px-1 rounded ml-1">Todos</span>';
-            
-            lista.innerHTML += `
-            <div class="bg-black/40 p-3 rounded-xl border border-white/10 relative shadow-sm mb-2 flex justify-between items-center">
-                <div class="flex flex-col w-3/4">
-                    <span class="text-[10px] font-black text-white uppercase truncate">${data.titulo}</span>
-                    <span class="text-[8px] text-gray-400 mt-0.5">${f} • Aud: ${audBadge}</span>
-                </div>
-                <button onclick="window.eliminarNotificacionAdmin('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 p-2 rounded-lg hover:bg-red-600/40 transition active:scale-95" title="Eliminar Mensaje">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>`;
-        });
-    } catch(e) { 
-        lista.innerHTML = '<p class="text-red-500 text-xs text-center">Error al cargar.</p>'; 
-    }
-};
-
-window.eliminarNotificacionAdmin = async function(idDoc) {
-    window.mostrarConfirmacion("Eliminar Comunicado", "¿Deseas borrar este mensaje? Desaparecerá de la bandeja de todos los usuarios de forma inmediata.", async () => {
-        try {
-            await deleteDoc(doc(db, "notificaciones_push", idDoc));
-            window.mostrarAlerta("Eliminada", "La notificación ha sido borrada de la base de datos global.", "success");
-            window.cargarNotificacionesAdmin();
-        } catch(e) { 
-            window.mostrarAlerta("Error", "No se pudo borrar la notificación.", "error"); 
-        }
-    });
-};
-
-window.renderizarLayoutAdmin = function() {
-    window.cerrarModalLogin();
-    document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-    
-    const bNav = document.getElementById('bottomNav'); 
-    const fApp = document.getElementById('footerApp'); 
-    if(bNav) bNav.style.display = 'none'; 
-    if(fApp) fApp.style.display = 'none'; 
-    
-    let btnTop = document.getElementById('btnTopLogin'); 
-    if(btnTop) { 
-        const nuevoBtn = btnTop.cloneNode(true); 
-        btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
-        nuevoBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>'; 
-        nuevoBtn.className = "shrink-0 bg-gray-800 text-red-500 text-[9px] px-3 py-2 rounded-full font-black border border-red-500/50 flex items-center gap-1.5 transition-all"; 
-        nuevoBtn.onclick = async () => { 
-            await signOut(auth); 
-            location.reload(); 
-        }; 
-    }
-
-    const aSec = document.getElementById('adminSection'); 
-    if(!aSec) return; 
-    aSec.style.display = 'block';
-    
-    let btnPushAdminHTML = '';
-    if (window.Notification) {
-        if (Notification.permission === 'granted') {
-            window.registrarTokenPush('ADMIN_MASTER', true); 
-        } else if (Notification.permission !== 'denied') {
-            btnPushAdminHTML = `<button id="btnActivarPushAdmin" onclick="window.registrarTokenPush('ADMIN_MASTER')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-5 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas Master</button>`;
-        }
-    }
-
-    aSec.innerHTML = `
-        <div class="p-4 bg-gray-900 min-h-screen pb-20">
-            <div class="flex flex-col items-center justify-center gap-2 mb-6 text-center border-b border-white/5 pb-4 relative">
-                <div class="bg-gray-800 p-4 rounded-full text-yellow-500 shadow-inner mt-4"><i class="fas fa-chart-line text-2xl"></i></div>
-                <h2 class="text-yellow-500 font-black text-2xl uppercase tracking-widest flex items-center gap-2">FR</h2>
-                <h3 class="text-gray-400 text-[10px] font-bold uppercase tracking-[0.3em]">| Analytics |</h3>
-                <span class="bg-gray-700 text-white text-[8px] px-2 py-0.5 rounded-full mt-2 font-black tracking-widest">CRM ADMIN</span>
-            </div>
-            
-            <div class="grid grid-cols-5 gap-1 mb-5 bg-black/60 p-1 rounded-xl border border-white/5">
-                <button onclick="window.cambiarTabAdmin('dash')" id="tab_dash" class="admin-tab-btn py-2 rounded-lg text-[8px] font-black uppercase transition-all bg-yellow-500 text-black shadow-md">General</button>
-                <button onclick="window.cambiarTabAdmin('users')" id="tab_users" class="admin-tab-btn py-2 rounded-lg text-[8px] font-black uppercase transition-all text-gray-400 hover:text-white">Tickets</button>
-                <button onclick="window.cambiarTabAdmin('fondo')" id="tab_fondo" class="admin-tab-btn py-2 rounded-lg text-[8px] font-black uppercase transition-all text-gray-400 hover:text-white">Fondos</button>
-                <button onclick="window.cambiarTabAdmin('ladder')" id="tab_ladder" class="admin-tab-btn py-2 rounded-lg text-[8px] font-black uppercase transition-all text-gray-400 hover:text-white">Escalera</button>
-                <button onclick="window.cambiarTabAdmin('access')" id="tab_access" class="admin-tab-btn py-2 rounded-lg text-[8px] font-black uppercase transition-all text-gray-400 hover:text-white">Accesos</button>
-            </div>
-
-            <div id="vistaAdm_dash" class="admin-view-content block">
-                ${btnPushAdminHTML}
-                
-                <div class="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border border-blue-500/50 p-4 rounded-xl mb-5 shadow-lg relative overflow-hidden">
-                    <div class="absolute top-0 right-0 bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">LIVE</div>
-                    <h3 class="text-[11px] font-black text-blue-400 uppercase tracking-widest mb-3 flex items-center"><i class="fas fa-bullhorn mr-2 text-lg"></i> Megáfono Inversores</h3>
-                    <input type="text" id="pushTitulo" placeholder="Ej: Nueva Señal Diamante" class="w-full bg-black/50 border border-blue-500/30 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-400 mb-2 font-bold shadow-inner">
-                    <textarea id="pushCuerpo" rows="2" placeholder="Escribe tu mensaje a todos los clientes..." class="w-full bg-black/50 border border-blue-500/30 rounded-lg p-3 text-white text-xs outline-none focus:border-blue-400 mb-3 shadow-inner resize-none"></textarea>
-                    <button id="btnEnviarPush" onclick="window.enviarNotificacionGlobal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-lg text-[10px] font-black uppercase transition active:scale-95 shadow-lg shadow-blue-500/30"><i class="fas fa-paper-plane mr-1"></i> Notificar a Inversores</button>
-                </div>
-
-                <div class="flex justify-between items-center mb-3 border-t border-white/5 pt-4">
-                    <h3 class="text-[11px] font-black text-white uppercase tracking-widest"><i class="fas fa-history text-blue-500 mr-1"></i> Historial de Comunicados</h3>
-                    <button onclick="window.cargarNotificacionesAdmin()" class="text-gray-500 hover:text-white p-1"><i class="fas fa-sync-alt"></i></button>
-                </div>
-                <div id="adminNotificacionesList" class="space-y-2 mb-6"></div>
-
-                <div class="flex justify-between items-center mb-3 border-t border-white/5 pt-4">
-                    <h3 class="text-[11px] font-black text-white uppercase tracking-widest"><i class="fas fa-globe text-yellow-500 mr-1"></i> Últimos Globales</h3>
-                    <button onclick="window.limpiarTodoMonitor()" class="bg-red-900/30 border border-red-500/50 hover:bg-red-900/60 text-red-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition active:scale-95 shadow-sm"><i class="fas fa-dumpster-fire mr-1"></i> Purgar Todo</button>
-                </div>
-                <div id="monitorTicketsList" class="space-y-3"></div>
-            </div>
-
-            <div id="vistaAdm_users" class="admin-view-content hidden">
-                <div id="panelListaUsuariosAdmin" class="block">
-                    <div class="relative mb-4">
-                        <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
-                        <input type="text" id="buscadorAdminUsuarios" onkeyup="window.filtrarUsuariosAdmin()" placeholder="Buscar código VIP..." class="w-full bg-black/60 border border-white/10 py-3 pl-10 pr-4 rounded-xl text-white text-xs outline-none focus:border-yellow-500 transition-colors shadow-inner">
-                    </div>
-                    <div id="listaUsuariosAdminContainer" class="space-y-2"></div>
-                </div>
-                <div id="panelDetalleUsuarioAdmin" class="hidden">
-                    <button onclick="window.volverAusuariosAdmin()" class="mb-4 bg-gray-800 text-yellow-500 text-[10px] font-black uppercase px-4 py-2 rounded-lg border border-white/5 shadow-md active:scale-95 transition-transform"><i class="fas fa-arrow-left mr-1"></i> Volver al listado</button>
-                    <h3 id="tituloDetalleUsuarioAdmin" class="text-xs font-black text-white mb-4 uppercase tracking-widest border-b border-white/10 pb-2"></h3>
-                    <div id="ticketsUsuarioAdminContainer" class="space-y-3"></div>
-                </div>
-            </div>
-
-            <div id="vistaAdm_fondo" class="admin-view-content hidden">
-                <div id="panelListaFondoAdmin" class="block">
-                    <h3 class="text-[11px] font-black text-green-400 uppercase tracking-widest mb-4 border-l-2 border-green-500 pl-2">Inversores Activos</h3>
-                    <div id="listaFondoAdminContainer" class="space-y-2"></div>
-                </div>
-                <div id="panelDetalleFondoAdmin" class="hidden">
-                    <button onclick="window.volverAfondoAdmin()" class="mb-4 bg-gray-800 text-green-500 text-[10px] font-black uppercase px-4 py-2 rounded-lg border border-white/5 shadow-md active:scale-95 transition-transform"><i class="fas fa-arrow-left mr-1"></i> Volver a Inversores</button>
-                    <h3 id="tituloDetalleFondoAdmin" class="text-xs font-black text-white mb-2 uppercase tracking-widest"></h3>
-                    <div id="statsFondoAdmin" class="grid grid-cols-2 gap-2 mb-4 border-b border-white/10 pb-4"></div>
-                    <div id="ticketsFondoAdminContainer" class="space-y-3"></div>
-                </div>
-            </div>
-
-            <div id="vistaAdm_ladder" class="admin-view-content hidden space-y-4">
-                <div class="bg-black/60 p-4 rounded-2xl border border-white/5 shadow-md">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-[10px] text-gray-400 font-bold uppercase"><i class="fas fa-hand-paper text-green-500 mr-1"></i> Solicitudes Pendientes</h3>
-                        <button onclick="window.renderizarSolicitudesAdmin()" class="text-gray-500 hover:text-white p-1"><i class="fas fa-sync-alt"></i></button>
-                    </div>
-                    <div id="solicitudesList" class="space-y-2"></div>
-                </div>
-
-                <div class="bg-black/60 p-5 rounded-2xl border border-yellow-500/20 shadow-lg relative overflow-hidden">
-                    <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">MOTOR FR</div>
-                    <h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-4"><i class="fas fa-rocket text-yellow-500 mr-1"></i> Creador de Escalera</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-dollar-sign mr-1"></i> Capital Inicial (Fondo)</label>
-                            <input type="number" id="inputCapitalEscalera" value="50000" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-crosshairs mr-1"></i> Cuota Objetivo Global</label>
-                            <input type="number" id="inputCuotaObjetivo" step="0.1" value="2.0" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="fas fa-shield-alt mr-1"></i> Seguridad Mínima (%)</label>
-                            <input type="number" id="inputProbMinima" value="85" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-sm outline-none focus:border-yellow-500 shadow-inner">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-gray-400 font-bold uppercase mb-1.5 block ml-1"><i class="far fa-calendar-alt mr-1"></i> Fecha del Reto</label>
-                            <input type="date" id="inputFechaEscalera" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white font-black text-xs uppercase outline-none focus:border-yellow-500 shadow-inner">
-                        </div>
-                        <button onclick="window.generarRetoAdmin()" class="w-full py-4 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] transition active:scale-95 mt-2"><i class="fas fa-robot mr-1"></i> Analizar Mercado Global</button>
-                    </div>
-                </div>
-
-                <div id="previewRetoAdmin" class="hidden mt-4"></div>
-                <textarea id="inputAdminReto" rows="2" class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-gray-300 text-xs mt-4 outline-none focus:border-yellow-500 hidden shadow-inner" placeholder="Escribe un mensaje de estrategia para los usuarios..."></textarea>
-                <button id="btnPublicarReto" onclick="window.publicarRetoEscalera()" class="w-full mt-4 py-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-[0_10px_20px_rgba(34,197,94,0.3)] transition active:scale-95 hidden"><i class="fas fa-broadcast-tower mr-1"></i> Publicar Escalera Oficial</button>
-                <button onclick="window.eliminarRetoEscaleraGlobal()" class="w-full mt-2 py-3 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl border border-red-500/30 font-black text-[10px] uppercase shadow-lg transition active:scale-95"><i class="fas fa-trash-alt mr-1"></i> Borrar Reto Activo</button>
-                
-                <div id="panelGestionRetoActivo" class="mt-4"></div>
-
-                <div class="bg-black/60 p-4 rounded-2xl border border-white/5 shadow-md mt-4">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-[10px] text-gray-400 font-bold uppercase"><i class="fas fa-history text-blue-500 mr-1"></i> Historial de Retos</h3>
-                        <button onclick="window.cargarHistorialEscaleraAdmin()" class="text-gray-500 hover:text-white p-1"><i class="fas fa-sync-alt"></i></button>
-                    </div>
-                    <div id="historialEscaleraAdminList" class="space-y-3"></div>
-                </div>
-            </div>
-
-            <div id="vistaAdm_access" class="admin-view-content hidden space-y-4">
-                <div class="bg-black/60 p-4 rounded-2xl border border-white/5 shadow-md">
-                    <h3 class="text-[10px] text-gray-400 font-bold uppercase mb-3"><i class="fas fa-key text-yellow-500 mr-1"></i> Generador de Licencias</h3>
-                    <input type="text" id="newCodeInput" placeholder="Ej: JUANPEREZ2026" class="w-full bg-gray-900 border border-white/10 p-3.5 rounded-xl text-white text-xs mb-3 uppercase outline-none focus:border-yellow-500 shadow-inner">
-                    <div class="flex gap-2">
-                        <button onclick="window.crearCodigo(false)" id="btnCrearVip" class="flex-1 py-3 bg-yellow-600 text-black rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-transform"><i class="fas fa-star mr-1"></i> Crear VIP</button>
-                        <button onclick="window.crearCodigo(true)" id="btnCrearPrem" class="flex-1 py-3 bg-purple-700 text-white rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-transform"><i class="fas fa-gem mr-1"></i> Crear PREM</button>
-                    </div>
-                </div>
-                <div class="bg-black/60 p-4 rounded-2xl border border-white/5 shadow-md">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-[10px] text-gray-400 font-bold uppercase"><i class="fas fa-users text-blue-500 mr-1"></i> Base de Datos Activa</h3>
-                        <button onclick="window.renderizarListaAdmin()" class="text-gray-500 hover:text-white p-1"><i class="fas fa-sync-alt"></i></button>
-                    </div>
-                    <div id="codesList" class="space-y-2"></div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    window.cargarMonitorTickets(); 
-    window.cargarUsuariosAdmin(); 
-    window.cargarFondosAdmin(); 
-    window.renderizarListaAdmin(); 
-    window.renderizarSolicitudesAdmin(); 
-    window.cargarHistorialEscaleraAdmin(); 
-    window.cargarNotificacionesAdmin();
-    window.cargarGestionRetoActivoAdmin();
-    
-    const hoy = new Date(); 
-    let mes = String(hoy.getMonth() + 1).padStart(2, '0'); 
-    let dia = String(hoy.getDate()).padStart(2, '0'); 
-    document.getElementById('inputFechaEscalera').value = `${hoy.getFullYear()}-${mes}-${dia}`;
-};
-
-window.cambiarTabAdmin = function(tabName) {
-    document.querySelectorAll('.admin-view-content').forEach(el => el.classList.add('hidden')); 
-    
-    document.querySelectorAll('.admin-tab-btn').forEach(btn => { 
-        btn.classList.remove('bg-yellow-500', 'text-black', 'shadow-md'); 
-        btn.classList.add('text-gray-400'); 
-    });
-    
-    document.getElementById('vistaAdm_' + tabName).classList.remove('hidden'); 
-    let activeBtn = document.getElementById('tab_' + tabName); 
-    activeBtn.classList.remove('text-gray-400'); 
-    activeBtn.classList.add('bg-yellow-500', 'text-black', 'shadow-md');
-};
-
-window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBackground = false) {
-    if(!esModoBackground) window.cerrarModalLogin(); 
-    
-    modoVipActivo = true; 
-    modoIlimitadoActivo = esIlimitado; 
-    codigoActivoUsuario = codeString; 
-    estadoEscalera = ladderStat; 
-    
-    try { 
-        localStorage.setItem('oracle_session', JSON.stringify({ 
-            code: codeString, 
-            ilimitado: esIlimitado, 
-            ladderStat: ladderStat 
-        })); 
-    } catch(e) {}
-    
-    const wrapVIP = document.getElementById('wrapperVIP'); 
-    const wrapFree = document.getElementById('wrapperFree');
-    
-    if(wrapVIP) {
-        wrapVIP.style.display = 'block'; 
-        let oldBtn = document.getElementById('btnActivarPushVip'); 
-        if(oldBtn) oldBtn.remove();
-        
-        if (window.Notification) {
-            if (Notification.permission === 'granted') {
-                window.registrarTokenPush(codeString, true); 
-            } else if (Notification.permission !== 'denied') {
-                wrapVIP.insertAdjacentHTML('afterbegin', `<button id="btnActivarPushVip" onclick="window.registrarTokenPush('${codeString}')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-4 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform"><i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas en este Celular</button>`);
-            }
-        }
-    }
-    
-    if(wrapFree) wrapFree.style.display = 'none'; 
-    
-    const btnTop = document.getElementById('btnTopLogin'); 
-    if(btnTop) {
-        const nuevoBtn = btnTop.cloneNode(true); 
-        btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
-        
-        nuevoBtn.removeAttribute('onclick'); 
-        nuevoBtn.onclick = function(e) { 
-            if(e) { e.preventDefault(); e.stopPropagation(); } 
-            window.cerrarSesionLocal(); 
-        };
-        
-        nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>`;
-        
-        if(esIlimitado) { 
-            nuevoBtn.className = "shrink-0 bg-purple-900 text-purple-300 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-purple-500/50 flex items-center gap-1.5 transition-all"; 
-        } else { 
-            nuevoBtn.className = "shrink-0 bg-yellow-900 text-yellow-500 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-yellow-600/50 flex items-center gap-1.5 transition-all"; 
-        }
-    }
-    
-    window.iniciarMonitorInactividad(); 
-    window.renderizarPartidosVIP(); 
-    if(!esModoBackground) window.scrollTo(0,0); 
-    
-    if(window.suscribirApadrinamiento) window.suscribirApadrinamiento(); 
-    if(window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI();
-};
-
-window.cerrarSesionLocal = function(e) { 
+window.abrirModalLogin = function(e) { 
     if(e) { e.preventDefault(); e.stopPropagation(); } 
-    window.cerrarModalLogin(); 
-    window.mostrarConfirmacion("Cerrar Sesión", "¿Deseas salir de tu cuenta VIP?", () => { 
-        window.ejecutarCierreSesion(); 
-        setTimeout(() => { window.abrirModalLogin(); }, 300); 
-    }); 
+    if(modoVipActivo) return; 
+    const m = document.getElementById('modalLogin'); 
+    if(m) { 
+        m.classList.remove('hidden'); 
+        m.style.display = 'flex'; 
+    } 
 };
 
-window.ejecutarCierreSesion = function() {
-    modoVipActivo = false; 
-    modoIlimitadoActivo = false; 
-    codigoActivoUsuario = ''; 
-    estadoEscalera = 'none'; 
-    seleccionesVIPGlobal = []; 
-    ticketDinamicoVIP = [];
-    
-    const contadorSel = document.getElementById('contadorSeleccion'); 
-    if(contadorSel) contadorSel.innerHTML = `<i class="fas fa-list-check mr-1"></i> 0 Seleccionados`;
-    
-    const resDiv = document.getElementById('resultadoVIP'); 
-    if(resDiv) resDiv.innerHTML = "";
-    
-    let btnPushVip = document.getElementById('btnActivarPushVip'); 
-    if(btnPushVip) btnPushVip.remove();
-    
-    if (unsubscribeApadrinamiento) unsubscribeApadrinamiento(); 
-    perfilApadrinamiento = null; 
-    clearInterval(timerInactividad); 
-    
-    try { localStorage.removeItem('oracle_session'); } catch(e){}
-    
-    const wrapVIP = document.getElementById('wrapperVIP'); 
-    const wrapFree = document.getElementById('wrapperFree');
-    
-    if(wrapVIP) wrapVIP.style.display = 'none'; 
-    if(wrapFree) wrapFree.style.display = 'block';
-    
-    const btnTop = document.getElementById('btnTopLogin');
-    if(btnTop) { 
-        const nuevoBtn = btnTop.cloneNode(true); 
-        btnTop.parentNode.replaceChild(nuevoBtn, btnTop); 
-        nuevoBtn.removeAttribute('onclick'); 
-        nuevoBtn.innerHTML = '<i class="fas fa-lock"></i> <span>INGRESAR</span>'; 
-        nuevoBtn.className = "shrink-0 bg-gray-800 text-yellow-500 text-[9px] px-3 py-2 rounded-lg font-black uppercase tracking-widest shadow-md flex items-center gap-2 border border-yellow-500/30 transition-all hover:bg-gray-700"; 
-        nuevoBtn.onclick = function(e) { 
-            if(e) { e.preventDefault(); e.stopPropagation(); } 
-            window.abrirModalLogin(); 
-        }; 
-    }
-    
-    if(window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI(); 
-    if(window.chequearApadrinamientoUI) window.chequearApadrinamientoUI(); 
-    window.ejecutarTopFutbol(); 
-    window.cambiarVista('picks');
+window.cerrarModalLogin = function() { 
+    const m = document.getElementById('modalLogin'); 
+    if(m) { 
+        m.classList.add('hidden'); 
+        m.style.display = 'none'; 
+    } 
+    correoAdminTemp = ""; 
+    const inputElement = document.getElementById('vipCode'); 
+    const btn = document.getElementById('btnValidarCodigo'); 
+    if(inputElement) { 
+        inputElement.type = 'text'; 
+        inputElement.placeholder = 'CÓDIGO DE INVERSOR'; 
+        inputElement.value = ''; 
+    } 
+    if(btn) { 
+        btn.innerHTML = '<i class="fas fa-sign-in-alt text-lg"></i> VERIFICAR ACCESO'; 
+    } 
 };
 
-function resetearInactividad() { tiempoInactividad = 0; }
-window.addEventListener('mousemove', resetearInactividad); 
-window.addEventListener('scroll', resetearInactividad); 
-window.addEventListener('touchstart', resetearInactividad); 
-window.addEventListener('keydown', resetearInactividad);
+window.cerrarConfirmGlobal = function() { 
+    const m = document.getElementById('modalConfirmGlobal'); 
+    if(m) { 
+        m.classList.add('hidden'); 
+        m.style.display = 'none'; 
+    } 
+};
 
-window.iniciarMonitorInactividad = function() { 
-    clearInterval(timerInactividad); 
-    tiempoInactividad = 0; 
-    timerInactividad = setInterval(() => { 
-        if(modoVipActivo) { 
-            tiempoInactividad++; 
-            if(tiempoInactividad >= TIEMPO_MAXIMO_SEGUNDOS) { 
-                window.ejecutarCierreSesion(); 
-                window.mostrarAlerta("Sesión Expirada", "Cerrada por inactividad.", "warning"); 
-            } 
-        } 
-    }, 1000); 
+window.cerrarModalAyuda = function() { 
+    const m = document.getElementById('modalAyudaApuesta'); 
+    if(m) { 
+        m.classList.add('hidden'); 
+        m.style.display = 'none'; 
+    } 
+};
+
+window.cerrarAlertaGlobal = function() { 
+    const m = document.getElementById('modalAlertaGlobal'); 
+    const c = document.getElementById('modalAlertaContenido'); 
+    if(m) { 
+        m.classList.add('hidden'); 
+        m.style.display = 'none'; 
+    } 
+    if(c) c.classList.replace('scale-100', 'scale-95'); 
 };
 
 window.cambiarVista = function(vista) {
@@ -1891,289 +1230,144 @@ window.quitarPartidoDelTicket = function(idPartido) {
         }
     }
 };
-function obtenerOpcionesRentables(partido) {
-    let mapaResultados = {}; 
-    if (!partido.bookmakers) return [];
-    
-    partido.bookmakers.forEach(b => { 
-        b.markets?.forEach(m => { 
-            m.outcomes?.forEach(o => { 
-                let nombreOpcion = o.name || ""; 
-                let descripcion = o.description || ""; 
-                if (descripcion && descripcion !== nombreOpcion) { 
-                    nombreOpcion = `${descripcion} | ${nombreOpcion}`; 
-                } 
-                let k = `${m.key}-${nombreOpcion}-${o.point||''}`; 
-                
-                if(!mapaResultados[k]) { 
-                    mapaResultados[k] = { 
-                        mercadoKey: m.key, 
-                        nombre: nombreOpcion, 
-                        point: o.point, 
-                        cuotas: [], 
-                        brokers: [] 
-                    }; 
-                } 
-                
-                if(o.price > 1.0) { 
-                    mapaResultados[k].cuotas.push(o.price); 
-                    mapaResultados[k].brokers.push({ 
-                        broker: b.title, 
-                        cuota: o.price, 
-                        probabilidad_real: o.probabilidad_real || null, 
-                        ev_porcentaje: o.ev_porcentaje || null, 
-                        es_valor: o.es_valor || false, 
-                        verificado_ia: o.verificado_ia || false 
-                    }); 
-                } 
-            }); 
-        }); 
-    });
-    
-    let opcionesFinales = []; 
-    Object.values(mapaResultados).forEach(res => { 
-        let esExotico = res.mercadoKey.includes('cards') || res.mercadoKey.includes('corners') || res.mercadoKey.includes('shots') || res.mercadoKey.includes('player'); 
-        let liquidezMinima = esExotico ? 3 : 1; 
-        
-        if(res.cuotas.length >= liquidezMinima) { 
-            res.brokers.sort((a,b) => b.cuota - a.cuota); 
-            let mejorOpcion = res.brokers[0]; 
-            let probFinal = mejorOpcion.probabilidad_real; 
-            let edgeFinal = mejorOpcion.ev_porcentaje; 
-            
-            if (probFinal === null || probFinal === undefined) { 
-                let cuotaPromedio = res.cuotas.reduce((a,b) => a+b, 0) / res.cuotas.length; 
-                probFinal = Math.min(Math.round((1 / cuotaPromedio) * 100), 99); 
-                edgeFinal = parseFloat((((mejorOpcion.cuota / cuotaPromedio) - 1) * 100).toFixed(2)); 
-            } 
-            
-            if(mejorOpcion.cuota >= 1.05 && mejorOpcion.cuota <= 4.50) { 
-                opcionesFinales.push({ 
-                    broker: mejorOpcion.broker, 
-                    mercadoKey: res.mercadoKey, 
-                    nombre: res.nombre, 
-                    point: res.point, 
-                    cuota: mejorOpcion.cuota, 
-                    probabilidad: probFinal, 
-                    edgeValor: edgeFinal, 
-                    es_valor: mejorOpcion.es_valor || (edgeFinal > 0), 
-                    verificado_ia: mejorOpcion.verificado_ia 
-                }); 
-            } 
-        } 
-    });
-    
-    opcionesFinales.sort((a, b) => { 
-        if (a.verificado_ia && !b.verificado_ia) return -1; 
-        if (!a.verificado_ia && b.verificado_ia) return 1; 
-        if (a.es_valor && !b.es_valor) return -1; 
-        if (!a.es_valor && b.es_valor) return 1; 
-        if (b.edgeValor !== a.edgeValor) return b.edgeValor - a.edgeValor; 
-        return b.probabilidad - a.probabilidad; 
-    }); 
-    
-    return opcionesFinales;
-}
 
-window.procesarTicketVIP = function() {
-    if(seleccionesVIPGlobal.length < 1) return; 
-    const resDiv = document.getElementById('resultadoVIP'); 
-    if(!resDiv) return;
+window.concederAcceso = function(esIlimitado, codeString, ladderStat, esModoBackground = false) {
+    if(!esModoBackground) window.cerrarModalLogin(); 
     
-    resDiv.innerHTML = `<div class="p-10 text-center bg-black/40 rounded-xl border border-white/5"><i class="fas fa-satellite-dish animate-pulse text-yellow-500 mb-4 text-4xl"></i><p class="text-[11px] uppercase text-yellow-500 font-black">Analizando probabilidades...</p></div>`; 
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    modoVipActivo = true; 
+    modoIlimitadoActivo = esIlimitado; 
+    codigoActivoUsuario = codeString; 
+    estadoEscalera = ladderStat; 
     
-    setTimeout(() => { 
-        ticketDinamicoVIP = []; 
-        modoMercadoGlobal = 'mixto'; 
-        modoRiesgoGlobal = false; 
-        
-        seleccionesVIPGlobal.forEach(p => { 
-            let oFinales = obtenerOpcionesRentables(p); 
-            if(oFinales.length > 0) { 
-                let riskIdx = oFinales.findIndex(opt => opt.cuota >= 2.0 && opt.cuota <= 3.8); 
-                if(riskIdx === -1) riskIdx = oFinales.length - 1; 
-                ticketDinamicoVIP.push({ 
-                    partido: p, 
-                    opciones: oFinales, 
-                    indexSeleccionado: 0, 
-                    indexRiesgo: riskIdx 
-                }); 
-            } 
-        }); 
-        window.dibujarTicketDinamico(false); 
-    }, 1000);
-};
-
-window.mejorarProbabilidadTicket = function() {
-    let huboMejoras = false; 
-    function fuzzyMatchLocal(s1, s2) { 
-        let t1 = s1.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); 
-        let t2 = s2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); 
-        if(t1.length < 3 || t2.length < 3) return t1 === t2; 
-        return t1.includes(t2) || t2.includes(t1); 
-    }
+    try { 
+        localStorage.setItem('oracle_session', JSON.stringify({ 
+            code: codeString, 
+            ilimitado: esIlimitado, 
+            ladderStat: ladderStat 
+        })); 
+    } catch(e) {}
     
-    ticketDinamicoVIP.forEach(item => {
-        const p = item.partido; 
-        const idxUsado = modoRiesgoGlobal ? item.indexRiesgo : item.indexSeleccionado; 
-        const oOriginal = item.opciones[idxUsado]; 
-        let candidatos = []; 
-        let origLower = oOriginal.nombre.toLowerCase();
+    const wrapVIP = document.getElementById('wrapperVIP'); 
+    const wrapFree = document.getElementById('wrapperFree');
+    
+    if(wrapVIP) {
+        wrapVIP.style.display = 'block'; 
+        let oldBtn = document.getElementById('btnActivarPushVip'); 
+        if(oldBtn) oldBtn.remove();
         
-        p.bookmakers?.forEach(b => { 
-            b.markets?.forEach(m => { 
-                m.outcomes?.forEach(o => { 
-                    let nombreOpcion = o.name || ""; 
-                    let descripcion = o.description || ""; 
-                    let nombreReal = descripcion && descripcion !== nombreOpcion ? `${descripcion} | ${nombreOpcion}` : nombreOpcion; 
-                    let nombreLower = nombreReal.toLowerCase(); 
-                    let esCandidato = false; 
-                    let pointNum = parseFloat(o.point); 
-                    let esMismoEquipo = fuzzyMatchLocal(nombreReal, oOriginal.nombre); 
-                    
-                    if (oOriginal.mercadoKey === 'h2h' && m.key === 'spreads' && !origLower.includes('draw') && !origLower.includes('empate') && esMismoEquipo) { 
-                        if (!isNaN(pointNum) && pointNum >= 0) esCandidato = true; 
-                    } else if (oOriginal.mercadoKey.includes('totals') && m.key === oOriginal.mercadoKey) { 
-                        if ((nombreLower.includes('over') || origLower.includes('over') || nombreLower.includes('más') || origLower.includes('más')) && pointNum < parseFloat(oOriginal.point)) { 
-                            esCandidato = true; 
-                        } 
-                    } else if (oOriginal.mercadoKey.includes('totals') && m.key === oOriginal.mercadoKey) { 
-                        if ((nombreLower.includes('under') || origLower.includes('under') || nombreLower.includes('menos') || origLower.includes('menos')) && pointNum > parseFloat(oOriginal.point)) { 
-                            esCandidato = true; 
-                        } 
-                    } else if (oOriginal.mercadoKey === 'spreads' && m.key === 'spreads' && esMismoEquipo) { 
-                        if (!isNaN(pointNum) && pointNum > parseFloat(oOriginal.point)) esCandidato = true; 
-                    } 
-                    
-                    if (esCandidato && o.price >= 1.05 && o.price < oOriginal.cuota) { 
-                        let probAprox = Math.min(98, Math.round((1 / o.price) * 105)); 
-                        let edgeMejora = oOriginal.edgeValor > 0 ? parseFloat((oOriginal.edgeValor * 0.5).toFixed(2)) : 0; 
-                        candidatos.push({ 
-                            broker: b.title, 
-                            mercadoKey: m.key, 
-                            nombre: nombreReal, 
-                            point: o.point, 
-                            cuota: o.price, 
-                            probabilidad: probAprox, 
-                            edgeValor: edgeMejora, 
-                            es_valor: edgeMejora > 0, 
-                            verificado_ia: oOriginal.verificado_ia, 
-                            es_mejora: true 
-                        }); 
-                    } 
-                }); 
-            }); 
-        });
-        
-        if (candidatos.length > 0) { 
-            candidatos.sort((a, b) => a.cuota - b.cuota); 
-            let mejorCandidato = candidatos.find(c => c.cuota >= 1.15) || candidatos[0]; 
-            let existeIdx = item.opciones.findIndex(opt => opt.mercadoKey === mejorCandidato.mercadoKey && opt.nombre === mejorCandidato.nombre && opt.point === mejorCandidato.point); 
-            
-            if (existeIdx !== -1) { 
-                if (!modoRiesgoGlobal) item.indexSeleccionado = existeIdx; else item.indexRiesgo = existeIdx; 
-            } else { 
-                item.opciones.push(mejorCandidato); 
-                if (!modoRiesgoGlobal) item.indexSeleccionado = item.opciones.length - 1; else item.indexRiesgo = item.opciones.length - 1; 
-            } 
-            huboMejoras = true; 
+        if (window.Notification && Notification.permission !== 'denied') {
+            wrapVIP.insertAdjacentHTML('afterbegin', `
+            <button id="btnActivarPushVip" onclick="window.registrarTokenPush('${codeString}')" class="w-full bg-blue-600 text-white py-4 rounded-xl mb-4 text-[12px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(37,99,235,0.3)] active:scale-95 transition-transform">
+                <i class="fas fa-bell mr-2 animate-bounce"></i> Activar Alertas en este Celular
+            </button>`);
         }
-    });
-    
-    if (huboMejoras) { 
-        window.mostrarAlerta("Ticket Blindado", "Se han encontrado líneas de protección bajando drásticamente el riesgo.", "success"); 
-        window.dibujarTicketDinamico(false); 
-    } else { 
-        window.mostrarAlerta("Límites Alcanzados", "El mercado no ofrece Hándicaps Asiáticos o líneas más seguras para estos equipos en este momento.", "warning"); 
     }
-};
-
-window.toggleModoRiesgo = function() { 
-    modoRiesgoGlobal = !modoRiesgoGlobal; 
-    window.dibujarTicketDinamico(false); 
-};
-
-window.cambiarModoMercado = function(modo) { 
-    modoMercadoGlobal = modo; 
-    let encontroOpciones = false; 
     
-    ticketDinamicoVIP.forEach(item => { 
-        const isProp = (k) => k.includes('shots') || k.includes('corners') || k.includes('cards') || k.includes('player'); 
+    if(wrapFree) wrapFree.style.display = 'none'; 
+    
+    const btnTop = document.getElementById('btnTopLogin'); 
+    if(btnTop) {
+        const nuevoBtn = btnTop.cloneNode(true); 
+        btnTop.parentNode.replaceChild(nuevoBtn, btnTop);
         
-        if(modo === 'props') { 
-            const idxS = item.opciones.findIndex(o => isProp(o.mercadoKey)); 
-            if (idxS !== -1) { 
-                item.indexSeleccionado = idxS; 
-                let lastIdxR = -1; 
-                item.opciones.forEach((o, i) => { if (isProp(o.mercadoKey)) lastIdxR = i; }); 
-                item.indexRiesgo = lastIdxR !== -1 ? lastIdxR : idxS; 
-                encontroOpciones = true; 
-            } 
-        } else if(modo === 'h2h' || modo === 'totals' || modo === 'spreads') { 
-            const idxS = item.opciones.findIndex(o => o.mercadoKey === modo); 
-            if(idxS !== -1) { 
-                item.indexSeleccionado = idxS; 
-                let lastIdxR = -1; 
-                item.opciones.forEach((o, i) => { if(o.mercadoKey === modo) lastIdxR = i; }); 
-                item.indexRiesgo = lastIdxR !== -1 ? lastIdxR : idxS; 
-                encontroOpciones = true; 
-            } 
+        nuevoBtn.removeAttribute('onclick'); 
+        nuevoBtn.onclick = function(e) { 
+            if(e) { e.preventDefault(); e.stopPropagation(); } 
+            window.cerrarSesionLocal(); 
+        };
+        
+        nuevoBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>SALIR</span>`;
+        
+        if(esIlimitado) { 
+            nuevoBtn.className = "shrink-0 bg-purple-900 text-purple-300 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-purple-500/50 flex items-center gap-1.5 transition-all"; 
         } else { 
-            item.indexSeleccionado = 0; 
-            let validRisk = item.opciones.findIndex(opt => opt.cuota >= 2.2); 
-            item.indexRiesgo = validRisk !== -1 ? validRisk : item.opciones.length - 1; 
-            encontroOpciones = true; 
-        } 
+            nuevoBtn.className = "shrink-0 bg-yellow-900 text-yellow-500 text-[9px] px-3 py-2 rounded-full font-black uppercase border border-yellow-600/50 flex items-center gap-1.5 transition-all"; 
+        }
+    }
+    
+    window.iniciarMonitorInactividad(); 
+    window.renderizarPartidosVIP(); 
+    if(!esModoBackground) window.scrollTo(0,0); 
+    
+    if(window.suscribirApadrinamiento) window.suscribirApadrinamiento(); 
+    if(window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI();
+};
+
+window.cerrarSesionLocal = function(e) { 
+    if(e) { e.preventDefault(); e.stopPropagation(); } 
+    window.cerrarModalLogin(); 
+    window.mostrarConfirmacion("Cerrar Sesión", "¿Deseas salir de tu cuenta VIP?", () => { 
+        window.ejecutarCierreSesion(); 
+        setTimeout(() => { window.abrirModalLogin(); }, 300); 
     }); 
-    
-    window.dibujarTicketDinamico(false); 
-    
-    if (modo === 'props' && !encontroOpciones) { 
-        window.mostrarAlerta("Mercados Cerrados", "Casas de apuestas aún no habilitan Props.", "warning"); 
-    } 
 };
 
-window.rotarPickIndividual = function(id) { 
-    let i = ticketDinamicoVIP.find(t => t.partido.id === id); 
-    if(i) { 
-        let opcionesValidas = []; 
-        const isProp = (k) => k.includes('shots') || k.includes('corners') || k.includes('cards') || k.includes('player'); 
-        
-        if (modoMercadoGlobal === 'props') { 
-            i.opciones.forEach((o, idx) => { if(isProp(o.mercadoKey)) opcionesValidas.push(idx); }); 
-        } else if (modoMercadoGlobal === 'mixto') { 
-            i.opciones.forEach((o, idx) => opcionesValidas.push(idx)); 
-        } else { 
-            i.opciones.forEach((o, idx) => { if(o.mercadoKey === modoMercadoGlobal) opcionesValidas.push(idx); }); 
-        } 
-        
-        if(opcionesValidas.length > 0) { 
-            let actualStr = modoRiesgoGlobal ? i.indexRiesgo : i.indexSeleccionado; 
-            let arrayIdx = opcionesValidas.indexOf(actualStr); 
-            if(arrayIdx === -1) arrayIdx = 0; 
-            let nextRealIdx = opcionesValidas[(arrayIdx + 1) % opcionesValidas.length]; 
-            
-            if(!modoRiesgoGlobal) { 
-                i.indexSeleccionado = nextRealIdx; 
-            } else { 
-                i.indexRiesgo = nextRealIdx; 
+window.ejecutarCierreSesion = function() {
+    modoVipActivo = false; 
+    modoIlimitadoActivo = false; 
+    codigoActivoUsuario = ''; 
+    estadoEscalera = 'none'; 
+    seleccionesVIPGlobal = []; 
+    ticketDinamicoVIP = [];
+    
+    const contadorSel = document.getElementById('contadorSeleccion'); 
+    if(contadorSel) contadorSel.innerHTML = `<i class="fas fa-list-check mr-1"></i> 0 Seleccionados`;
+    
+    const resDiv = document.getElementById('resultadoVIP'); 
+    if(resDiv) resDiv.innerHTML = "";
+    
+    let btnPushVip = document.getElementById('btnActivarPushVip'); 
+    if(btnPushVip) btnPushVip.remove();
+    
+    if (unsubscribeApadrinamiento) unsubscribeApadrinamiento(); 
+    perfilApadrinamiento = null; 
+    clearInterval(timerInactividad); 
+    
+    try { localStorage.removeItem('oracle_session'); } catch(e){}
+    
+    const wrapVIP = document.getElementById('wrapperVIP'); 
+    const wrapFree = document.getElementById('wrapperFree');
+    
+    if(wrapVIP) wrapVIP.style.display = 'none'; 
+    if(wrapFree) wrapFree.style.display = 'block';
+    
+    const btnTop = document.getElementById('btnTopLogin');
+    if(btnTop) { 
+        const nuevoBtn = btnTop.cloneNode(true); 
+        btnTop.parentNode.replaceChild(nuevoBtn, btnTop); 
+        nuevoBtn.removeAttribute('onclick'); 
+        nuevoBtn.innerHTML = '<i class="fas fa-lock"></i> <span>INGRESAR</span>'; 
+        nuevoBtn.className = "shrink-0 bg-gray-800 text-yellow-500 text-[9px] px-3 py-2 rounded-lg font-black uppercase tracking-widest shadow-md flex items-center gap-2 border border-yellow-500/30 transition-all hover:bg-gray-700"; 
+        nuevoBtn.onclick = function(e) { 
+            if(e) { e.preventDefault(); e.stopPropagation(); } 
+            window.abrirModalLogin(); 
+        }; 
+    }
+    
+    if(window.chequearEstadoEscaleraUI) window.chequearEstadoEscaleraUI(); 
+    if(window.chequearApadrinamientoUI) window.chequearApadrinamientoUI(); 
+    window.ejecutarTopFutbol(); 
+    window.cambiarVista('picks');
+};
+
+function resetearInactividad() { tiempoInactividad = 0; }
+window.addEventListener('mousemove', resetearInactividad); 
+window.addEventListener('scroll', resetearInactividad); 
+window.addEventListener('touchstart', resetearInactividad); 
+window.addEventListener('keydown', resetearInactividad);
+
+window.iniciarMonitorInactividad = function() { 
+    clearInterval(timerInactividad); 
+    tiempoInactividad = 0; 
+    timerInactividad = setInterval(() => { 
+        if(modoVipActivo) { 
+            tiempoInactividad++; 
+            if(tiempoInactividad >= TIEMPO_MAXIMO_SEGUNDOS) { 
+                window.ejecutarCierreSesion(); 
+                window.mostrarAlerta("Sesión Expirada", "Cerrada por inactividad.", "warning"); 
             } 
         } 
-        window.dibujarTicketDinamico(false); 
-    } 
-};
-
-window.regenerarTicketCompleto = function() { 
-    ticketDinamicoVIP.forEach(item => { 
-        let max = item.opciones.length; 
-        if(!modoRiesgoGlobal) { 
-            item.indexSeleccionado = Math.floor(Math.random() * (max > 4 ? 4 : max)); 
-        } else { 
-            item.indexRiesgo = Math.floor(Math.random() * max); 
-        } 
-    }); 
-    window.dibujarTicketDinamico(false); 
+    }, 1000); 
 };
 
 window.dibujarTicketDinamico = function(esRadarAuto) {
@@ -2308,7 +1502,6 @@ window.dibujarTicketDinamico = function(esRadarAuto) {
             </button>
         </div>`;
 };
-
 // ==========================================
 // 10. HISTORIAL DE TICKETS (USUARIO)
 // ==========================================
@@ -2332,7 +1525,14 @@ window.guardarTicketHistorial = async function(cuota) {
     
     try { 
         let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || []; 
-        let nuevoTicket = { id: Date.now(), fecha: new Date().toLocaleDateString('es-CO'), cuota: cuota, picksObj: picksObj, estado: 'pendiente' }; 
+        let nuevoTicket = { 
+            id: Date.now(), 
+            fecha: new Date().toLocaleDateString('es-CO'), 
+            cuota: cuota, 
+            picksObj: picksObj, 
+            estado: 'pendiente' 
+        }; 
+        
         hist.unshift(nuevoTicket); 
         localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist)); 
         
@@ -2358,11 +1558,16 @@ window.renderizarHistorial = function() {
         let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)) || []; 
         const cont = document.getElementById('contenedorHistorial'); 
         if(!cont) return; 
+        
         cont.innerHTML = ''; 
         let ganados = 0, perdidos = 0, generados = hist.length;
         
         if(hist.length === 0) { 
-            cont.innerHTML = `<div class="text-center opacity-50 py-10"><i class="fas fa-folder-open text-4xl mb-3"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin tickets guardados.</p></div>`; 
+            cont.innerHTML = `
+            <div class="text-center opacity-50 py-10">
+                <i class="fas fa-folder-open text-4xl mb-3"></i>
+                <p class="text-[10px] uppercase font-bold tracking-widest">Sin tickets guardados.</p>
+            </div>`; 
         } else {
             hist.forEach(t => {
                 if(t.estado === 'won') ganados++; 
@@ -2394,7 +1599,20 @@ window.renderizarHistorial = function() {
                         let badgeIA = p.verificado_ia ? `<span class="bg-blue-600 text-white px-1.5 py-0.5 rounded text-[7px] font-black uppercase ml-2 shadow-sm"><i class="fas fa-robot"></i> IA</span>` : '';
                         let probBadge = p.probabilidad ? `<div class="absolute top-0 right-0 bg-gray-700 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">PROB: ${p.probabilidad}%</div>` : '';
                         
-                        return `<div class="bg-gray-900/60 p-3 rounded-lg mb-2 border border-white/5 relative overflow-hidden shadow-inner">${probBadge}<div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[10px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido}</div><div class="flex justify-between items-center bg-black/40 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[9px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${p.pick}</span>${badgeIA}<button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${p.pick.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-[11px]">${parseFloat(p.cuota).toFixed(2)}</span></div></div>`; 
+                        return `
+                        <div class="bg-gray-900/60 p-3 rounded-lg mb-2 border border-white/5 relative overflow-hidden shadow-inner">
+                            ${probBadge}
+                            <div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div>
+                            <div class="text-[10px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido}</div>
+                            <div class="flex justify-between items-center bg-black/40 p-2 rounded border border-gray-700">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[9px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${p.pick}</span>
+                                    ${badgeIA}
+                                    <button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${p.pick.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button>
+                                </div>
+                                <span class="text-white font-black text-[11px]">${parseFloat(p.cuota).toFixed(2)}</span>
+                            </div>
+                        </div>`; 
                     }).join(''); 
                 } else if(t.picks) { 
                     picksHtml = `<ul class="mb-4 pl-2 border-l-2 border-yellow-500/50">` + t.picks.map(p => `<li class="text-[9px] text-gray-300 border-b border-white/5 py-1 last:border-0">${p}</li>`).join('') + `</ul>`; 
@@ -2429,6 +1647,7 @@ window.marcarTicket = async function(id, estado) {
     try { 
         let hist = JSON.parse(localStorage.getItem('oracle_historial_' + codigoActivoUsuario)); 
         let index = hist.findIndex(t => t.id === id); 
+        
         if(index !== -1) { 
             hist[index].estado = estado; 
             localStorage.setItem('oracle_historial_' + codigoActivoUsuario, JSON.stringify(hist)); 
@@ -2521,11 +1740,12 @@ window.solicitarAccesoEscalera = async function() {
     } 
 };
 
-// 🚀 NUEVA FUNCIÓN: EL USUARIO EDITA SU CAPITAL DE ESCALERA LOCALMENTE
+// 🚀 FUNCIÓN CLIENTE: EDITAR CAPITAL LOCAL
 window.editarMiCapitalEscalera = function() {
     let actual = localStorage.getItem('oracle_cap_escalera');
     let def = actual ? actual : 50000;
     let n = prompt("Toca el icono ✏️ para ajustar tu banca.\n\nIngresa el capital real (COP) con el que iniciarás esta escalera para calcular tus apuestas con precisión matemática:", def);
+    
     let val = parseFloat(n);
     if(!isNaN(val) && val >= 1000) {
         localStorage.setItem('oracle_cap_escalera', val);
@@ -2536,6 +1756,7 @@ window.editarMiCapitalEscalera = function() {
     }
 };
 
+// 🚀 FUNCIÓN CLIENTE: MARCAR COMO REALIZADO
 window.confirmarPickEscalera = async function(idx) {
     try {
         const ref = doc(db, "global", "escalera"); 
@@ -2551,9 +1772,12 @@ window.confirmarPickEscalera = async function(idx) {
                 window.mostrarAlerta("¡Inversión Confirmada!", "Has marcado este pick como realizado. ¡Éxito en la cancha!", "success");
             }
         }
-    } catch(e) { window.mostrarAlerta("Error", "Fallo de conexión al confirmar.", "error"); }
+    } catch(e) { 
+        window.mostrarAlerta("Error", "Fallo de conexión al confirmar.", "error"); 
+    }
 };
 
+// 🚀 FUNCIÓN CLIENTE: RENDERIZAR ESCALERA (MATEMÁTICA Y BOTONES)
 window.cargarRetoEscaleraNube = async function() {
     const divTexto = document.getElementById('textoRetoAdmin'); 
     try { 
@@ -2614,9 +1838,15 @@ window.cargarRetoEscaleraNube = async function() {
                     let btnConfirmar = '';
                     if(isCurrentPick || estadoP === 'won' || estadoP === 'lost') {
                         if(p.confirmados && p.confirmados.includes(codigoActivoUsuario)) {
-                            btnConfirmar = `<div class="w-full mt-3 py-2 bg-green-900/40 text-green-400 text-[10px] font-black uppercase text-center rounded border border-green-500/50 shadow-inner"><i class="fas fa-check-double mr-1"></i> Inversión Realizada</div>`;
+                            btnConfirmar = `
+                            <div class="w-full mt-3 py-2 bg-green-900/40 text-green-400 text-[10px] font-black uppercase text-center rounded border border-green-500/50 shadow-inner">
+                                <i class="fas fa-check-double mr-1"></i> Inversión Realizada
+                            </div>`;
                         } else if (isCurrentPick) {
-                            btnConfirmar = `<button onclick="window.confirmarPickEscalera(${index})" class="w-full mt-3 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[10px] uppercase shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition active:scale-95"><i class="fas fa-hand-holding-usd mr-1"></i> Marcar Como Realizado</button>`;
+                            btnConfirmar = `
+                            <button onclick="window.confirmarPickEscalera(${index})" class="w-full mt-3 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[10px] uppercase shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition active:scale-95">
+                                <i class="fas fa-hand-holding-usd mr-1"></i> Marcar Como Realizado
+                            </button>`;
                         }
                     }
 
@@ -2630,7 +1860,10 @@ window.cargarRetoEscaleraNube = async function() {
                         
                         <div class="flex flex-col gap-2 mt-2">
                             <div class="flex justify-between items-center bg-black/60 p-2 rounded-lg border border-gray-700">
-                                <div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span><button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span>
+                                    <button onclick="window.abrirModalAyuda('${p.mercadoKey}', '${safePickTxt}')" class="text-gray-600 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button>
+                                </div>
                                 <span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span>
                             </div>
                             
@@ -2705,7 +1938,10 @@ window.cargarRetoEscaleraNube = async function() {
         } else { 
             divTexto.innerHTML = '<div class="text-center opacity-50 py-10"><i class="fas fa-lock text-3xl mb-3"></i><p class="text-[10px] uppercase font-bold tracking-widest">Sin reto oficial hoy.</p></div>'; 
         } 
-    } catch(e) { console.error(e); divTexto.innerHTML = "Error cargando el reto del servidor."; }
+    } catch(e) { 
+        console.error(e); 
+        divTexto.innerHTML = "Error cargando el reto del servidor."; 
+    }
 };
 
 window.chequearApadrinamientoUI = function() {
@@ -3106,7 +2342,20 @@ window.cargarHistorialApadrinamiento = async function() {
                 let badgeIA = p.verificado_ia ? `<span class="bg-blue-600 text-white px-1.5 py-0.5 rounded text-[7px] font-black uppercase ml-2 shadow-sm"><i class="fas fa-robot"></i> IA</span>` : '';
                 let probBadge = p.probabilidad ? `<div class="absolute top-0 right-0 bg-gray-700 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">PROB: ${p.probabilidad}%</div>` : '';
                 
-                return `<div class="bg-gray-900/60 p-3 rounded-lg mb-2 border border-white/5 relative overflow-hidden shadow-inner">${probBadge}<div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div><div class="text-[10px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido}</div><div class="flex justify-between items-center bg-black/40 p-2 rounded border border-gray-700"><div class="flex items-center gap-1.5"><span class="text-[9px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${p.pick}</span>${badgeIA}<button onclick="window.abrirModalAyuda('${p.mercado}', '${p.pick.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button></div><span class="text-white font-black text-[11px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span></div></div>`; 
+                return `
+                <div class="bg-gray-900/60 p-3 rounded-lg mb-2 border border-white/5 relative overflow-hidden shadow-inner">
+                    ${probBadge}
+                    <div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo}</div>
+                    <div class="text-[10px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido}</div>
+                    <div class="flex justify-between items-center bg-black/40 p-2 rounded border border-gray-700">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[9px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${p.pick}</span>
+                            ${badgeIA}
+                            <button onclick="window.abrirModalAyuda('${p.mercado}', '${p.pick.replace(/'/g, "\\'")}')" class="text-gray-500 hover:text-yellow-500 transition-colors text-xs p-0.5"><i class="fas fa-question-circle"></i></button>
+                        </div>
+                        <span class="text-white font-black text-[11px]">${p.cuota ? parseFloat(p.cuota).toFixed(2) : ''}</span>
+                    </div>
+                </div>`; 
             }).join('');
             
             cont.innerHTML += `
@@ -3145,11 +2394,498 @@ window.editarCuotaUsuario = async function(id, cuotaActual) {
 };
 
 // ==========================================
-// ADMIN: GESTIÓN DE USUARIOS
+// 12. ADMIN: GENERADOR RETO ESCALERA Y CONTROL LIVE
+// ==========================================
+window.generarRetoAdmin = async function() {
+    const meta = parseFloat(document.getElementById('inputCuotaObjetivo').value); 
+    const probMin = parseFloat(document.getElementById('inputProbMinima').value) || 85; 
+    const fechaElegida = document.getElementById('inputFechaEscalera').value;
+    
+    if(!fechaElegida) { window.mostrarAlerta("Error", "Selecciona una fecha.", "error"); return; } 
+    if(!meta || meta <= 1.0) { window.mostrarAlerta("Error", "Cuota válida > 1.0", "error"); return; }
+    
+    const btn = document.querySelector('button[onclick="window.generarRetoAdmin()"]'); 
+    const originalBtn = btn.innerHTML; 
+    btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> BUSCANDO...'; 
+    btn.disabled = true;
+    
+    try {
+        let soccerLigas = competicionesGlobales.map(l => l.key); 
+        let todos = CACHE_PARTIDOS_FUTUROS.filter(p => soccerLigas.includes(p.sport_key));
+        
+        let partidosDelDia = todos.filter(p => { 
+            const d = new Date(p.commence_time); 
+            let mes = String(d.getMonth() + 1).padStart(2, '0'); 
+            let dia = String(d.getDate()).padStart(2, '0'); 
+            return `${d.getFullYear()}-${mes}-${dia}` === fechaElegida; 
+        });
+        
+        if(partidosDelDia.length === 0) { 
+            window.mostrarAlerta("Sin Datos", "No hay eventos en caché para esa fecha.", "warning"); 
+            return; 
+        }
+        
+        let ops = []; 
+        partidosDelDia.forEach(p => { 
+            let valiosas = obtenerOpcionesRentables(p); 
+            valiosas.forEach(v => { 
+                if(v.probabilidad >= probMin && v.cuota >= 1.15 && v.cuota <= 2.50) { 
+                    ops.push({ partido: p, ...v }); 
+                } 
+            }); 
+        }); 
+        
+        ops.sort((a,b) => { 
+            if(a.verificado_ia && !b.verificado_ia) return -1; 
+            if(!a.verificado_ia && b.verificado_ia) return 1; 
+            let scoreA = (a.mercadoKey.includes('spreads') || a.mercadoKey.includes('totals') || a.mercadoKey.includes('corners')) ? 2 : (a.mercadoKey === 'h2h' ? 0 : 1); 
+            let scoreB = (b.mercadoKey.includes('spreads') || b.mercadoKey.includes('totals') || b.mercadoKey.includes('corners')) ? 2 : (b.mercadoKey === 'h2h' ? 0 : 1); 
+            if (scoreA !== scoreB) return scoreB - scoreA; 
+            if(b.probabilidad !== a.probabilidad) return b.probabilidad - a.probabilidad; 
+            return b.cuota - a.cuota; 
+        });
+        
+        let unicas = []; 
+        let vistos = new Set(); 
+        
+        ops.forEach(op => { 
+            if(!vistos.has(op.partido.id)){ 
+                vistos.add(op.partido.id); 
+                unicas.push(op); 
+            } 
+        });
+        
+        if(unicas.length === 0) { 
+            window.mostrarAlerta("Límite", `Sin apuestas válidas para un Reto (Prob >= ${probMin}% y Cuota >= 1.15).`, "warning"); 
+            return; 
+        }
+        
+        let seleccionados = []; 
+        let cuotaAcum = 1.0; 
+        
+        for(let op of unicas) { 
+            seleccionados.push(op); 
+            cuotaAcum *= op.cuota; 
+            if(cuotaAcum >= meta) break; 
+            if(seleccionados.length >= 2) break; 
+        }
+        
+        // 🚀 PREPARAMOS EL OBJETO CON STAKE 100 Y CONFIRMADOS VACÍO
+        window.retoPendientePublicar = { 
+            picks: seleccionados.map(s => ({ 
+                home_team: s.partido.home_team, 
+                away_team: s.partido.away_team, 
+                mercadoKey: s.mercadoKey, 
+                nombre: s.nombre, 
+                point: s.point === undefined ? null : s.point, 
+                cuota: s.cuota, 
+                probabilidad: s.probabilidad, 
+                stake: 100, 
+                confirmados: [] 
+            })), 
+            cuotaTotal: cuotaAcum.toFixed(2), 
+            fechaFiltro: fechaElegida 
+        };
+        
+        let previewHtml = `
+        <div class="bg-black/50 p-4 rounded-xl border border-yellow-500/50 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+            <div class="flex justify-between items-center mb-3 border-b border-white/10 pb-2">
+                <span class="text-xs font-black text-yellow-500 uppercase"><i class="fas fa-ticket-alt mr-1"></i> TICKET (PREVIEW)</span>
+                <span class="text-[10px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded">Cuota: ${cuotaAcum.toFixed(2)}</span>
+            </div>`;
+            
+        seleccionados.forEach((p, idx) => { 
+            let defMercado = definicionesApuestas[p.mercadoKey] || {titulo: 'Mercado Especial'}; 
+            let pickTxt = formatearPickEspanol(p.nombre, p.point, p.mercadoKey); 
+            let safePickTxt = pickTxt.replace(/'/g, "\\'"); 
+            
+            let ico = "fa-handshake"; 
+            if(p.mercadoKey.includes('shots')) ico = "fa-bullseye"; 
+            else if(p.mercadoKey.includes('corners')) ico = "fa-flag"; 
+            else if(p.mercadoKey.includes('cards')) ico = "fa-square"; 
+            else if(p.mercadoKey === 'totals') ico = "fa-futbol"; 
+            else if(p.mercadoKey === 'spreads') ico = "fa-balance-scale"; 
+            
+            previewHtml += `
+            <div class="bg-gray-900/50 p-3 rounded-lg mb-3 border border-white/5 relative">
+                <div class="absolute top-0 right-0 bg-green-600 text-white text-[8px] font-black px-2 py-1 rounded-bl-lg shadow-md">CONF: ${p.probabilidad}%</div>
+                <div class="text-[8px] text-gray-400 font-bold uppercase mb-1"><i class="fas ${ico} mr-1"></i> ${defMercado.titulo || defMercado}</div>
+                <div class="text-[11px] font-bold text-white mb-2 border-b border-white/5 pb-1">${p.partido.home_team} <span class="text-gray-500 font-normal mx-1">vs</span> ${p.partido.away_team}</div>
+                <div class="flex justify-between items-center bg-black/60 p-2 rounded border border-gray-700">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] text-yellow-500 font-black uppercase tracking-wide">PICK: ${pickTxt}</span>
+                    </div>
+                    <span class="text-white font-black text-xs">${parseFloat(p.cuota).toFixed(2)}</span>
+                </div>
+                <div class="mt-2 pt-2 border-t border-white/10 flex justify-between items-center">
+                    <span class="text-[9px] text-blue-400 uppercase font-bold"><i class="fas fa-percentage mr-1"></i> % de Fondo a Apostar</span>
+                    <input type="number" value="100" class="w-20 bg-blue-900/30 text-blue-400 font-black text-center text-xs p-1.5 rounded border border-blue-500/50 outline-none" onchange="window.actualizarStakePreview(${idx}, this.value)">
+                </div>
+            </div>`; 
+        });
+        
+        previewHtml += `</div>`; 
+        document.getElementById('previewRetoAdmin').innerHTML = previewHtml; 
+        document.getElementById('previewRetoAdmin').classList.remove('hidden'); 
+        document.getElementById('inputAdminReto').value = `⚠️ Gestión de Banca Sugerida: Respeta el % indicado en cada pick para no perder todo en un solo fallo.`;
+        document.getElementById('inputAdminReto').classList.remove('hidden'); 
+        document.getElementById('btnPublicarReto').classList.remove('hidden');
+        
+        if (cuotaAcum < meta) {
+            window.mostrarAlerta("Aviso", `Se logró una cuota de ${cuotaAcum.toFixed(2)}.`, "warning"); 
+        } else {
+            window.mostrarAlerta("Generado", `Cuota lograda: ${cuotaAcum.toFixed(2)}. Revisa el % de Stake antes de publicar.`, "success");
+        }
+    } catch(e) { 
+        window.mostrarAlerta("Error", "Fallo IA.", "error"); 
+    } finally { 
+        btn.innerHTML = originalBtn; 
+        btn.disabled = false; 
+    }
+};
+
+window.actualizarStakePreview = function(idx, val) {
+    let v = parseFloat(val);
+    if(!isNaN(v) && v > 0 && v <= 100 && window.retoPendientePublicar) {
+        window.retoPendientePublicar.picks[idx].stake = v;
+    }
+};
+
+window.publicarRetoEscalera = async function() {
+    const txt = document.getElementById('inputAdminReto').value; 
+    if(!txt && !window.retoPendientePublicar) return window.mostrarAlerta("Error", "Nada para publicar.", "error");
+    
+    const btn = document.getElementById('btnPublicarReto'); 
+    const originalTxt = btn.innerText; 
+    btn.innerText = "Publicando..."; 
+    btn.disabled = true;
+    
+    const capitalStr = document.getElementById('inputCapitalEscalera')?.value;
+    const capitalInicial = parseFloat(capitalStr) || 50000;
+    
+    window.retoPendientePublicar.capital_inicial = capitalInicial;
+    window.retoPendientePublicar.estado_reto = 'activo';
+    
+    // Validar formato
+    window.retoPendientePublicar.picks.forEach(p => { 
+        p.estado = 'pendiente'; 
+        if(!p.confirmados) p.confirmados = []; 
+    });
+
+    try { 
+        const ahora = Date.now();
+        await setDoc(doc(db, "global", "escalera"), { 
+            mensaje: txt, 
+            ticket_data: window.retoPendientePublicar, 
+            timestamp: ahora 
+        }); 
+        
+        const idHistorial = ahora.toString();
+        const fechaStr = new Date().toLocaleDateString('es-CO', {timeZone: 'America/Bogota'}) + ' ' + new Date().toLocaleTimeString('es-CO', {timeZone: 'America/Bogota', hour: '2-digit', minute:'2-digit'});
+        
+        await setDoc(doc(db, "historial_escalera", idHistorial), { 
+            id: idHistorial, 
+            mensaje: txt, 
+            ticket_data: window.retoPendientePublicar, 
+            fecha: fechaStr, 
+            timestamp: ahora 
+        });
+
+        await setDoc(doc(collection(db, "notificaciones_push")), { 
+            titulo: "🔥 NUEVO RETO ESCALERA", 
+            cuerpo: "El algoritmo ha publicado el ticket oficial. ¡Entra para revisarlo!", 
+            url: window.location.origin + "/?view=escalera", 
+            timestamp: ahora, 
+            enviadoPor: "FR (Bot)", 
+            audiencia: "escalera" 
+        });
+
+        window.mostrarAlerta("Publicado", "Ticket publicado y notificación enviada a los inversores.", "success"); 
+        
+        document.getElementById('inputAdminReto').value=''; 
+        document.getElementById('previewRetoAdmin').innerHTML=''; 
+        document.getElementById('previewRetoAdmin').classList.add('hidden'); 
+        document.getElementById('inputAdminReto').classList.add('hidden'); 
+        document.getElementById('btnPublicarReto').classList.add('hidden'); 
+        
+        window.retoPendientePublicar = null; 
+        
+        if(window.cargarHistorialEscaleraAdmin) window.cargarHistorialEscaleraAdmin();
+        window.cargarGestionRetoActivoAdmin();
+
+    } catch(e){ 
+        window.mostrarAlerta("Error", "Error de red.", "error"); 
+    } finally { 
+        btn.innerText = originalTxt; 
+        btn.disabled = false; 
+    }
+};
+
+window.cargarGestionRetoActivoAdmin = async function() {
+    const panel = document.getElementById('panelGestionRetoActivo'); 
+    if(!panel) return;
+    
+    try {
+        const snap = await getDoc(doc(db, "global", "escalera"));
+        if(snap.exists()) {
+            const data = snap.data(); 
+            const tk = data.ticket_data;
+            
+            if(!tk || !tk.picks || tk.picks.length === 0) { 
+                panel.innerHTML = ''; 
+                return; 
+            }
+            
+            let capitalInicial = tk.capital_inicial || 50000;
+            let currentCap = capitalInicial;
+            let htmlPicks = '';
+            
+            tk.picks.forEach((p, index) => {
+                let stakePct = p.stake !== undefined ? parseFloat(p.stake) : 100;
+                let stakeFraction = stakePct / 100;
+                
+                // 🚀 MATEMÁTICA DE INTERÉS COMPUESTO (ADMIN)
+                let amountToBet = currentCap * stakeFraction;
+                let amountKept = currentCap - amountToBet;
+                let winCap = amountKept + (amountToBet * p.cuota);
+                let loseCap = amountKept;
+
+                let startPctGlobal = (currentCap / capitalInicial) * 100;
+                let endPctGlobal = (winCap / capitalInicial) * 100;
+
+                if (p.estado === 'won') {
+                    currentCap = winCap;
+                } else if (p.estado === 'lost') {
+                    currentCap = loseCap;
+                    endPctGlobal = (loseCap / capitalInicial) * 100;
+                }
+
+                let bgStatus = p.estado === 'won' ? 'bg-green-900/30 border-green-500/50' : (p.estado === 'lost' ? 'bg-red-900/30 border-red-500/50' : 'bg-gray-900/50 border-white/10');
+                let colorPct = p.estado === 'won' ? 'text-green-400' : (p.estado === 'lost' ? 'text-red-400' : 'text-gray-400');
+                
+                let confCount = p.confirmados ? p.confirmados.length : 0;
+                let confList = confCount > 0 ? p.confirmados.join(', ') : 'Nadie aún';
+
+                htmlPicks += `
+                <div class="${bgStatus} p-3 rounded-lg mb-2 border flex flex-col relative">
+                    <div class="flex justify-between items-center mb-2 border-b border-white/5 pb-2">
+                        <div class="flex flex-col w-1/2 pr-2">
+                            <span class="text-[9px] font-bold text-white truncate">${p.home_team} vs ${p.away_team}</span>
+                            <span class="text-[8px] text-yellow-500 truncate">PICK: ${p.nombre} (C: ${p.cuota})</span>
+                        </div>
+                        <div class="flex gap-1 items-center justify-end w-1/2">
+                            <button onclick="window.editarStakePickEscalera(${index}, ${stakePct})" class="bg-blue-600/20 text-blue-400 p-2 rounded-lg border border-blue-500/30 hover:bg-blue-600/40 active:scale-95 transition flex items-center gap-1 font-black text-[9px]" title="Ajustar Stake de este Pick"><i class="fas fa-percent"></i> ${stakePct}%</button>
+                            <div class="w-[1px] h-6 bg-gray-700 mx-1"></div>
+                            <button onclick="window.marcarPickEscalera(${index}, 'won')" class="bg-green-600/20 text-green-500 p-2 rounded-lg border border-green-500/30 hover:bg-green-600/40 active:scale-95 transition" title="Marcar Ganado"><i class="fas fa-check"></i></button>
+                            <button onclick="window.marcarPickEscalera(${index}, 'lost')" class="bg-red-600/20 text-red-500 p-2 rounded-lg border border-red-500/30 hover:bg-red-600/40 active:scale-95 transition" title="Marcar Perdido"><i class="fas fa-times"></i></button>
+                            <button onclick="window.marcarPickEscalera(${index}, 'pendiente')" class="bg-gray-600/20 text-gray-400 p-2 rounded-lg border border-gray-500/30 hover:bg-gray-600/40 active:scale-95 transition" title="Devolver a Pendiente"><i class="fas fa-undo"></i></button>
+                            <button onclick="window.eliminarPickEscalera(${index})" class="text-red-500 hover:text-red-400 p-2 ml-1 transition" title="Borrar Pick"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">Fondo Acumulado Total</span>
+                        <span class="text-[10px] font-black ${colorPct}">${startPctGlobal.toFixed(1)}% <i class="fas fa-arrow-right text-[8px] mx-1"></i> ${endPctGlobal.toFixed(1)}%</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-white/5">
+                        <span class="text-[8px] text-blue-400 font-bold uppercase"><i class="fas fa-users mr-1"></i> Confirmados (${confCount}):</span>
+                        <div class="text-[7px] text-gray-400 mt-1 break-words">${confList}</div>
+                    </div>
+                </div>`;
+            });
+            
+            let metaCapital = capitalInicial * (tk.cuotaTotal || 1);
+            let totalPctReal = (currentCap / capitalInicial) * 100;
+
+            let html = `
+            <div class="bg-black/60 p-4 rounded-2xl border border-yellow-500/50 shadow-lg relative">
+                <div class="absolute top-0 right-0 bg-yellow-500 text-black text-[8px] font-black px-3 py-1 rounded-bl-xl">CONTROL LIVE</div>
+                <h3 class="text-[11px] font-black text-white uppercase tracking-widest mb-3"><i class="fas fa-gamepad text-yellow-500 mr-1"></i> Tablero de Escalera</h3>
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div class="bg-gray-900 border border-white/5 p-2 rounded-lg text-center flex flex-col justify-center">
+                        <span class="block text-[7px] text-gray-500 uppercase tracking-wider">C. Inicial</span>
+                        <span class="text-gray-400 font-black text-xs">${formatoCOP(capitalInicial)}</span>
+                    </div>
+                    <div class="bg-black border ${tk.estado_reto === 'perdido' ? 'border-red-500/30' : 'border-yellow-500/50'} p-2 rounded-lg text-center flex flex-col justify-center">
+                        <span class="block text-[7px] ${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} uppercase tracking-wider">Fondo Actual</span>
+                        <span class="${tk.estado_reto === 'perdido' ? 'text-red-500' : 'text-yellow-500'} font-black text-sm">${formatoCOP(currentCap)}</span>
+                    </div>
+                    <div class="bg-blue-900/20 border border-blue-500/30 p-2 rounded-lg text-center flex flex-col justify-center">
+                        <span class="block text-[7px] text-blue-400 uppercase tracking-wider">Crecimiento Global</span>
+                        <span class="text-blue-500 font-black text-sm">${totalPctReal.toFixed(1)}%</span>
+                    </div>
+                </div>
+                ${htmlPicks}
+            </div>`; 
+            
+            panel.innerHTML = html;
+        } else { 
+            panel.innerHTML = ''; 
+        }
+    } catch(e) { console.error(e); }
+};
+
+window.editarStakePickEscalera = async function(index, currentStake) {
+    let n = prompt("Ingresa el % del fondo acumulado que se apostará en este pick (ej: 100, 50, 25):", currentStake);
+    let val = parseFloat(n);
+    if(!isNaN(val) && val > 0 && val <= 100) {
+        try {
+            const snap = await getDoc(doc(db, "global", "escalera"));
+            if(snap.exists()) {
+                let d = snap.data();
+                d.ticket_data.picks[index].stake = val;
+                await updateDoc(doc(db, "global", "escalera"), { ticket_data: d.ticket_data });
+                window.cargarGestionRetoActivoAdmin();
+                window.mostrarAlerta("Éxito", "Porcentaje de inversión ajustado. Las proyecciones se recalcularon.", "success");
+                if(document.getElementById('vista_escalera').classList.contains('view-active')) { 
+                    window.cargarRetoEscaleraNube(); 
+                }
+            }
+        } catch(e) { 
+            window.mostrarAlerta("Error", "No se pudo actualizar el porcentaje", "error"); 
+        }
+    } else if (n !== null) {
+        window.mostrarAlerta("Error", "Ingresa un porcentaje válido del 1 al 100.", "warning");
+    }
+};
+
+window.eliminarPickEscalera = async function(index) {
+    window.mostrarConfirmacion("Borrar Pick", "¿Eliminar esta selección de la Escalera? Los porcentajes se recalcularán automáticamente.", async () => {
+        try {
+            const snap = await getDoc(doc(db, "global", "escalera"));
+            if(snap.exists()) {
+                const data = snap.data();
+                data.ticket_data.picks.splice(index, 1);
+                
+                let perdidos = 0; let ganados = 0;
+                data.ticket_data.picks.forEach(p => { 
+                    if(p.estado === 'lost') perdidos++; 
+                    if(p.estado === 'won') ganados++; 
+                });
+                
+                if (data.ticket_data.picks.length === 0) data.ticket_data.estado_reto = 'activo';
+                else if (perdidos > 0) data.ticket_data.estado_reto = 'perdido';
+                else if (ganados === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado';
+                else data.ticket_data.estado_reto = 'activo';
+                
+                await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data });
+                window.cargarGestionRetoActivoAdmin();
+                
+                if(document.getElementById('vista_escalera').classList.contains('view-active')) { 
+                    window.cargarRetoEscaleraNube(); 
+                }
+                window.mostrarAlerta("Actualizado", "Pick eliminado y porcentajes ajustados.", "success");
+            }
+        } catch(e) { 
+            window.mostrarAlerta("Error", "Fallo al eliminar.", "error"); 
+        }
+    });
+};
+
+window.marcarPickEscalera = async function(index, estado) {
+    try {
+        const snap = await getDoc(doc(db, "global", "escalera"));
+        if(snap.exists()) {
+            const data = snap.data();
+            data.ticket_data.picks[index].estado = estado;
+            
+            let perdidos = 0; let ganados = 0;
+            data.ticket_data.picks.forEach(p => { 
+                if(p.estado === 'lost') perdidos++; 
+                if(p.estado === 'won') ganados++; 
+            });
+            
+            if (perdidos > 0) data.ticket_data.estado_reto = 'perdido';
+            else if (ganados === data.ticket_data.picks.length) data.ticket_data.estado_reto = 'ganado';
+            else data.ticket_data.estado_reto = 'activo';
+            
+            await updateDoc(doc(db, "global", "escalera"), { ticket_data: data.ticket_data });
+            window.cargarGestionRetoActivoAdmin();
+            
+            if(document.getElementById('vista_escalera').classList.contains('view-active')) { 
+                window.cargarRetoEscaleraNube(); 
+            }
+        }
+    } catch(e) { 
+        window.mostrarAlerta("Error", "No se pudo actualizar el pick", "error"); 
+    }
+};
+
+window.eliminarRetoEscaleraGlobal = async function() { 
+    window.mostrarConfirmacion("Borrar Reto Activo", "¿Deseas borrar el Reto Escalera activo para que no lo vean los usuarios en la app?", async () => { 
+        try { 
+            await deleteDoc(doc(db, "global", "escalera")); 
+            window.mostrarAlerta("Sistema Limpio", "El reto activo ha sido eliminado de la nube.", "success"); 
+            window.cargarGestionRetoActivoAdmin();
+        } catch(e) { 
+            window.mostrarAlerta("Error", "Fallo de conexión.", "error"); 
+        } 
+    }); 
+};
+
+window.cargarHistorialEscaleraAdmin = async function() {
+    const lista = document.getElementById('historialEscaleraAdminList'); 
+    if(!lista) return;
+    
+    lista.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner animate-spin text-blue-500 text-xl"></i></div>';
+    
+    try {
+        const q = query(collection(db, "historial_escalera"), orderBy("timestamp", "desc"), limit(20));
+        const snap = await getDocs(q);
+        lista.innerHTML = '';
+        
+        if(snap.empty) { 
+            lista.innerHTML = `<p class="text-[10px] text-gray-500 text-center border border-dashed border-white/10 p-4 rounded-lg">No hay retos en el historial.</p>`; 
+            return; 
+        }
+        
+        snap.forEach(doc => {
+            let d = doc.data();
+            let picksHtml = '';
+            
+            if(d.ticket_data && d.ticket_data.picks) {
+                picksHtml = d.ticket_data.picks.map(p => `
+                <div class="bg-gray-900/80 p-2 rounded mt-1 border border-white/5">
+                    <div class="text-[9px] font-bold text-white">${p.home_team} vs ${p.away_team}</div>
+                    <div class="text-[8px] text-yellow-500">PICK: ${p.nombre} (C: ${p.cuota})</div>
+                </div>`).join('');
+            }
+            
+            lista.innerHTML += `
+            <div class="bg-black/40 p-3 rounded-xl border border-blue-500/20 relative shadow-md mb-3">
+                <div class="absolute top-0 right-0 flex overflow-hidden rounded-bl-xl rounded-tr-xl shadow-md z-10">
+                    <button onclick="window.eliminarHistorialEscaleraAdmin('${d.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[10px] px-3 py-1 transition-colors border-r border-red-700"><i class="fas fa-trash"></i></button>
+                    <span class="bg-blue-600 text-white text-[10px] font-black px-3 py-1">C: ${d.ticket_data ? d.ticket_data.cuotaTotal : '-'}</span>
+                </div>
+                <div class="mb-2 border-b border-white/5 pb-1 pr-14">
+                    <span class="text-[9px] text-gray-400 font-bold"><i class="far fa-calendar-alt mr-1"></i> ${d.fecha}</span>
+                </div>
+                <div class="mt-2">${picksHtml}</div>
+            </div>`;
+        });
+    } catch(e) { 
+        lista.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al leer historial.</p>`; 
+    }
+};
+
+window.eliminarHistorialEscaleraAdmin = async function(idDoc) {
+    window.mostrarConfirmacion("Eliminar Reto del Historial", "¿Seguro que deseas borrar este reto del registro administrativo?", async () => {
+        try {
+            await deleteDoc(doc(db, "historial_escalera", idDoc));
+            window.mostrarAlerta("Eliminado", "Reto borrado del historial correctamente.", "success");
+            window.cargarHistorialEscaleraAdmin();
+        } catch(e) { 
+            window.mostrarAlerta("Error", "Fallo al intentar borrar.", "error"); 
+        }
+    });
+};
+
+// ==========================================
+// 13. ADMIN: GENERADOR DE CÓDIGOS Y ACCESOS
 // ==========================================
 window.crearCodigo = async function(esIlimitado) {
     const inputCode = document.getElementById('newCodeInput');
     if (!inputCode) return;
+    
     const nuevoCodigo = inputCode.value.toUpperCase().trim();
     
     if (!nuevoCodigo || nuevoCodigo === 'UNDEFINED' || nuevoCodigo === 'NULL') { 
@@ -3174,9 +2910,9 @@ window.crearCodigo = async function(esIlimitado) {
         
         inputCode.value = ''; 
         window.mostrarAlerta("Éxito", `Código ${esIlimitado ? 'PREMIUM' : 'VIP'} creado.`, "success");
+        
         if(window.renderizarListaAdmin) window.renderizarListaAdmin();
     } catch (error) { 
-        console.error("Error creando código:", error); 
         window.mostrarAlerta("Error", "Fallo de conexión al servidor.", "error"); 
     }
 };
@@ -3277,6 +3013,9 @@ window.aprobarEscalera = async function(c) {
     } catch(e){} 
 };
 
+// ==========================================
+// 14. ADMIN: MONITOR GLOBAL Y GESTIÓN DE USUARIOS
+// ==========================================
 window.eliminarTicketAdmin = async function(idDoc, fromView = 'dash') {
     window.mostrarConfirmacion("Eliminar Ticket", "Se borrará permanentemente de la base de datos.", async () => {
         try {
@@ -3385,9 +3124,6 @@ window.cargarMonitorTickets = async function() {
         lista.innerHTML = `<p class="text-red-500 text-[10px] text-center">Error al leer los tickets.</p>`; 
     }
 };
-
-let ticketsGlobalesAdminCache = []; 
-window.usuariosAdminList = [];
 
 window.cargarUsuariosAdmin = async function(forzarRefresco = false) {
     const contenedor = document.getElementById('listaUsuariosAdminContainer'); 
