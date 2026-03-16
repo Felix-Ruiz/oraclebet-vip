@@ -1205,13 +1205,27 @@ window.iniciarApadrinamiento = async function() {
         return window.mostrarAlerta("Error", "Ingresa un bankroll válido (mínimo $10,000).", "error");
     }
 
+    // 🚀 3. EL FIX: EXTRACCIÓN SEGURA DE IDENTIDAD
+    // Buscamos el código en la memoria del celular directamente
+    let usuarioActual = null;
+    if (typeof codigoActivoUsuario !== 'undefined' && codigoActivoUsuario) {
+        usuarioActual = codigoActivoUsuario;
+    } else {
+        usuarioActual = localStorage.getItem('oracle_vip_code');
+    }
+
+    // Si por algún milagro sigue vacío, bloqueamos el proceso antes de estrellar Firebase
+    if (!usuarioActual) {
+        return window.mostrarAlerta("Sesión Expirada", "Por favor inicia sesión nuevamente con tu código VIP.", "error");
+    }
+
     const btn = document.querySelector('#apadrinamientoOnboarding button');
-    const txtOriginal = btn ? btn.innerText : 'ACTIVAR';
+    const txtOriginal = btn ? btn.innerText : 'ACTIVAR TERMINAL';
     if(btn) { btn.innerText = "PROCESANDO..."; btn.disabled = true; }
 
     try {
-        // 3. BLINDAJE FIREBASE: Usamos setDoc con merge
-        await setDoc(doc(db, "codigos_nube", window.codigoActivoUsuario), { 
+        // 4. BLINDAJE FIREBASE: Usamos el ID seguro y setDoc con merge
+        await setDoc(doc(db, "codigos_nube", usuarioActual), { 
             apadrinamiento: { 
                 bankroll_inicial: monto, 
                 bankroll_actual: monto, 
@@ -1222,19 +1236,19 @@ window.iniciarApadrinamiento = async function() {
         window.mostrarAlerta("Éxito", "Software configurado. Ya puedes acceder al radar de operaciones.", "success");
         
         // Ocultar Onboarding y Mostrar Dashboard
-        document.getElementById('apadrinamientoOnboarding').style.display = 'none';
+        const onboarding = document.getElementById('apadrinamientoOnboarding');
         const dash = document.getElementById('apadrinamientoDashboard');
+        if(onboarding) onboarding.style.display = 'none';
         if(dash) {
             dash.style.display = 'block';
             dash.classList.remove('hidden');
         }
         
-        // Refrescar los números
+        // Refrescar los números en pantalla
         if(window.cargarDatosApadrinamiento) window.cargarDatosApadrinamiento();
 
     } catch(e) {
         console.error("Fallo crítico en activación:", e);
-        // Si falla ahora, te mostrará este mensaje en pantalla con el error exacto en inglés:
         window.mostrarAlerta("Error de Servidor", "Google dice: " + e.message, "error");
     } finally {
         if(btn) { btn.innerText = txtOriginal; btn.disabled = false; }
