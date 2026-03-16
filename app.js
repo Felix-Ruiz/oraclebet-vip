@@ -1191,8 +1191,44 @@ window.chequearApadrinamientoUI = function() {
 };
 
 window.suscribirApadrinamiento = function() { if(!codigoActivoUsuario) return; if(unsubscribeApadrinamiento) unsubscribeApadrinamiento(); try { unsubscribeApadrinamiento = onSnapshot(doc(db, "codigos_nube", codigoActivoUsuario), (docSnap) => { if(docSnap.exists()) { const data = docSnap.data(); perfilApadrinamiento = data.apadrinamiento || null; estadoEscalera = data.ladderStatus || 'none'; if(document.getElementById('vista_escalera')?.classList.contains('view-active')) { window.chequearEstadoEscaleraUI(); } if(document.getElementById('vista_apadrinamiento')?.classList.contains('view-active')) { window.chequearApadrinamientoUI(); } } }); } catch(e) {} };
-window.iniciarApadrinamiento = async function() { const input = document.getElementById('inputBankrollInicial').value; const monto = parseFloat(input); if(isNaN(monto) || monto < 10000) { window.mostrarAlerta("Error", "Ingresa un capital válido (Mínimo $10,000 COP).", "error"); return; } try { await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { apadrinamiento: { activo: true, bankroll_inicial: monto, bankroll_actual: monto, ultimo_dia_generado: "" } }); window.mostrarAlerta("Bienvenido", "Tu fondo ha sido configurado.", "success"); } catch(e) { window.mostrarAlerta("Error", "Error de red.", "error"); } };
+window.iniciarApadrinamiento = async function() {
+    // 🚀 VALIDACIÓN LEGAL OBLIGATORIA
+    const checkbox = document.getElementById('checkTerminosApadrinamiento');
+    if (checkbox && !checkbox.checked) {
+        return window.mostrarAlerta("Atención", "Debes leer y aceptar el Acuerdo de Licencia de Software para poder utilizar la terminal.", "error");
+    }
 
+    const valor = document.getElementById('inputBankrollInicial').value;
+    const monto = parseFloat(valor);
+    if (!monto || monto < 10000) return window.mostrarAlerta("Error", "Ingresa un bankroll válido (mínimo $10,000).", "error");
+
+    const btn = document.querySelector('#apadrinamientoOnboarding button');
+    const txtOriginal = btn.innerText;
+    btn.innerText = "PROCESANDO..."; btn.disabled = true;
+
+    try {
+        await updateDoc(doc(db, "codigos_nube", codigoActivoUsuario), { 
+            apadrinamiento: { bankroll_inicial: monto, bankroll_actual: monto, fecha_inicio: Date.now() } 
+        });
+        window.mostrarAlerta("Éxito", "Software configurado. Ya puedes acceder al radar de operaciones.", "success");
+        window.cargarDatosApadrinamiento();
+    } catch(e) {
+        window.mostrarAlerta("Error", "No se pudo guardar la configuración.", "error");
+    } finally {
+        btn.innerText = txtOriginal; btn.disabled = false;
+    }
+};
+
+// 🚀 CONTROLADORES DEL MODAL LEGAL
+window.abrirModalTerminosApadrinamiento = function() {
+    const modal = document.getElementById('modalTerminosApadrinamiento');
+    if(modal) { modal.classList.remove('hidden'); modal.style.display = 'flex'; }
+};
+
+window.cerrarModalTerminosApadrinamiento = function() {
+    const modal = document.getElementById('modalTerminosApadrinamiento');
+    if(modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
+};
 window.renderizarDashboardApadrinamiento = async function() {
     if(!perfilApadrinamiento) return; document.getElementById('uiBankrollInicial').innerText = formatoCOP(perfilApadrinamiento.bankroll_inicial); document.getElementById('uiBankrollActual').innerText = formatoCOP(perfilApadrinamiento.bankroll_actual);
     let rendimiento = ((perfilApadrinamiento.bankroll_actual - perfilApadrinamiento.bankroll_inicial) / perfilApadrinamiento.bankroll_inicial) * 100; let uiRendimiento = document.getElementById('uiBankrollRendimiento'); let uiBadge = document.getElementById('uiBankrollBadge');
@@ -1458,10 +1494,50 @@ window.eliminarHistorialEscaleraAdmin = async function(idDoc) {
 // ==========================================
 // 13. ADMIN: GENERADOR DE CÓDIGOS Y ACCESOS
 // ==========================================
-window.crearCodigo = async function(esIl) {
-    const nuevo = document.getElementById('newCodeInput').value.toUpperCase().trim(); if(nuevo==="") return;
-    const btn = document.getElementById(esIl ? 'btnCrearPrem' : 'btnCrearVip'); btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i>`; btn.disabled = true;
-    try { const ref = doc(db, "codigos_nube", nuevo); const snap = await getDoc(ref); if(!snap.exists()) { await setDoc(ref, { code: nuevo, ilimitado: esIl, deviceID: null, ladderStatus: 'none', creado: Date.now() }); document.getElementById('newCodeInput').value=''; window.renderizarListaAdmin(); window.mostrarAlerta("Éxito", "Código creado.", "success"); } else window.mostrarAlerta("Error", "Código existe.", "warning"); } catch (e) { window.mostrarAlerta("Error", "Fallo de red.", "error"); } finally { btn.innerHTML = esIl ? '<i class="fas fa-gem mr-1"></i> Crear PREM' : '<i class="fas fa-star mr-1"></i> Crear VIP'; btn.disabled = false; }
+window.crearCodigo = async function(esIlimitado) {
+    const inputCode = document.getElementById('newCodeInput');
+    
+    // 🛑 CANDADO 1: ¿Existe el elemento HTML?
+    if (!inputCode) return;
+
+    // 🛑 CANDADO 2: Extraer y limpiar el texto (Eliminar espacios extra)
+    const nuevoCodigo = inputCode.value.toUpperCase().trim();
+
+    // 🛑 CANDADO 3: El candado "Anti-Undefined"
+    // Si el texto está vacío, o es la palabra literal "UNDEFINED" o "NULL", bloquea la operación.
+    if (!nuevoCodigo || nuevoCodigo === 'UNDEFINED' || nuevoCodigo === 'NULL') {
+        return window.mostrarAlerta("Error", "Debes ingresar un código alfanumérico válido.", "error");
+    }
+
+    const ref = doc(db, "codigos_nube", nuevoCodigo);
+    
+    // 🛑 CANDADO 4: Validar que no exista para no sobreescribir a un cliente activo
+    try {
+        const docSnap = await getDoc(ref);
+        if (docSnap.exists()) {
+            return window.mostrarAlerta("Error", "Este código ya existe en la base de datos.", "error");
+        }
+
+        const ahora = Date.now();
+        await setDoc(ref, { 
+            code: nuevoCodigo, 
+            ilimitado: esIlimitado, 
+            deviceID: null, 
+            ladderStatus: 'none', 
+            creado: ahora 
+        });
+
+        // Limpiar el campo y avisar
+        inputCode.value = '';
+        window.mostrarAlerta("Éxito", `Código ${esIlimitado ? 'PREMIUM' : 'VIP'} creado.`, "success");
+        
+        // Recargar la lista visual
+        if(window.renderizarListaAdmin) window.renderizarListaAdmin();
+
+    } catch (error) {
+        console.error("Error creando código:", error);
+        window.mostrarAlerta("Error", "Fallo de conexión al servidor.", "error");
+    }
 };
 
 window.eliminarCodigo = async function(c) { window.mostrarConfirmacion("Eliminar", `¿Borrar código ${c}?`, async () => { try { await deleteDoc(doc(db, "codigos_nube", c)); window.renderizarListaAdmin(); window.renderizarSolicitudesAdmin(); } catch(e){} }); };
