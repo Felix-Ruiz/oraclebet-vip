@@ -519,38 +519,121 @@ if (document.readyState === 'loading') { document.addEventListener('DOMContentLo
 // ==========================================
 const promesaConTimeout = (promesa, ms) => { let timeout = new Promise((resolve, reject) => { let id = setTimeout(() => { clearTimeout(id); reject(new Error("Timeout")); }, ms); }); return Promise.race([promesa, timeout]); };
 
-// 🚀 INTERCEPTOR LEGAL EN LA PUERTA DE ENTRADA
+// 🚀 INTERCEPTOR LEGAL EN LA PUERTA DE ENTRADA (MEJORADO)
 window.preValidarCodigo = function() {
     const input = document.getElementById('vipCode');
     
-    // Primero verificamos que no intente entrar con el cuadro vacío
+    // 1. Verificamos que el input no esté vacío
     if (!input || input.value.trim() === '') {
         return window.mostrarAlerta("Atención", "Debes ingresar un código de acceso válido.", "error");
     }
 
-    // Si escribió un código, levantamos el muro legal
-    const modal = document.getElementById('modalTerminosGenerales');
-    if(modal) { 
-        modal.classList.remove('hidden'); 
-        modal.style.display = 'flex'; 
+    // 2. Ocultamos el modal de Login temporalmente para que no estorbe abajo
+    const modalLogin = document.getElementById('modalLogin');
+    if(modalLogin) {
+        modalLogin.classList.add('hidden');
+        modalLogin.style.display = 'none';
+    }
+
+    // 3. Levantamos el muro legal
+    const modalTerminos = document.getElementById('modalTerminosGenerales');
+    if(modalTerminos) { 
+        modalTerminos.classList.remove('hidden'); 
+        modalTerminos.style.display = 'flex'; 
     }
 };
 
 window.cerrarModalTerminosGenerales = function() {
-    const modal = document.getElementById('modalTerminosGenerales');
-    if(modal) { 
-        modal.classList.add('hidden'); 
-        modal.style.display = 'none'; 
+    // Si rechaza, cerramos los términos y VOLVEMOS a mostrar el Login
+    const modalTerminos = document.getElementById('modalTerminosGenerales');
+    if(modalTerminos) { 
+        modalTerminos.classList.add('hidden'); 
+        modalTerminos.style.display = 'none'; 
+    }
+    
+    const modalLogin = document.getElementById('modalLogin');
+    if(modalLogin) {
+        modalLogin.classList.remove('hidden');
+        modalLogin.style.display = 'flex';
     }
 };
 
 window.aceptarTerminosYLogin = function() {
     // 1. Cerramos el muro legal
-    window.cerrarModalTerminosGenerales();
+    const modalTerminos = document.getElementById('modalTerminosGenerales');
+    if(modalTerminos) { 
+        modalTerminos.classList.add('hidden'); 
+        modalTerminos.style.display = 'none'; 
+    }
     
-    // 2. Disparamos la función original que se comunica con Firebase
-    if(window.validarCodigo) {
-        window.validarCodigo();
+    // 2. Volvemos a mostrar el login pero le cambiamos el estado al botón para dar feedback
+    const modalLogin = document.getElementById('modalLogin');
+    if(modalLogin) {
+        modalLogin.classList.remove('hidden');
+        modalLogin.style.display = 'flex';
+    }
+
+    const btn = document.getElementById('btnValidarCodigo');
+    const txtOriginal = btn ? btn.innerHTML : 'VERIFICAR ACCESO';
+    
+    if(btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONECTANDO...';
+        btn.disabled = true;
+    }
+    
+    // 3. Disparamos la función original a Firebase (validarCodigo)
+    window.validarCodigo(txtOriginal, btn);
+};
+
+// 🚀 MODIFICAMOS LIGERAMENTE validarCodigo PARA QUE RECIBA LOS PARÁMETROS DEL BOTÓN
+window.validarCodigo = async function(txtOriginal = 'VERIFICAR ACCESO', btnObj = null) {
+    const codigoIngresado = document.getElementById('vipCode').value.toUpperCase().trim();
+    if(!codigoIngresado) return;
+    
+    const btn = btnObj || document.getElementById('btnValidarCodigo'); 
+    
+    // Solo le cambiamos el estado si NO venía del interceptor (por si lo llaman directo por consola)
+    if(!btnObj && btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; }
+    
+    if (codigoIngresado.startsWith("MASTER_")) {
+        try {
+            if (!correoAdminTemp) {
+                correoAdminTemp = prompt("Introduce el correo del Administrador:");
+                if (!correoAdminTemp) throw new Error("Correo requerido.");
+            }
+            const p = codigoIngresado.split("MASTER_")[1];
+            await promesaConTimeout(signInWithEmailAndPassword(auth, correoAdminTemp, p), 8000);
+            window.cerrarModalLogin();
+            window.renderizarLayoutAdmin();
+        } catch(e) {
+            correoAdminTemp = "";
+            window.mostrarAlerta("Acceso Denegado", "Credenciales de Master incorrectas.", "error");
+        } finally {
+            if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; }
+        }
+        return;
+    }
+    
+    try {
+        const docRef = doc(db, "codigos_nube", codigoIngresado);
+        const docSnap = await promesaConTimeout(getDoc(docRef), 8000);
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.deviceID && data.deviceID !== HUELLA_ESTE_CELULAR) {
+                window.mostrarAlerta("Licencia en Uso", "Este código ya está vinculado a otro celular. Contacta al gestor.", "error");
+            } else {
+                if (!data.deviceID) { await updateDoc(docRef, { deviceID: HUELLA_ESTE_CELULAR }); }
+                window.mostrarAlerta("Acceso Concedido", `Bienvenido Inversor.`, "success");
+                window.concederAcceso(data.ilimitado, codigoIngresado, data.ladderStatus || 'none', false);
+            }
+        } else {
+            window.mostrarAlerta("Acceso Denegado", "Código no existe en la base de datos.", "error");
+        }
+    } catch(e) {
+        window.mostrarAlerta("Error de Red", "Tiempo de espera agotado. Revisa tu conexión a internet.", "error");
+    } finally {
+        if(btn) { btn.innerHTML = txtOriginal; btn.disabled = false; }
     }
 };
 
